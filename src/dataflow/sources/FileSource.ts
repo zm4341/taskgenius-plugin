@@ -979,21 +979,6 @@ export class FileSource {
 	}
 
 	/**
-	 * Convert a task symbol back to metadata value for file updates
-	 * This will be used in Phase 3 when implementing file task updates
-	 */
-	private mapSymbolToFileMetadata(symbol: string): string {
-		const config = this.config.getConfig();
-
-		if (!config.statusMapping.enabled) {
-			return symbol;
-		}
-
-		// Map symbol back to preferred metadata value
-		return this.config.mapSymbolToMetadata(symbol);
-	}
-
-	/**
 	 * Apply configured metadata mappings to normalize frontmatter keys
 	 */
 	private applyMetadataMappings(
