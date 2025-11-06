@@ -348,15 +348,19 @@ export class ContentComponent extends Component {
 	}
 
 	private cleanupComponents() {
-		// Unload and clear previous components
-		this.taskComponents.forEach((component) => this.removeChild(component));
+		this.disposeComponentList(this.taskComponents);
+		this.disposeComponentList(this.treeComponents);
 		this.taskComponents = [];
-		this.treeComponents.forEach((component) => this.removeChild(component));
 		this.treeComponents = [];
-		// Disconnect observer from any previous elements
-		this.taskListObserver.disconnect();
-		// Clear the container
+		this.taskListObserver?.disconnect();
 		this.taskListEl.empty();
+	}
+
+	private disposeComponentList<T extends Component>(components: T[]) {
+		const snapshot = [...components];
+		for (const component of snapshot) {
+			this.removeChild(component);
+		}
 	}
 
 	private isContainerVisible(): boolean {
@@ -370,7 +374,7 @@ export class ContentComponent extends Component {
 		return rect.width > 0 && rect.height > 0;
 	}
 
-	private debounceRefreshTaskList = debounce(this.refreshTaskList, 700);
+	private debounceRefreshTaskList = debounce(this.refreshTaskList, 150);
 
 	private refreshTaskList() {
 		console.log("refreshing");
@@ -417,7 +421,13 @@ export class ContentComponent extends Component {
 		const prevScrollState = this.captureScrollState();
 
 		try {
-			this.cleanupComponents(); // Clear previous state and components
+			const previousTaskComponents = [...this.taskComponents];
+			const previousTreeComponents = [...this.treeComponents];
+
+			this.taskComponents = [];
+			this.treeComponents = [];
+			this.taskListObserver?.disconnect();
+			this.removeLoadMarker();
 
 			// Reset indices for lazy loading
 			this.nextTaskIndex = 0;
@@ -425,11 +435,15 @@ export class ContentComponent extends Component {
 			this.rootTasks = [];
 
 			if (this.filteredTasks.length === 0) {
+				this.taskListEl.replaceChildren();
+				this.disposeComponentList(previousTaskComponents);
+				this.disposeComponentList(previousTreeComponents);
 				this.addEmptyState(t("No tasks found."));
 				return;
 			}
 
-			// Render based on view mode
+			const renderTarget = document.createDocumentFragment();
+
 			if (this.isTreeView) {
 				const taskMap = new Map<string, Task>();
 				// Add all non-filtered tasks to the taskMap
@@ -486,10 +500,14 @@ export class ContentComponent extends Component {
 						return (a.line ?? 0) - (b.line ?? 0);
 					});
 				}
-				this.loadRootTaskBatch(taskMap); // Load the first batch
+				this.loadRootTaskBatch(taskMap, renderTarget); // Load the first batch
 			} else {
-				this.loadTaskBatch(); // Load the first batch
+				this.loadTaskBatch(renderTarget); // Load the first batch
 			}
+
+			this.taskListEl.replaceChildren(renderTarget);
+			this.disposeComponentList(previousTaskComponents);
+			this.disposeComponentList(previousTreeComponents);
 
 			// Add load marker if necessary
 			this.checkAndAddLoadMarker();
@@ -564,7 +582,9 @@ export class ContentComponent extends Component {
 		container.scrollTop = state.scrollTop;
 	}
 
-	private loadTaskBatch(): number {
+	private loadTaskBatch(
+		target: DocumentFragment | HTMLElement = this.taskListEl,
+	): number {
 		const fragment = document.createDocumentFragment();
 		const countToLoad = this.taskPageSize;
 		const start = this.nextTaskIndex;
@@ -589,11 +609,6 @@ export class ContentComponent extends Component {
 			};
 			taskComponent.onTaskUpdate = async (originalTask, updatedTask) => {
 				if (this.params.onTaskUpdate) {
-					console.log(
-						"ContentComponent onTaskUpdate",
-						originalTask.content,
-						updatedTask.content,
-					);
 					await this.params.onTaskUpdate(originalTask, updatedTask);
 				}
 			};
@@ -608,12 +623,15 @@ export class ContentComponent extends Component {
 			this.taskComponents.push(taskComponent); // Keep track of rendered components
 		}
 
-		this.taskListEl.appendChild(fragment);
+		target.appendChild(fragment);
 		this.nextTaskIndex = end; // Update index for the next batch
 		return end; // Return the new end index
 	}
 
-	private loadRootTaskBatch(taskMap: Map<string, Task>): number {
+	private loadRootTaskBatch(
+		taskMap: Map<string, Task>,
+		target: DocumentFragment | HTMLElement = this.taskListEl,
+	): number {
 		const fragment = document.createDocumentFragment();
 		const countToLoad = this.taskPageSize;
 		const start = this.nextRootTaskIndex;
@@ -664,7 +682,7 @@ export class ContentComponent extends Component {
 			this.treeComponents.push(treeComponent); // Keep track of rendered components
 		}
 
-		this.taskListEl.appendChild(fragment);
+		target.appendChild(fragment);
 		this.nextRootTaskIndex = end; // Update index for the next batch
 		return end; // Return the new end index
 	}
@@ -736,7 +754,6 @@ export class ContentComponent extends Component {
 	}
 
 	private addEmptyState(message: string) {
-		this.cleanupComponents(); // Ensure list is clean
 		const emptyEl = this.taskListEl.createDiv({ cls: "task-empty-state" });
 		emptyEl.setText(message);
 	}
@@ -829,8 +846,9 @@ export class ContentComponent extends Component {
 				this.params.onTaskCompleted?.(t);
 			};
 			taskComponent.onTaskUpdate = async (orig, upd) => {
-				if (this.params.onTaskUpdate)
+				if (this.params.onTaskUpdate) {
 					await this.params.onTaskUpdate(orig, upd);
+				}
 			};
 			taskComponent.onTaskContextMenu = (e, t) => {
 				this.params.onTaskContextMenu?.(e, t);

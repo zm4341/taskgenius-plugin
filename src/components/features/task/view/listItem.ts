@@ -10,6 +10,7 @@ import {
 import { Task } from "@/types/task";
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
 import "@/styles/task-list.css";
+import "@/styles/task-status-indicator.css";
 import { createTaskCheckbox } from "./details";
 import { getRelativeTimeString } from "@/utils/date/date-formatter";
 import { t } from "@/translations/helper";
@@ -20,6 +21,7 @@ import { InlineEditorManager } from "./InlineEditorManager";
 import { sanitizePriorityForClass } from "@/utils/task/priority-utils";
 import { TaskSelectionManager } from "@/components/features/task/selection/TaskSelectionManager";
 import { showBulkOperationsMenu } from "./BulkOperationsMenu";
+import { TaskStatusIndicator } from "./TaskStatusIndicator";
 
 export class TaskListItemComponent extends Component {
 	public element: HTMLElement;
@@ -38,10 +40,21 @@ export class TaskListItemComponent extends Component {
 
 	private metadataEl: HTMLElement;
 
+	private statusIndicator: TaskStatusIndicator | null = null;
+	private checkboxInput: HTMLInputElement | null = null;
+
 	private settings: TaskProgressBarSettings;
 
 	// Use shared editor manager instead of individual editors
 	private static editorManager: InlineEditorManager | null = null;
+
+	private static readonly PRIORITY_CONFIG = [
+		{ value: 5, key: "Highest", icon: "triangle", class: "highest" },
+		{ value: 4, key: "High", icon: "alert-triangle", class: "high" },
+		{ value: 3, key: "Medium", icon: "minus", class: "medium" },
+		{ value: 2, key: "Low", icon: "chevron-down", class: "low" },
+		{ value: 1, key: "Lowest", icon: "chevrons-down", class: "lowest" },
+	] as const;
 
 	// Selection management
 	private selectionManager: TaskSelectionManager | null = null;
@@ -52,7 +65,7 @@ export class TaskListItemComponent extends Component {
 		private viewMode: string,
 		private app: App,
 		private plugin: TaskProgressBarPlugin,
-		selectionManager?: TaskSelectionManager,
+		selectionManager?: TaskSelectionManager
 	) {
 		super();
 
@@ -70,7 +83,7 @@ export class TaskListItemComponent extends Component {
 		if (!TaskListItemComponent.editorManager) {
 			TaskListItemComponent.editorManager = new InlineEditorManager(
 				this.app,
-				this.plugin,
+				this.plugin
 			);
 		}
 	}
@@ -86,7 +99,7 @@ export class TaskListItemComponent extends Component {
 					try {
 						await this.onTaskUpdate(originalTask, updatedTask);
 						console.log(
-							"listItem onTaskUpdate completed successfully",
+							"listItem onTaskUpdate completed successfully"
 						);
 						// Don't update task reference here - let onContentEditFinished handle it
 					} catch (error) {
@@ -99,7 +112,7 @@ export class TaskListItemComponent extends Component {
 			},
 			onContentEditFinished: (
 				targetEl: HTMLElement,
-				updatedTask: Task,
+				updatedTask: Task
 			) => {
 				// Update the task reference with the saved task
 				this.task = updatedTask;
@@ -112,13 +125,13 @@ export class TaskListItemComponent extends Component {
 
 				// Release the editor from the manager
 				TaskListItemComponent.editorManager?.releaseEditor(
-					this.task.id,
+					this.task.id
 				);
 			},
 			onMetadataEditFinished: (
 				targetEl: HTMLElement,
 				updatedTask: Task,
-				fieldType: string,
+				fieldType: string
 			) => {
 				// Update the task reference with the saved task
 				this.task = updatedTask;
@@ -128,7 +141,7 @@ export class TaskListItemComponent extends Component {
 
 				// Release the editor from the manager
 				TaskListItemComponent.editorManager?.releaseEditor(
-					this.task.id,
+					this.task.id
 				);
 			},
 			useEmbeddedEditor: true, // Enable Obsidian's embedded editor
@@ -136,7 +149,7 @@ export class TaskListItemComponent extends Component {
 
 		return TaskListItemComponent.editorManager!.getEditor(
 			this.task,
-			editorOptions,
+			editorOptions
 		);
 	}
 
@@ -146,7 +159,7 @@ export class TaskListItemComponent extends Component {
 	private isCurrentlyEditing(): boolean {
 		return (
 			TaskListItemComponent.editorManager?.hasActiveEditor(
-				this.task.id,
+				this.task.id
 			) || false
 		);
 	}
@@ -159,8 +172,8 @@ export class TaskListItemComponent extends Component {
 					"task-genius:selection-changed",
 					() => {
 						this.updateSelectionVisualState();
-					},
-				),
+					}
+				)
 			);
 
 			// Setup long press detection for mobile
@@ -172,7 +185,7 @@ export class TaskListItemComponent extends Component {
 							this.selectionManager?.enterSelectionMode();
 							this.handleMultiSelect();
 						},
-					},
+					}
 				);
 			}
 		}
@@ -197,11 +210,11 @@ export class TaskListItemComponent extends Component {
 					() => {
 						// Refresh view after operation
 						// The parent view should handle this via task updates
-					},
+					}
 				).catch((error) => {
 					console.error(
 						"Failed to show bulk operations menu:",
-						error,
+						error
 					);
 				});
 				return;
@@ -217,6 +230,12 @@ export class TaskListItemComponent extends Component {
 	}
 
 	private renderTaskItem() {
+		if (this.statusIndicator) {
+			this.removeChild(this.statusIndicator);
+			this.statusIndicator = null;
+		}
+		this.checkboxInput = null;
+
 		this.element.empty();
 
 		if (this.task.completed) {
@@ -234,25 +253,69 @@ export class TaskListItemComponent extends Component {
 				const checkbox = createTaskCheckbox(
 					this.task.status,
 					this.task,
-					el,
+					el
 				);
+				this.checkboxInput = checkbox;
 
 				this.registerDomEvent(checkbox, "click", (event) => {
 					event.stopPropagation();
 
-					if (this.onTaskCompleted) {
-						this.onTaskCompleted(this.task);
-					}
+					// Check if we should merge indicator with checkbox
+					if (
+						!this.plugin.settings.enableIndicatorWithCheckbox &&
+						this.statusIndicator
+					) {
+						// Cycle through statuses using the status indicator
+						this.statusIndicator.cycle();
+					} else {
+						// Original behavior - just complete the task
+						if (this.onTaskCompleted) {
+							this.onTaskCompleted(this.task);
+						}
 
-					if (this.task.status === " ") {
-						checkbox.checked = true;
-						checkbox.dataset.task = "x";
+						if (this.task.status === " ") {
+							checkbox.checked = true;
+							checkbox.dataset.task = "x";
+						}
 					}
 				});
-			},
+			}
 		);
 
 		this.element.appendChild(checkboxEl);
+
+		// Always create the status indicator (for its logic), but only render it if not merged
+		this.statusIndicator = new TaskStatusIndicator({
+			task: this.task,
+			plugin: this.plugin,
+			canInteract: () => !this.isCurrentlyEditing(),
+			onStatusChange: async (previousTask, updatedTask) => {
+				if (this.onTaskUpdate) {
+					await this.onTaskUpdate(previousTask, updatedTask);
+				}
+
+				this.updateTask(updatedTask);
+
+				if (this.checkboxInput) {
+					this.checkboxInput.dataset.task = updatedTask.status;
+					this.checkboxInput.checked = updatedTask.completed;
+				}
+
+				this.statusIndicator?.updateTask(updatedTask);
+			},
+		});
+
+		this.addChild(this.statusIndicator);
+		this.statusIndicator.load();
+
+		// Only render the status indicator in the DOM if not merged with checkbox
+		if (this.plugin.settings.enableIndicatorWithCheckbox) {
+			const statusWrapper = this.element.createDiv({
+				cls: "task-status-indicator-wrapper",
+			});
+			this.statusIndicator.render(statusWrapper);
+		}
+
 		this.containerEl = this.element.createDiv({
 			cls: "task-item-container",
 		});
@@ -278,45 +341,81 @@ export class TaskListItemComponent extends Component {
 
 		this.renderMetadata();
 
-		// Priority indicator if available
-		if (this.task.metadata.priority) {
-			console.log("priority", this.task.metadata.priority);
+		const priorityValue = this.task.metadata.priority;
 
-			// Convert priority to numeric value
+		if (priorityValue) {
 			let numericPriority: number;
-			if (typeof this.task.metadata.priority === "string") {
-				switch ((this.task.metadata.priority as string).toLowerCase()) {
+			if (typeof priorityValue === "number") {
+				numericPriority = priorityValue;
+			} else {
+				switch (priorityValue) {
 					case "low":
-						numericPriority = 1;
-						break;
-					case "medium":
 						numericPriority = 2;
 						break;
-					case "high":
+					case "medium":
 						numericPriority = 3;
 						break;
+					case "high":
+						numericPriority = 4;
+						break;
+					case "highest":
+						numericPriority = 5;
+						break;
+					case "lowest":
+						numericPriority = 1;
+						break;
 					default:
-						numericPriority =
-							parseInt(this.task.metadata.priority) || 1;
+						numericPriority = parseInt(priorityValue, 10) || 1;
 						break;
 				}
-			} else {
-				numericPriority = this.task.metadata.priority;
 			}
 
-			const sanitizedPriority = sanitizePriorityForClass(numericPriority);
+			const priorityConfig = TaskListItemComponent.PRIORITY_CONFIG.find(
+				(config) => config.value === numericPriority
+			);
 			const classes = ["task-priority"];
-			if (sanitizedPriority) {
-				classes.push(`priority-${sanitizedPriority}`);
+			if (priorityConfig) {
+				classes.push(`priority-${priorityConfig.class}`);
 			}
+
+			if (this.plugin.settings.enableInlineEditor) {
+				classes.push("task-priority-clickable");
+			}
+
 			const priorityEl = createDiv({ cls: classes });
-
-			// Priority icon based on level
-			let icon = "•";
-			icon = "!".repeat(numericPriority);
-
+			const icon = "!".repeat(numericPriority);
 			priorityEl.textContent = icon;
+
+			if (this.plugin.settings.enableInlineEditor) {
+				const priorityTooltip = t("Click to set priority");
+				priorityEl.setAttribute("aria-label", priorityTooltip);
+				// priorityEl.setAttribute("title", priorityTooltip);
+
+				this.registerDomEvent(priorityEl, "click", (e) => {
+					e.stopPropagation();
+					if (!this.isCurrentlyEditing()) {
+						this.showPriorityMenu(priorityEl);
+					}
+				});
+			}
+
 			this.element.appendChild(priorityEl);
+		} else if (this.plugin.settings.enableInlineEditor) {
+			const addPriorityBtn = this.element.createEl("div", {
+				cls: "add-priority-btn",
+				attr: {
+					"aria-label": t("Click to set priority"),
+					// title: t("Click to set priority"),
+					role: "button",
+				},
+			});
+
+			this.registerDomEvent(addPriorityBtn, "click", (e) => {
+				e.stopPropagation();
+				if (!this.isCurrentlyEditing()) {
+					this.showPriorityMenu(addPriorityBtn);
+				}
+			});
 		}
 
 		// Click handler to select task
@@ -352,7 +451,7 @@ export class TaskListItemComponent extends Component {
 		if (this.task.metadata.cancelledDate) {
 			this.renderDateMetadata(
 				"cancelled",
-				this.task.metadata.cancelledDate,
+				this.task.metadata.cancelledDate
 			);
 		}
 
@@ -369,7 +468,7 @@ export class TaskListItemComponent extends Component {
 			if (this.task.metadata.scheduledDate) {
 				this.renderDateMetadata(
 					"scheduled",
-					this.task.metadata.scheduledDate,
+					this.task.metadata.scheduledDate
 				);
 			}
 
@@ -387,7 +486,7 @@ export class TaskListItemComponent extends Component {
 			if (this.task.metadata.completedDate) {
 				this.renderDateMetadata(
 					"completed",
-					this.task.metadata.completedDate,
+					this.task.metadata.completedDate
 				);
 			}
 
@@ -395,7 +494,7 @@ export class TaskListItemComponent extends Component {
 			if (this.task.metadata.createdDate) {
 				this.renderDateMetadata(
 					"created",
-					this.task.metadata.createdDate,
+					this.task.metadata.createdDate
 				);
 			}
 		}
@@ -443,7 +542,7 @@ export class TaskListItemComponent extends Component {
 			| "completed"
 			| "cancelled"
 			| "created",
-		dateValue: number,
+		dateValue: number
 	) {
 		const dateEl = this.metadataEl.createEl("div", {
 			cls: ["task-date", `task-${type}-date`],
@@ -492,7 +591,7 @@ export class TaskListItemComponent extends Component {
 						year: "numeric",
 						month: "long",
 						day: "numeric",
-					});
+				  });
 		}
 
 		if (cssClass) {
@@ -512,20 +611,20 @@ export class TaskListItemComponent extends Component {
 						type === "due"
 							? "dueDate"
 							: type === "scheduled"
-								? "scheduledDate"
-								: type === "start"
-									? "startDate"
-									: type === "cancelled"
-										? "cancelledDate"
-										: type === "completed"
-											? "completedDate"
-											: null;
+							? "scheduledDate"
+							: type === "start"
+							? "startDate"
+							: type === "cancelled"
+							? "cancelledDate"
+							: type === "completed"
+							? "completedDate"
+							: null;
 
 					if (fieldType) {
 						this.getInlineEditor().showMetadataEditor(
 							dateEl,
 							fieldType,
-							dateString,
+							dateString
 						);
 					}
 				}
@@ -571,7 +670,7 @@ export class TaskListItemComponent extends Component {
 					this.getInlineEditor().showMetadataEditor(
 						projectEl,
 						"project",
-						this.task.metadata.project || "",
+						this.task.metadata.project || ""
 					);
 				}
 			});
@@ -601,7 +700,7 @@ export class TaskListItemComponent extends Component {
 							this.getInlineEditor().showMetadataEditor(
 								tagsContainer,
 								"tags",
-								tagsString,
+								tagsString
 							);
 						}
 					});
@@ -623,7 +722,7 @@ export class TaskListItemComponent extends Component {
 					this.getInlineEditor().showMetadataEditor(
 						recurrenceEl,
 						"recurrence",
-						this.task.metadata.recurrence || "",
+						this.task.metadata.recurrence || ""
 					);
 				}
 			});
@@ -644,7 +743,7 @@ export class TaskListItemComponent extends Component {
 					this.getInlineEditor().showMetadataEditor(
 						onCompletionEl,
 						"onCompletion",
-						this.task.metadata.onCompletion || "",
+						this.task.metadata.onCompletion || ""
 					);
 				}
 			});
@@ -656,7 +755,7 @@ export class TaskListItemComponent extends Component {
 			cls: "task-dependson",
 		});
 		dependsOnEl.textContent = `⛔ ${this.task.metadata.dependsOn?.join(
-			", ",
+			", "
 		)}`;
 
 		// Make dependsOn clickable for editing only if inline editor is enabled
@@ -667,7 +766,7 @@ export class TaskListItemComponent extends Component {
 					this.getInlineEditor().showMetadataEditor(
 						dependsOnEl,
 						"dependsOn",
-						this.task.metadata.dependsOn?.join(", ") || "",
+						this.task.metadata.dependsOn?.join(", ") || ""
 					);
 				}
 			});
@@ -688,7 +787,7 @@ export class TaskListItemComponent extends Component {
 					this.getInlineEditor().showMetadataEditor(
 						idEl,
 						"id",
-						this.task.metadata.id || "",
+						this.task.metadata.id || ""
 					);
 				}
 			});
@@ -785,7 +884,7 @@ export class TaskListItemComponent extends Component {
 		if (fieldsToShow.length === 0) {
 			menu.addItem((item) => {
 				item.setTitle(
-					"All metadata fields are already set",
+					"All metadata fields are already set"
 				).setDisabled(true);
 			});
 		} else {
@@ -802,7 +901,7 @@ export class TaskListItemComponent extends Component {
 
 							editor.showMetadataEditor(
 								tempContainer,
-								field.key as any,
+								field.key as any
 							);
 						});
 				});
@@ -813,6 +912,64 @@ export class TaskListItemComponent extends Component {
 			x: buttonEl.getBoundingClientRect().left,
 			y: buttonEl.getBoundingClientRect().bottom,
 		});
+	}
+
+	/**
+	 * Show priority selection menu
+	 */
+	private showPriorityMenu(buttonEl: HTMLElement): void {
+		const menu = new Menu();
+
+		TaskListItemComponent.PRIORITY_CONFIG.forEach((config) => {
+			menu.addItem((item) => {
+				item.setTitle(t(config.key))
+					.setIcon(config.icon)
+					.onClick(async () => {
+						await this.updateTaskPriority(config.value);
+					});
+			});
+		});
+
+		menu.addItem((item) => {
+			item.setTitle(t("Clear priority"))
+				.setIcon("minus")
+				.onClick(async () => {
+					await this.updateTaskPriority(null);
+				});
+		});
+
+		const rect = buttonEl.getBoundingClientRect();
+
+		menu.showAtPosition({
+			x: rect.left,
+			y: rect.bottom,
+		});
+	}
+
+	/**
+	 * Update task priority and refresh UI
+	 */
+	private async updateTaskPriority(priority: number | null): Promise<void> {
+		const metadata = { ...this.task.metadata };
+		if (priority === null) {
+			delete metadata.priority;
+		} else {
+			metadata.priority = priority;
+		}
+
+		const updatedTask: Task = {
+			...this.task,
+			metadata,
+		};
+
+		try {
+			if (this.onTaskUpdate) {
+				await this.onTaskUpdate(this.task, updatedTask);
+			}
+			this.updateTask(updatedTask);
+		} catch (error) {
+			console.error("Failed to update task priority:", error);
+		}
 	}
 
 	private formatDateForInput(date: Date): string {
@@ -831,30 +988,22 @@ export class TaskListItemComponent extends Component {
 		// Clear the content element
 		this.contentEl.empty();
 
-		// 使用 requestAnimationFrame 确保 DOM 完全清理后再渲染新内容
-		requestAnimationFrame(() => {
-			// Create new renderer
-			this.markdownRenderer = new MarkdownRendererComponent(
-				this.app,
-				this.contentEl,
-				this.task.filePath,
-			);
-			this.addChild(this.markdownRenderer);
+		// Create new renderer immediately (no need for async)
+		this.markdownRenderer = new MarkdownRendererComponent(
+			this.app,
+			this.contentEl,
+			this.task.filePath
+		);
+		this.addChild(this.markdownRenderer);
 
-			// Render the markdown content - 使用最新的 originalMarkdown
-			this.markdownRenderer.render(
-				this.task.originalMarkdown || "\u200b",
-			);
+		// Render the markdown content
+		this.markdownRenderer.render(this.task.originalMarkdown || "\u200b");
 
-			// Re-register the click event for editing after rendering
-			this.registerContentClickHandler();
+		// Re-register the click event for editing after rendering
+		this.registerContentClickHandler();
 
-			// Update layout mode after content is rendered
-			// Use another requestAnimationFrame to ensure the content is fully rendered
-			requestAnimationFrame(() => {
-				this.updateLayoutMode();
-			});
-		});
+		// Update layout mode synchronously - no waiting needed
+		this.updateLayoutMode();
 	}
 
 	/**
@@ -870,36 +1019,61 @@ export class TaskListItemComponent extends Component {
 			// If disabled, always use multi-line (traditional) layout
 			this.contentMetadataContainer.toggleClass(
 				"multi-line-content",
-				true,
+				true
 			);
 			this.contentMetadataContainer.toggleClass(
 				"single-line-content",
-				false,
+				false
 			);
 			return;
 		}
 
-		// Get the line height of the content element
-		const computedStyle = window.getComputedStyle(this.contentEl);
-		const lineHeight =
-			parseFloat(computedStyle.lineHeight) ||
-			parseFloat(computedStyle.fontSize) * 1.4;
-
-		// Get actual content height
-		const contentHeight = this.contentEl.scrollHeight;
-
-		// Check if content is multi-line (with some tolerance)
-		const isMultiLine = contentHeight > lineHeight * 1.2;
+		// Fast synchronous detection using text content analysis
+		const isMultiLine = this.detectMultiLineContent();
 
 		// Apply appropriate layout class using Obsidian's toggleClass method
 		this.contentMetadataContainer.toggleClass(
 			"multi-line-content",
-			isMultiLine,
+			isMultiLine
 		);
 		this.contentMetadataContainer.toggleClass(
 			"single-line-content",
-			!isMultiLine,
+			!isMultiLine
 		);
+	}
+
+	/**
+	 * Fast detection of multi-line content using text analysis
+	 */
+	private detectMultiLineContent(): boolean {
+		if (!this.contentEl) return true;
+
+		// Method 1: Check for line breaks in text content
+		const textContent = this.contentEl.textContent || "";
+		if (textContent.includes("\n") || textContent.includes("\r")) {
+			return true;
+		}
+
+		// Method 2: Quick DOM measurement without layout thrashing
+		const computedStyle = window.getComputedStyle(this.contentEl);
+		const fontSize = parseFloat(computedStyle.fontSize) || 16;
+		const lineHeight =
+			parseFloat(computedStyle.lineHeight) || fontSize * 1.4;
+
+		// Method 3: Check if scrollHeight is significantly larger than a single line
+		// Use a smaller threshold to avoid false positives
+		const contentHeight = this.contentEl.scrollHeight;
+		const isMultiLine = contentHeight > lineHeight * 1.1;
+
+		// Method 4: Check for elements that typically cause multi-line layout
+		const hasBlockElements = this.contentEl.querySelector(
+			"br, div, p, ul, ol, li, blockquote"
+		);
+		if (hasBlockElements) {
+			return true;
+		}
+
+		return isMultiLine;
 	}
 
 	/**
@@ -942,29 +1116,39 @@ export class TaskListItemComponent extends Component {
 		const oldTask = this.task;
 		this.task = task;
 
-		// Update completion status
-		if (oldTask.completed !== task.completed) {
-			if (task.completed) {
-				this.element.classList.add("task-completed");
-			} else {
-				this.element.classList.remove("task-completed");
-			}
+		// Batch DOM updates to minimize reflows
+		let needsContentUpdate = false;
+		let needsMetadataUpdate = false;
+
+		// Check what needs updating
+		const contentChanged =
+			oldTask.originalMarkdown !== task.originalMarkdown ||
+			oldTask.content !== task.content;
+		const metadataChanged =
+			JSON.stringify(oldTask.metadata) !== JSON.stringify(task.metadata);
+		const completedChanged = oldTask.completed !== task.completed;
+
+		// Update checkbox state
+		if (this.checkboxInput) {
+			this.checkboxInput.dataset.task = task.status;
+			this.checkboxInput.checked = !!task.completed;
 		}
 
-		// If content or originalMarkdown changed, update the markdown display
-		if (
-			oldTask.originalMarkdown !== task.originalMarkdown ||
-			oldTask.content !== task.content
-		) {
-			// Re-render the markdown content
-			this.contentEl.empty();
+		// Update status indicator
+		this.statusIndicator?.updateTask(task);
+
+		// Update completion status
+		if (completedChanged) {
+			this.element.toggleClass("task-completed", task.completed);
+		}
+
+		// If content changed, update the markdown display
+		if (contentChanged) {
 			this.renderMarkdown();
 		}
 
-		// Check if metadata changed and update metadata display
-		if (
-			JSON.stringify(oldTask.metadata) !== JSON.stringify(task.metadata)
-		) {
+		// If metadata changed, update metadata display
+		if (metadataChanged) {
 			this.renderMetadata();
 		}
 	}
@@ -1023,6 +1207,12 @@ export class TaskListItemComponent extends Component {
 		) {
 			TaskListItemComponent.editorManager.releaseEditor(this.task.id);
 		}
+
+		if (this.statusIndicator) {
+			this.removeChild(this.statusIndicator);
+			this.statusIndicator = null;
+		}
+		this.checkboxInput = null;
 
 		this.element.detach();
 	}

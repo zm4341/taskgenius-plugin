@@ -115,12 +115,16 @@
 	align-items: center;
 }
 
-.tree-task-item .task-content-metadata-container.single-line-content .task-item-content {
+.tree-task-item
+	.task-content-metadata-container.single-line-content
+	.task-item-content {
 	flex: 1;
 	min-width: 0; /* Allow content to shrink */
 }
 
-.tree-task-item .task-content-metadata-container.single-line-content .task-metadata {
+.tree-task-item
+	.task-content-metadata-container.single-line-content
+	.task-metadata {
 	flex-shrink: 0;
 	margin-top: 0;
 }
@@ -131,11 +135,15 @@
 	align-items: flex-start;
 }
 
-.tree-task-item .task-content-metadata-container.multi-line-content .task-item-content {
+.tree-task-item
+	.task-content-metadata-container.multi-line-content
+	.task-item-content {
 	width: 100%;
 }
 
-.tree-task-item .task-content-metadata-container.multi-line-content .task-metadata {
+.tree-task-item
+	.task-content-metadata-container.multi-line-content
+	.task-metadata {
 	margin-top: 4px;
 }
 
@@ -173,6 +181,15 @@
 
 .task-priority.priority-1 {
 	color: var(--text-accent);
+}
+
+.task-priority-clickable {
+	cursor: pointer;
+	transition: opacity 0.2s ease;
+}
+
+.task-priority-clickable:hover {
+	opacity: 0.7;
 }
 
 /* New field styles for tree view */

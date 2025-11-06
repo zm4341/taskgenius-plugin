@@ -331,6 +331,9 @@ export class TaskSpecificView extends ItemView {
 				onTaskCompleted: (task: Task) => {
 					this.toggleTaskCompletion(task);
 				},
+				onTaskUpdate: async (originalTask: Task, updatedTask: Task) => {
+					await this.handleTaskUpdate(originalTask, updatedTask);
+				},
 				onTaskContextMenu: (event: MouseEvent, task: Task) => {
 					this.handleTaskContextMenu(event, task);
 				},

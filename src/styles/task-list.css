@@ -77,7 +77,9 @@
 	flex-wrap: wrap;
 	align-items: flex-start;
 	gap: var(--size-2-2);
-	transition: all 0.2s ease;
+	/* Remove transition to prevent flash during layout changes */
+	/* Use GPU-accelerated properties only if transition is needed */
+	will-change: auto;
 }
 
 /* Single line content layout - horizontal */
@@ -251,6 +253,45 @@
 }
 .task-priority.priority-1 {
 	color: var(--text-accent);
+}
+
+.task-priority-clickable {
+	cursor: pointer;
+	transition: opacity 0.2s ease;
+}
+
+.task-priority-clickable:hover {
+	opacity: 0.7;
+}
+
+.add-priority-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	margin-left: 4px;
+	padding: 0;
+	/* border: 1px dashed var(--text-muted); */
+	border-radius: 3px;
+	background: transparent;
+	color: var(--text-muted);
+	font-size: 12px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.add-priority-btn:hover {
+	border-color: var(--text-normal);
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
+}
+
+.task-item.tree-task-item .task-priority-clickable,
+.task-item.tree-task-item .add-priority-btn {
+	position: absolute;
+	right: var(--size-4-2);
+	top: var(--size-4-2);
 }
 
 /* New field styles */
