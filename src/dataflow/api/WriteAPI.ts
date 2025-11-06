@@ -2635,16 +2635,33 @@ export class WriteAPI {
 		newTask.completed = false;
 		newTask.metadata.completedDate = undefined;
 
-		// Determine where to apply the next date based on what the original task had
-		if (completedTask.metadata.dueDate) {
-			// If original task had due date, update due date
-			newTask.metadata.dueDate = nextDate;
-		} else if (completedTask.metadata.scheduledDate) {
-			// If original task only had scheduled date, update scheduled date
+		// Determine where to apply the next date based on user settings
+		const recurrenceDateBase =
+			this.plugin.settings.recurrenceDateBase || "due";
+
+		if (recurrenceDateBase === "scheduled") {
+			// User wants to use scheduled dates for recurrence
 			newTask.metadata.scheduledDate = nextDate;
-			newTask.metadata.dueDate = undefined; // Make sure due date is not set
-		} else {
+			// Clear due date if it was calculated from scheduled date
+			if (!completedTask.metadata.dueDate) {
+				newTask.metadata.dueDate = undefined;
+			}
+		} else if (recurrenceDateBase === "due") {
+			// User wants to use due dates for recurrence (default)
 			newTask.metadata.dueDate = nextDate;
+			// Clear scheduled date if it was calculated from due date
+			if (!completedTask.metadata.scheduledDate) {
+				newTask.metadata.scheduledDate = undefined;
+			}
+		} else {
+			// recurrenceDateBase === "current" - preserve existing date fields
+			if (completedTask.metadata.dueDate) {
+				newTask.metadata.dueDate = nextDate;
+			} else if (completedTask.metadata.scheduledDate) {
+				newTask.metadata.scheduledDate = nextDate;
+			} else {
+				newTask.metadata.dueDate = nextDate;
+			}
 		}
 
 		// Extract the original list marker (-, *, 1., etc.) from the original markdown
@@ -2792,11 +2809,11 @@ export class WriteAPI {
 						unit = unit.substring(0, unit.length - 1);
 					}
 
-					// Start from base date
+					// Start from base date and keep month anchor for rollover handling
 					let nextDate = new Date(baseDate);
+					const monthAnchor = baseDate.getDate();
 
-					// Keep advancing the date until it's in the future
-					while (nextDate.getTime() <= todayStart.getTime()) {
+					const advance = () => {
 						switch (unit) {
 							case "day":
 								nextDate.setDate(nextDate.getDate() + interval);
@@ -2806,17 +2823,16 @@ export class WriteAPI {
 									nextDate.getDate() + interval * 7,
 								);
 								break;
-							case "month":
-								// Save the original day of month for proper month rolling
-								const originalDay = baseDate.getDate();
+							case "month": {
 								nextDate.setMonth(
 									nextDate.getMonth() + interval,
 								);
 								// If day has changed (e.g., Jan 31 -> Feb 28), adjust back
-								if (nextDate.getDate() !== originalDay) {
+								if (nextDate.getDate() !== monthAnchor) {
 									nextDate.setDate(0); // Go to last day of previous month
 								}
 								break;
+							}
 							case "year":
 								nextDate.setFullYear(
 									nextDate.getFullYear() + interval,
@@ -2827,6 +2843,12 @@ export class WriteAPI {
 								nextDate.setDate(nextDate.getDate() + interval);
 								break;
 						}
+					};
+
+					// Always advance at least once so we progress from the base date
+					advance();
+					while (nextDate.getTime() <= todayStart.getTime()) {
+						advance();
 					}
 
 					// Normalize to midnight
@@ -2847,9 +2869,9 @@ export class WriteAPI {
 				const unit = simpleMatch[2];
 
 				let nextDate = new Date(baseDate);
+				const monthAnchor = baseDate.getDate();
 
-				// Keep advancing the date until it's in the future
-				while (nextDate.getTime() <= todayStart.getTime()) {
+				const advance = () => {
 					switch (unit) {
 						case "d":
 							nextDate.setDate(nextDate.getDate() + interval);
@@ -2858,10 +2880,9 @@ export class WriteAPI {
 							nextDate.setDate(nextDate.getDate() + interval * 7);
 							break;
 						case "m":
-							const originalDay = baseDate.getDate();
 							nextDate.setMonth(nextDate.getMonth() + interval);
 							// Handle month-end edge cases
-							if (nextDate.getDate() !== originalDay) {
+							if (nextDate.getDate() !== monthAnchor) {
 								nextDate.setDate(0);
 							}
 							break;
@@ -2871,6 +2892,12 @@ export class WriteAPI {
 							);
 							break;
 					}
+				};
+
+				// Keep advancing the date until it's in the future
+				advance();
+				while (nextDate.getTime() <= todayStart.getTime()) {
+					advance();
 				}
 
 				// Normalize to midnight
