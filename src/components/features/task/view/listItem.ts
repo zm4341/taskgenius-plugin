@@ -9,7 +9,7 @@ import {
 } from "obsidian";
 import { Task } from "@/types/task";
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
-import "@/styles/task-list.css";
+
 import "@/styles/task-status-indicator.css";
 import { createTaskCheckbox } from "./details";
 import { getRelativeTimeString } from "@/utils/date/date-formatter";

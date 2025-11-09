@@ -1,0 +1,30 @@
+.task-item {
+	display: flex;
+	align-items: flex-start;
+	padding: 8px 16px;
+	border-bottom: 1px solid var(--color-base-10);
+	cursor: pointer;
+	gap: var(--size-2-3);
+	min-height: 40px;
+	gap: 0;
+	border-radius: var(--radius-m);
+}
+
+.task-list > .task-item {
+	margin-bottom: var(--size-4-2);
+}
+
+.fluent-search-container input[type="search"] {
+	width: 100%;
+	background-color: var(--background-primary-alt);
+	height: var(--size-4-8);
+	border: unset;
+}
+
+.search-input-container {
+	width: 100%;
+}
+
+.task-list {
+	padding: var(--size-4-2);
+}

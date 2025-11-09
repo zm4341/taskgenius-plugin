@@ -8,8 +8,7 @@ import {
 	Workspace,
 } from "obsidian";
 import { Task } from "@/types/task";
-import "@/styles/tree-view.css";
-import "@/styles/task-status-indicator.css";
+
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
 import { createTaskCheckbox } from "./details";
 import { getViewSettingOrDefault, ViewMode } from "@/common/setting-definition";
