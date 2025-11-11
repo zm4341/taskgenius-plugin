@@ -14,6 +14,23 @@ import { Events, on } from "@/dataflow/events/Events";
 
 export type ViewMode = "list" | "kanban" | "tree" | "calendar";
 
+export function isCompletedMark(
+	plugin: TaskProgressBarPlugin,
+	mark: string
+): boolean {
+	if (!mark) return false;
+	try {
+		const lower = mark.toLowerCase();
+		const completedCfg =
+			String(plugin.settings.taskStatuses?.completed || "x") +
+			"|" +
+			(plugin.settings.taskStatuses?.abandoned || "-");
+		return completedCfg.split("|").includes(lower);
+	} catch (_) {
+		return false;
+	}
+}
+
 export class TopNavigation extends Component {
 	private containerEl: HTMLElement;
 	private plugin: TaskProgressBarPlugin;
@@ -71,6 +88,40 @@ export class TopNavigation extends Component {
 		);
 	}
 
+	/**
+	 * Check if a task is overdue based on its dates
+	 * @param task - The task to check
+	 * @param today - Current date with time set to 00:00:00
+	 * @returns true if the task is overdue, false otherwise
+	 */
+	private isOverdueTask(task: Task, today: Date): boolean {
+		// Exclude completed tasks
+		if (task.completed) return false;
+
+		// Exclude abandoned/completed status tasks
+		if (task.status && isCompletedMark(this.plugin, task.status))
+			return false;
+
+		// Only include tasks with dueDate or scheduledDate
+		const dueDate = task.metadata?.dueDate;
+		const scheduledDate = task.metadata?.scheduledDate;
+
+		if (!dueDate && !scheduledDate) return false;
+
+		// Check if either date is overdue
+		if (dueDate) {
+			const dueDateObj = new Date(dueDate);
+			if (dueDateObj < today) return true;
+		}
+
+		if (scheduledDate) {
+			const scheduledDateObj = new Date(scheduledDate);
+			if (scheduledDateObj < today) return true;
+		}
+
+		return false;
+	}
+
 	private async updateNotificationCount() {
 		try {
 			let tasks: Task[] = [];
@@ -89,28 +140,9 @@ export class TopNavigation extends Component {
 			const today = new Date();
 			today.setHours(0, 0, 0, 0);
 
-			this.notificationCount = tasks.filter((task: Task) => {
-				if (task.completed) return false;
-
-				// Only include tasks with dueDate or scheduledDate
-				const dueDate = task.metadata?.dueDate;
-				const scheduledDate = task.metadata?.scheduledDate;
-
-				if (!dueDate && !scheduledDate) return false;
-
-				// Check if either date is overdue
-				if (dueDate) {
-					const dueDateObj = new Date(dueDate);
-					if (dueDateObj < today) return true;
-				}
-
-				if (scheduledDate) {
-					const scheduledDateObj = new Date(scheduledDate);
-					if (scheduledDateObj < today) return true;
-				}
-
-				return false;
-			}).length;
+			this.notificationCount = tasks.filter((task: Task) =>
+				this.isOverdueTask(task, today)
+			).length;
 
 			this.updateNotificationBadge();
 		} catch (error) {
@@ -248,28 +280,9 @@ export class TopNavigation extends Component {
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 
-		const overdueTasks = tasks.filter((task: Task) => {
-			if (task.completed) return false;
-
-			// Only include tasks with dueDate or scheduledDate
-			const dueDate = task.metadata?.dueDate;
-			const scheduledDate = task.metadata?.scheduledDate;
-
-			if (!dueDate && !scheduledDate) return false;
-
-			// Check if either date is overdue
-			if (dueDate) {
-				const dueDateObj = new Date(dueDate);
-				if (dueDateObj < today) return true;
-			}
-
-			if (scheduledDate) {
-				const scheduledDateObj = new Date(scheduledDate);
-				if (scheduledDateObj < today) return true;
-			}
-
-			return false;
-		});
+		const overdueTasks = tasks.filter((task: Task) =>
+			this.isOverdueTask(task, today)
+		);
 
 		if (overdueTasks.length === 0) {
 			menu.addItem((item) => {
