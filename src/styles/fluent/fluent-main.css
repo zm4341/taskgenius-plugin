@@ -521,6 +521,18 @@ button.fluent-new-task-btn:hover {
 	gap: 12px;
 }
 
+/* Custom buttons container (for dynamic buttons from views) */
+.fluent-nav-custom-buttons {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.fluent-nav-custom-button-wrapper {
+	display: flex;
+	align-items: center;
+}
+
 .fluent-nav-icon-button {
 	position: relative;
 	width: 36px;

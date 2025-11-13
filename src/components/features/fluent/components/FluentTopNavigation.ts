@@ -6,6 +6,7 @@ import {
 	Platform,
 	Component,
 	TFile,
+	ExtraButtonComponent,
 } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { Task } from "@/types/task";
@@ -13,6 +14,13 @@ import { t } from "@/translations/helper";
 import { Events, on } from "@/dataflow/events/Events";
 
 export type ViewMode = "list" | "kanban" | "tree" | "calendar";
+
+export interface CustomNavButton {
+	id: string;
+	icon: string;
+	tooltip: string;
+	onClick: () => void;
+}
 
 export function isCompletedMark(
 	plugin: TaskProgressBarPlugin,
@@ -39,6 +47,8 @@ export class TopNavigation extends Component {
 	private notificationCount = 0;
 	private availableModes: ViewMode[] = ["list", "kanban", "tree", "calendar"];
 	private viewTabsContainer: HTMLElement | null = null;
+	private customButtonsContainer: HTMLElement | null = null;
+	private customButtons: Map<string, { buttonEl: HTMLElement; config: CustomNavButton }> = new Map();
 
 	constructor(
 		containerEl: HTMLElement,
@@ -195,6 +205,11 @@ export class TopNavigation extends Component {
 		// Right section - Notifications and Settings
 		const rightSection = this.containerEl.createDiv({
 			cls: "fluent-nav-right",
+		});
+
+		// Custom buttons container (for dynamic buttons from views)
+		this.customButtonsContainer = rightSection.createDiv({
+			cls: "fluent-nav-custom-buttons",
 		});
 
 		// Notification button
@@ -421,5 +436,77 @@ export class TopNavigation extends Component {
 
 	public getCurrentViewMode(): ViewMode {
 		return this.currentViewMode;
+	}
+
+	/**
+	 * Register a custom button in the top navigation
+	 */
+	public registerCustomButton(config: CustomNavButton): void {
+		if (!this.customButtonsContainer) {
+			console.warn("[FluentTopNavigation] Custom buttons container not initialized");
+			return;
+		}
+
+		// Check if button already exists
+		if (this.customButtons.has(config.id)) {
+			console.warn(`[FluentTopNavigation] Button with id "${config.id}" already registered`);
+			return;
+		}
+
+		// Create button container
+		const buttonContainer = this.customButtonsContainer.createDiv({
+			cls: "fluent-nav-custom-button-wrapper",
+		});
+
+		// Create button using ExtraButtonComponent
+		const button = new ExtraButtonComponent(buttonContainer)
+			.setIcon(config.icon)
+			.setTooltip(config.tooltip)
+			.onClick(config.onClick);
+
+		// Store reference
+		this.customButtons.set(config.id, {
+			buttonEl: buttonContainer,
+			config: config,
+		});
+
+		console.log(`[FluentTopNavigation] Registered custom button: ${config.id}`);
+	}
+
+	/**
+	 * Unregister a custom button by ID
+	 */
+	public unregisterCustomButton(id: string): void {
+		const button = this.customButtons.get(id);
+		if (!button) {
+			return;
+		}
+
+		// Remove DOM element
+		button.buttonEl.remove();
+
+		// Remove from map
+		this.customButtons.delete(id);
+
+		console.log(`[FluentTopNavigation] Unregistered custom button: ${id}`);
+	}
+
+	/**
+	 * Clear all custom buttons
+	 */
+	public clearCustomButtons(): void {
+		if (!this.customButtonsContainer) {
+			return;
+		}
+
+		// Remove all button elements
+		this.customButtons.forEach((button) => {
+			button.buttonEl.remove();
+		});
+
+		// Clear map
+		this.customButtons.clear();
+
+		console.log("[FluentTopNavigation] Cleared all custom buttons");
 	}
 }

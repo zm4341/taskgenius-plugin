@@ -943,6 +943,10 @@ export class FluentTaskView extends ItemView {
 		this.addChild(this.componentManager);
 		this.componentManager.initializeViewComponents();
 
+		// Set TopNavigation reference in ComponentManager
+		this.componentManager.setTopNavigation(this.topNavigation);
+		console.log("[Task Genius] TopNavigation reference passed to ComponentManager");
+
 		// Sidebar toggle in header and responsive collapse
 		console.log("[Task Genius] Creating sidebar toggle");
 		this.layoutManager.createSidebarToggle();

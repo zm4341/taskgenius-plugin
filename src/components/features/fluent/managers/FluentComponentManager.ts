@@ -20,7 +20,7 @@ import { filterTasks } from "@/utils/task/task-filter-utils";
 import { RootFilterState } from "@/components/features/task/filter/ViewTaskFilter";
 import { QuickCaptureModal } from "@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch";
 import { t } from "@/translations/helper";
-import { ViewMode } from "../components/FluentTopNavigation";
+import { ViewMode, TopNavigation } from "../components/FluentTopNavigation";
 import { TaskSelectionManager } from "@/components/features/task/selection/TaskSelectionManager";
 
 type ManagedViewComponent = {
@@ -85,6 +85,9 @@ export class FluentComponentManager extends Component {
 	// Track currently visible component
 	private currentVisibleComponent: ManagedViewComponent | null = null;
 
+	// Top Navigation reference (for registering custom buttons)
+	private topNavigation: TopNavigation | null = null;
+
 	// View handlers
 	private viewHandlers: {
 		onTaskSelected: (task: Task) => void;
@@ -119,6 +122,14 @@ export class FluentComponentManager extends Component {
 	) {
 		super();
 		this.viewHandlers = viewHandlers;
+	}
+
+	/**
+	 * Set the TopNavigation reference for managing custom buttons
+	 */
+	public setTopNavigation(nav: TopNavigation): void {
+		this.topNavigation = nav;
+		console.log("[FluentComponentManager] TopNavigation reference set");
 	}
 
 	/**
@@ -447,6 +458,12 @@ export class FluentComponentManager extends Component {
 		console.log("[FluentComponent] Hiding all components");
 		this.hideAllComponents();
 
+		// Clear custom buttons from TopNavigation before switching views
+		// They will be re-registered by the new view if needed
+		if (this.topNavigation) {
+			this.topNavigation.clearCustomButtons();
+		}
+
 		// Check if current view supports multiple view modes and we're in a non-list mode
 		const viewModes = this.getAvailableModesForView(viewId, project);
 
@@ -588,6 +605,12 @@ export class FluentComponentManager extends Component {
 			targetComponent.containerEl.show();
 			this.currentVisibleComponent = targetComponent;
 
+			// Set TopNavigation reference for ContentComponent to enable custom buttons
+			if (targetComponent === this.contentComponent && this.topNavigation) {
+				console.log("[FluentComponent] Setting TopNavigation reference for ContentComponent");
+				this.contentComponent.setTopNavigation(this.topNavigation);
+			}
+
 			// Set view mode first for ContentComponent
 			if (typeof targetComponent.setViewMode === "function") {
 				console.log(
@@ -685,6 +708,11 @@ export class FluentComponentManager extends Component {
 		// Hide current component
 		this.hideAllComponents();
 
+		// Clear custom buttons before switching view modes
+		if (this.topNavigation) {
+			this.topNavigation.clearCustomButtons();
+		}
+
 		// Based on the current view mode, show the appropriate component
 		switch (viewMode) {
 			case "list":
@@ -693,6 +721,12 @@ export class FluentComponentManager extends Component {
 				if (!this.contentComponent) return;
 
 				this.contentComponent.containerEl.show();
+
+				// Set TopNavigation reference to enable custom buttons
+				if (this.topNavigation) {
+					this.contentComponent.setTopNavigation(this.topNavigation);
+				}
+
 				this.contentComponent.setViewMode(viewId as any);
 				this.contentComponent.setIsTreeView(viewMode === "tree");
 
