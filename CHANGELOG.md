@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
+## [9.10.2](https://github.com/Quorafind/Obsidian-Task-Genius/compare/9.10.1...9.10.2) (2025-11-14)
+
+### Refactors
+
+* improve error handling and status mark display ([37606e0](https://github.com/Quorafind/Obsidian-Task-Genius/commit/37606e0))
+
 ## [9.10.1](https://github.com/Quorafind/Obsidian-Task-Genius/compare/9.10.0...9.10.1) (2025-11-13)
 
 ### Bug Fixes
