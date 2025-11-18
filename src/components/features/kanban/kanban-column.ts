@@ -4,6 +4,7 @@ import { KanbanCardComponent } from "./kanban-card";
 import TaskProgressBarPlugin from "@/index"; // Adjust path
 import { QuickCaptureModal } from "@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch"; // Import QuickCaptureModal
 import { t } from "@/translations/helper"; // Import translation helper
+import { getTaskStatusConfig } from "@/utils/status-cycle-resolver";
 
 const BATCH_SIZE = 20; // Number of cards to load at a time
 
@@ -28,16 +29,16 @@ export class KanbanColumnComponent extends Component {
 		private params: {
 			onTaskStatusUpdate?: (
 				taskId: string,
-				newStatusMark: string
+				newStatusMark: string,
 			) => Promise<void>;
 			onTaskSelected?: (task: Task) => void;
 			onTaskCompleted?: (task: Task) => void;
 			onTaskContextMenu?: (ev: MouseEvent, task: Task) => void;
 			onFilterApply?: (
 				filterType: string,
-				value: string | number | string[]
+				value: string | number | string[],
 			) => void;
-		}
+		},
 	) {
 		super();
 	}
@@ -63,8 +64,8 @@ export class KanbanColumnComponent extends Component {
 			type: "checkbox",
 		});
 
-		const mark =
-			this.plugin.settings.taskStatusMarks[this.statusName] || " ";
+		const { marks } = getTaskStatusConfig(this.plugin.settings);
+		const mark = marks[this.statusName] || " ";
 		checkbox.dataset.task = mark;
 		// Only show the header checkbox as checked for the Completed column
 		const completedChars = (
@@ -113,19 +114,18 @@ export class KanbanColumnComponent extends Component {
 				el.createEl("span", {
 					text: t("Add Card"),
 				});
-			}
+			},
 		);
 		this.registerDomEvent(addCardButton, "click", () => {
 			// Get the status symbol for the current column
+			const { marks } = getTaskStatusConfig(this.plugin.settings);
 			const taskStatusSymbol =
-				this.plugin.settings.taskStatusMarks[this.statusName] ||
-				this.statusName ||
-				" ";
+				marks[this.statusName] || this.statusName || " ";
 			new QuickCaptureModal(
 				this.app,
 				this.plugin,
 				{ status: taskStatusSymbol },
-				true
+				true,
 			).open();
 		});
 		// --- End Add Card Button ---
@@ -165,7 +165,7 @@ export class KanbanColumnComponent extends Component {
 				this.plugin,
 				this.contentEl,
 				task,
-				this.params
+				this.params,
 			);
 			this.addChild(card); // Register for lifecycle
 			this.cards.push(card);
@@ -195,7 +195,7 @@ export class KanbanColumnComponent extends Component {
 			this.plugin,
 			this.contentEl,
 			task,
-			this.params
+			this.params,
 		);
 		this.addChild(card);
 		this.cards.push(card);
@@ -205,7 +205,7 @@ export class KanbanColumnComponent extends Component {
 	// Optional: Method to remove a card component
 	removeCard(taskId: string) {
 		const cardIndex = this.cards.findIndex(
-			(c) => c.getTask().id === taskId
+			(c) => c.getTask().id === taskId,
 		);
 		if (cardIndex > -1) {
 			const card = this.cards[cardIndex];

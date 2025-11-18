@@ -433,7 +433,7 @@
 .task-genius-settings:has(
 		.settings-tab-section-active:not([data-tab-id="general"])
 	)
-.settings-tabs-categorized-container {
+	.settings-tabs-categorized-container {
 	display: none;
 }
 
@@ -444,7 +444,7 @@
 
 /* Show legacy tabs when general tab is active (fallback behavior) */
 .task-genius-settings:has(.settings-tab-active[data-tab-id="general"])
-.settings-tabs-container {
+	.settings-tabs-container {
 	display: grid;
 }
 
@@ -456,7 +456,7 @@
 .task-genius-settings:has(
 		.settings-tab-section-active:not([data-tab-id="general"])
 	)
-.task-genius-settings-header {
+	.task-genius-settings-header {
 	display: none;
 }
 
@@ -1230,7 +1230,6 @@
 	flex: 1;
 }
 
-
 .view-edit-button,
 .view-copy-button,
 .view-order-button,
@@ -1294,7 +1293,8 @@
 		var(--accent-l),
 		0.5
 	);
-	border: 1px solid hsl(var(--accent-h), var(--accent-s), var(--accent-l), 0.5);
+	border: 1px solid
+		hsl(var(--accent-h), var(--accent-s), var(--accent-l), 0.5);
 	border-radius: var(--radius-m);
 	color: var(--text-on-accent);
 }
@@ -1598,3 +1598,355 @@
 	opacity: 0.55;
 	pointer-events: none;
 }
+
+/* ========================================
+   Multiple Status Cycles UI Styles
+   ======================================== */
+
+/* Container for all status cycles */
+.status-cycles-container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-3);
+	margin-top: var(--size-4-2);
+}
+
+/* Individual cycle card */
+.status-cycle-card {
+	background-color: var(--background-primary-alt);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	padding: var(--size-4-2);
+	transition: all 0.2s ease;
+}
+
+.status-cycle-card:hover {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Cycle card header */
+.status-cycle-header {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-3);
+	margin-bottom: var(--size-4-2);
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding-bottom: var(--size-2-3);
+}
+
+.status-cycle-card.collapsed .status-cycle-header {
+	margin-bottom: 0;
+	border-bottom: unset;
+}
+
+/* Collapse button */
+.status-cycle-collapse-button {
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: var(--text-muted);
+	user-select: none;
+	flex-shrink: 0;
+	transition: color 0.15s ease;
+}
+
+.status-cycle-collapse-button svg {
+	width: 16px;
+	height: 16px;
+}
+
+.status-cycle-collapse-button:hover {
+	color: var(--interactive-accent);
+}
+
+/* Up/Down buttons */
+.status-cycle-updown-buttons {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	flex-shrink: 0;
+}
+
+.status-cycle-button {
+	width: 18px;
+	height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: var(--text-muted);
+	user-select: none;
+	transition: color 0.15s ease;
+}
+
+.status-cycle-button svg {
+	width: 14px;
+	height: 14px;
+}
+
+.status-cycle-button:hover {
+	color: var(--interactive-accent);
+}
+
+.status-cycle-button.disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+/* Content-editable title */
+.status-cycle-title {
+	flex: 1;
+	font-weight: var(--font-weight-semibold);
+	font-size: var(--font-ui-medium);
+	padding: var(--size-2-1) var(--size-2-2);
+	border-radius: var(--radius-s);
+	outline: none;
+	transition: background-color 0.15s ease;
+	min-width: 0;
+}
+
+.status-cycle-title:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.status-cycle-title:focus {
+	background-color: var(--background-modifier-form-field);
+	box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.status-cycle-title:empty::before {
+	content: "Unnamed Cycle";
+	color: var(--text-muted);
+}
+
+/* Controls container */
+.status-cycle-controls {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	flex-shrink: 0;
+}
+
+.status-cycle-controls .setting-item {
+	border-bottom: none;
+	padding: 0;
+	margin: 0;
+}
+
+/* Cycle card body */
+.status-cycle-body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-3);
+	transition:
+		max-height 0.2s ease,
+		opacity 0.2s ease;
+}
+
+.status-cycle-body .setting-item {
+	padding: var(--size-2-2) 0;
+}
+
+/* Collapsed state */
+.status-cycle-card.collapsed .status-cycle-body {
+	display: none;
+}
+
+/* Status list container */
+.status-list-container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+	padding: var(--size-2-3);
+	background-color: var(--background-secondary);
+	border-radius: var(--radius-s);
+	margin-top: var(--size-2-2);
+}
+
+/* Individual status row */
+.status-row {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	padding: var(--size-2-1);
+	background-color: var(--background-primary);
+	border-radius: var(--radius-s);
+	border: 1px solid var(--background-modifier-border);
+	transition: border-color 0.15s ease;
+}
+
+.status-row:hover {
+	border-color: var(--interactive-hover);
+}
+
+.status-row .setting-item {
+	padding: 0;
+	border: none;
+	margin: 0;
+	flex: 1;
+}
+
+.status-row .setting-item-name {
+	min-width: 40px;
+	font-weight: var(--font-weight-medium);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.status-row .setting-item-control {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	flex: 1;
+}
+
+/* Status drag handle */
+.status-drag-handle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	min-height: 30px;
+	color: var(--text-muted);
+	cursor: grab;
+	user-select: none;
+	opacity: 0.4;
+	transition: all 0.15s ease;
+	flex-shrink: 0;
+	margin-right: var(--size-2-1);
+}
+
+.status-drag-handle svg {
+	width: 16px;
+	height: 16px;
+}
+
+.status-row:hover .status-drag-handle {
+	opacity: 0.7;
+}
+
+.status-drag-handle:hover {
+	opacity: 1 !important;
+	color: var(--interactive-accent);
+	transform: scale(1.1);
+}
+
+.status-drag-handle:active {
+	cursor: grabbing;
+	color: var(--interactive-accent);
+}
+
+/* Status drag states */
+.status-row-ghost {
+	opacity: 0.3;
+}
+
+.status-row-chosen {
+	opacity: 0.7;
+}
+
+.status-row-drag {
+	background-color: var(--background-primary);
+	border: 1px dashed var(--interactive-accent) !important;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Priority indicator */
+.status-cycle-header .setting-item-name::before {
+	content: "";
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: var(--interactive-accent);
+	margin-right: var(--size-2-1);
+}
+
+/* Disabled cycle styling */
+.status-cycle-card:has(
+	.setting-item-control .checkbox-container:not(.is-enabled)
+) {
+	opacity: 0.6;
+}
+
+.status-cycle-card:has(
+		.setting-item-control .checkbox-container:not(.is-enabled)
+	)
+	.status-cycle-body {
+	pointer-events: none;
+}
+
+/* Quick Templates Section */
+.status-cycles-container + .setting-item {
+	margin-top: var(--size-4-4);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	.status-row .setting-item-control {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.status-row input[type="text"] {
+		width: 100% !important;
+	}
+}
+
+/* Add button styling */
+.status-list-container .setting-item button,
+.status-cycles-container > .setting-item button {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	border-radius: var(--radius-s);
+	padding: var(--size-2-2) var(--size-4-2);
+	font-weight: var(--font-weight-medium);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.status-list-container .setting-item button:hover,
+.status-cycles-container > .setting-item button:hover {
+	background-color: var(--interactive-accent-hover);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Template buttons in quick templates section */
+.setting-item-control button[data-tooltip*="TODO"] {
+	background-color: var(--color-green);
+}
+
+.setting-item-control button[data-tooltip*="PLAN"] {
+	background-color: var(--color-blue);
+}
+
+.setting-item-control button[data-tooltip*="1"] {
+	background-color: var(--color-purple);
+}
+
+/* Extra button icons styling */
+.status-cycle-header .setting-item-control .clickable-icon {
+	color: var(--text-muted);
+	transition: color 0.15s ease;
+}
+
+.status-cycle-header .setting-item-control .clickable-icon:hover {
+	color: var(--interactive-accent);
+}
+
+.status-cycle-header
+	.setting-item-control
+	.clickable-icon[aria-label*="Delete"]:hover,
+.status-row .clickable-icon[aria-label*="Remove"]:hover {
+	color: var(--color-red);
+}
+
+/* Animation for cycle cards - removed per user request */
+/* Cycle drag functionality - removed, replaced with up/down buttons */

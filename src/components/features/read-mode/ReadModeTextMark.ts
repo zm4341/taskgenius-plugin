@@ -8,6 +8,7 @@ import {
 } from "obsidian";
 import { getTasksAPI } from "@/utils";
 import { parseTaskLine } from "@/utils/task/task-operations";
+import { getTaskStatusConfig } from "@/utils/status-cycle-resolver";
 
 // This component replaces standard checkboxes with custom text marks in reading view
 export function applyTaskTextMarks({
@@ -39,7 +40,7 @@ export function applyTaskTextMarks({
 
 		// Get the original checkbox
 		const checkbox = taskItem.querySelector(
-			".task-list-item-checkbox"
+			".task-list-item-checkbox",
 		) as HTMLInputElement;
 
 		if (!checkbox) continue;
@@ -62,7 +63,7 @@ class TaskTextMark extends Component {
 		private taskItem: HTMLElement,
 		private originalCheckbox: HTMLInputElement,
 		private currentMark: string,
-		private ctx: MarkdownPostProcessorContext
+		private ctx: MarkdownPostProcessorContext,
 	) {
 		super();
 	}
@@ -96,7 +97,7 @@ class TaskTextMark extends Component {
 			// Insert custom mark after the checkbox
 			this.originalCheckbox.parentElement?.insertBefore(
 				this.markContainerEl,
-				this.originalCheckbox.nextSibling
+				this.originalCheckbox.nextSibling,
 			);
 
 			// Register click handler for status cycling
@@ -108,13 +109,13 @@ class TaskTextMark extends Component {
 		} else {
 			// When custom marks are disabled, clone the checkbox for interaction
 			const newCheckbox = this.originalCheckbox.cloneNode(
-				true
+				true,
 			) as HTMLInputElement;
 
 			// Insert cloned checkbox
 			this.originalCheckbox.parentElement?.insertBefore(
 				newCheckbox,
-				this.originalCheckbox.nextSibling
+				this.originalCheckbox.nextSibling,
 			);
 
 			// Register click handler on the cloned checkbox
@@ -196,14 +197,13 @@ class TaskTextMark extends Component {
 		}
 
 		// Get cycle configuration from plugin settings
-		const cycle = this.plugin.settings.taskStatusCycle || [];
-		const marks = this.plugin.settings.taskStatusMarks || {};
-		const excludeMarksFromCycle =
-			this.plugin.settings.excludeMarksFromCycle || [];
+		const { cycle, marks, excludeMarksFromCycle } = getTaskStatusConfig(
+			this.plugin.settings,
+		);
 
 		// Filter out excluded marks
 		const remainingCycle = cycle.filter(
-			(state) => !excludeMarksFromCycle.includes(state)
+			(state) => !excludeMarksFromCycle.includes(state),
 		);
 
 		if (remainingCycle.length === 0) return;
@@ -211,7 +211,7 @@ class TaskTextMark extends Component {
 		// Find current state in cycle
 		let currentState =
 			Object.keys(marks).find(
-				(state) => marks[state] === this.currentMark
+				(state) => marks[state] === this.currentMark,
 			) || remainingCycle[0];
 
 		// Find next state in cycle
@@ -234,7 +234,7 @@ class TaskTextMark extends Component {
 				// Standard method using sectionInfo
 				// Get the relative line number from the taskItem's data-line attribute
 				const dataLine = parseInt(
-					this.taskItem.getAttribute("data-line") || "0"
+					this.taskItem.getAttribute("data-line") || "0",
 				);
 
 				// Calculate the actual line in the file by adding the relative line to section start
@@ -245,13 +245,13 @@ class TaskTextMark extends Component {
 				const dataLine = parseInt(
 					this.taskItem
 						.querySelector("input")
-						?.getAttribute("data-line") || "0"
+						?.getAttribute("data-line") || "0",
 				);
 
 				// Calculate actual line number by adding data-line to lines before callout
 				const contentBeforeCallout = content.substring(
 					0,
-					calloutInfo.start
+					calloutInfo.start,
 				);
 				const linesBefore = contentBeforeCallout.split("\n").length - 1;
 				actualLineIndex = linesBefore + dataLine;
@@ -264,7 +264,7 @@ class TaskTextMark extends Component {
 				// Use Tasks API to toggle the task
 				const updatedContent = tasksApi.executeToggleTaskDoneCommand(
 					taskLine,
-					file.path
+					file.path,
 				);
 
 				// Handle potential multi-line result (recurring tasks might create new lines)
@@ -290,13 +290,13 @@ class TaskTextMark extends Component {
 					// Remove completion date if switching from DONE state
 					updatedLine = updatedLine.replace(
 						/\s+✅\s+\d{4}-\d{2}-\d{2}/,
-						""
+						"",
 					);
 				}
 
 				updatedLine = updatedLine.replace(
 					/(\s*[-*+]\s*\[)(.)(])/,
-					`$1${nextMark}$3`
+					`$1${nextMark}$3`,
 				);
 
 				if (updatedLine !== taskLine) {
@@ -319,12 +319,12 @@ class TaskTextMark extends Component {
 					taskLine,
 					actualLineIndex,
 					this.plugin.settings.preferMetadataFormat,
-					this.plugin // Pass plugin for configurable prefix support
+					this.plugin, // Pass plugin for configurable prefix support
 				);
 				task &&
 					this.plugin.app.workspace.trigger(
 						"task-genius:task-completed",
-						task
+						task,
 					);
 			}
 
@@ -333,12 +333,11 @@ class TaskTextMark extends Component {
 	}
 
 	getTaskStatusFromMark(mark: string): string | null {
-		const cycle = this.plugin.settings.taskStatusCycle;
-		const marks = this.plugin.settings.taskStatusMarks;
-		const excludeMarksFromCycle =
-			this.plugin.settings.excludeMarksFromCycle || [];
+		const { cycle, marks, excludeMarksFromCycle } = getTaskStatusConfig(
+			this.plugin.settings,
+		);
 		const remainingCycle = cycle.filter(
-			(state) => !excludeMarksFromCycle.includes(state)
+			(state) => !excludeMarksFromCycle.includes(state),
 		);
 
 		if (remainingCycle.length === 0) return null;

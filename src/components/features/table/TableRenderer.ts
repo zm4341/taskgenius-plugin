@@ -4,9 +4,17 @@ import { TableSpecificConfig } from "../../../common/setting-definition";
 import { t } from "@/translations/helper";
 import { DatePickerPopover } from "@/components/ui/date-picker/DatePickerPopover";
 import type TaskProgressBarPlugin from "@/index";
-import { ContextSuggest, ProjectSuggest, TagSuggest } from "@/components/ui/inputs/AutoComplete";
+import {
+	ContextSuggest,
+	ProjectSuggest,
+	TagSuggest,
+} from "@/components/ui/inputs/AutoComplete";
 import { clearAllMarks } from "@/components/ui/renderers/MarkdownRenderer";
-import { getEffectiveProject, isProjectReadonly } from "@/utils/task/task-operations";
+import {
+	getEffectiveProject,
+	isProjectReadonly,
+} from "@/utils/task/task-operations";
+import { getAllStatusMarks } from "@/utils/status-cycle-resolver";
 
 // Cache for autocomplete data to avoid repeated expensive operations
 interface AutoCompleteCache {
@@ -43,7 +51,7 @@ export class TableRenderer extends Component {
 	public onDateChange?: (
 		rowId: string,
 		columnId: string,
-		newDate: string | null
+		newDate: string | null,
 	) => void;
 
 	// Callback for row expansion
@@ -53,7 +61,7 @@ export class TableRenderer extends Component {
 	public onCellChange?: (
 		rowId: string,
 		columnId: string,
-		newValue: any
+		newValue: any,
 	) => void;
 
 	constructor(
@@ -63,7 +71,7 @@ export class TableRenderer extends Component {
 		private columns: TableColumn[],
 		private config: TableSpecificConfig,
 		private app: App,
-		private plugin: TaskProgressBarPlugin
+		private plugin: TaskProgressBarPlugin,
 	) {
 		super();
 	}
@@ -107,33 +115,37 @@ export class TableRenderer extends Component {
 		) {
 			// Fetch fresh data
 			const tags = Object.keys(
-				this.plugin.app.metadataCache.getTags() || {}
+				this.plugin.app.metadataCache.getTags() || {},
 			).map(
-				(tag) => tag.substring(1) // Remove # prefix
+				(tag) => tag.substring(1), // Remove # prefix
 			);
 
 			// Get projects and contexts from dataflow
 			let projects: string[] = [];
 			let contexts: string[] = [];
-			
+
 			if (this.plugin.dataflowOrchestrator) {
 				try {
-					const queryAPI = this.plugin.dataflowOrchestrator.getQueryAPI();
+					const queryAPI =
+						this.plugin.dataflowOrchestrator.getQueryAPI();
 					const allTasks = await queryAPI.getAllTasks();
-					
+
 					// Extract unique projects and contexts from tasks
 					const projectSet = new Set<string>();
 					const contextSet = new Set<string>();
-					
+
 					allTasks.forEach((task: any) => {
 						if (task.project) projectSet.add(task.project);
 						if (task.context) contextSet.add(task.context);
 					});
-					
+
 					projects = Array.from(projectSet).sort();
 					contexts = Array.from(contextSet).sort();
 				} catch (error) {
-					console.warn("Failed to get projects/contexts from dataflow:", error);
+					console.warn(
+						"Failed to get projects/contexts from dataflow:",
+						error,
+					);
 				}
 			}
 
@@ -153,7 +165,7 @@ export class TableRenderer extends Component {
 	 */
 	private async setupAutoComplete(
 		input: HTMLInputElement,
-		type: "tags" | "project" | "context"
+		type: "tags" | "project" | "context",
 	): Promise<void> {
 		// Check if this input already has a suggest
 		if (this.activeSuggests.has(input)) {
@@ -227,7 +239,7 @@ export class TableRenderer extends Component {
 
 			// Add column title
 			const titleSpan = headerContent.createSpan(
-				"task-table-header-title"
+				"task-table-header-title",
 			);
 			titleSpan.textContent = column.title;
 
@@ -235,7 +247,7 @@ export class TableRenderer extends Component {
 			if (column.sortable) {
 				th.addClass("sortable");
 				const sortIcon = headerContent.createSpan(
-					"task-table-sort-icon"
+					"task-table-sort-icon",
 				);
 				setIcon(sortIcon, "chevrons-up-down");
 			}
@@ -262,7 +274,7 @@ export class TableRenderer extends Component {
 		rows: TableRow[],
 		selectedRows: Set<string>,
 		startIndex: number = 0,
-		totalRows?: number
+		totalRows?: number,
 	) {
 		// Always clear empty state first if it exists
 		this.clearEmptyState();
@@ -279,7 +291,7 @@ export class TableRenderer extends Component {
 		// Track which row IDs are currently needed
 		const neededRowIds = new Set(rows.map((row) => row.id));
 		const currentRowElements = Array.from(
-			this.bodyEl.querySelectorAll("tr[data-row-id]")
+			this.bodyEl.querySelectorAll("tr[data-row-id]"),
 		);
 
 		// Step 1: Remove rows that are no longer needed
@@ -305,7 +317,7 @@ export class TableRenderer extends Component {
 
 		// Step 2: Build a map of current DOM positions
 		const spacerElement = this.bodyEl.querySelector(
-			".virtual-scroll-spacer-top"
+			".virtual-scroll-spacer-top",
 		);
 		const targetPosition = spacerElement ? 1 : 0; // Position after spacer
 
@@ -330,7 +342,7 @@ export class TableRenderer extends Component {
 
 				// Check if row needs repositioning
 				const currentIndex = Array.from(this.bodyEl.children).indexOf(
-					rowEl
+					rowEl,
 				);
 				if (currentIndex !== targetIndex) {
 					rowsToInsert.push({ element: rowEl, index: targetIndex });
@@ -362,7 +374,7 @@ export class TableRenderer extends Component {
 	private shouldUpdateRow(
 		rowEl: HTMLTableRowElement,
 		row: TableRow,
-		isSelected: boolean
+		isSelected: boolean,
 	): boolean {
 		// Quick checks first
 		const currentRowId = rowEl.dataset.rowId;
@@ -473,7 +485,7 @@ export class TableRenderer extends Component {
 	private updateRow(
 		rowEl: HTMLTableRowElement,
 		row: TableRow,
-		isSelected: boolean
+		isSelected: boolean,
 	) {
 		// Clean up previous events for this row
 		this.cleanupRowEvents(rowEl);
@@ -522,7 +534,7 @@ export class TableRenderer extends Component {
 			// Set cell width and styles efficiently
 			td.style.cssText = `width:${column.width}px;min-width:${Math.min(
 				column.width,
-				50
+				50,
 			)}px;${column.align ? `text-align:${column.align};` : ""}`;
 
 			// Apply subtask styling if needed
@@ -591,7 +603,7 @@ export class TableRenderer extends Component {
 	private clearVirtualSpacers() {
 		// Use more efficient selector and removal
 		const spacers = this.bodyEl.querySelectorAll(
-			".virtual-scroll-spacer-top, .virtual-scroll-spacer-bottom"
+			".virtual-scroll-spacer-top, .virtual-scroll-spacer-bottom",
 		);
 		spacers.forEach((spacer) => spacer.remove());
 	}
@@ -621,7 +633,7 @@ export class TableRenderer extends Component {
 
 		// Also clean up child elements - but limit depth for performance
 		const childElements = element.querySelectorAll(
-			"input, button, [data-cleanup]"
+			"input, button, [data-cleanup]",
 		);
 		childElements.forEach((child) => {
 			const childCleanup = this.eventCleanupMap.get(child as HTMLElement);
@@ -639,7 +651,7 @@ export class TableRenderer extends Component {
 		el: HTMLElement | Document | Window,
 		type: K,
 		callback: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-		options?: boolean | AddEventListenerOptions
+		options?: boolean | AddEventListenerOptions,
 	): void {
 		// Call the appropriate overload based on the element type
 		if (el instanceof Window) {
@@ -666,7 +678,7 @@ export class TableRenderer extends Component {
 		cellEl: HTMLElement,
 		row: TableRow,
 		cell: TableCell,
-		column: TableColumn
+		column: TableColumn,
 	) {
 		const treeContainer = cellEl.createDiv("task-table-tree-container");
 
@@ -674,12 +686,12 @@ export class TableRenderer extends Component {
 			// Add expand/collapse button for parent rows
 			if (row.hasChildren) {
 				const expandBtn = treeContainer.createSpan(
-					"task-table-expand-btn"
+					"task-table-expand-btn",
 				);
 				expandBtn.addClass("clickable-icon");
 				setIcon(
 					expandBtn,
-					row.expanded ? "chevron-down" : "chevron-right"
+					row.expanded ? "chevron-down" : "chevron-right",
 				);
 				this.registerDomEvent(expandBtn, "click", (e) => {
 					e.stopPropagation();
@@ -704,7 +716,7 @@ export class TableRenderer extends Component {
 
 		// Create content wrapper
 		const contentWrapper = treeContainer.createDiv(
-			"task-table-content-wrapper"
+			"task-table-content-wrapper",
 		);
 
 		// Render the actual cell content
@@ -718,7 +730,7 @@ export class TableRenderer extends Component {
 		cellEl: HTMLElement,
 		cell: TableCell,
 		column: TableColumn,
-		row?: TableRow
+		row?: TableRow,
 	) {
 		cellEl.empty();
 
@@ -801,22 +813,11 @@ export class TableRenderer extends Component {
 
 		const menu = new Menu();
 
-		// Get unique statuses from taskStatusMarks
-		const statusMarks = this.plugin.settings.taskStatusMarks;
-		const uniqueStatuses = new Map<string, string>();
+		// Get unique statuses from configuration (mark -> status)
+		const uniqueStatuses = getAllStatusMarks(this.plugin.settings);
 
-		// Build a map of unique mark -> status name to avoid duplicates
-		for (const status of Object.keys(statusMarks)) {
-			const mark = statusMarks[status];
-			// If this mark is not already in the map, add it
-			// This ensures each mark appears only once in the menu
-			if (!Array.from(uniqueStatuses.values()).includes(mark)) {
-				uniqueStatuses.set(status, mark);
-			}
-		}
-
-		// Create menu items from unique statuses
-		for (const [status, mark] of uniqueStatuses) {
+		// Create menu items from unique statuses (getAllStatusMarks returns mark -> status)
+		for (const [mark, status] of uniqueStatuses) {
 			menu.addItem((item) => {
 				item.titleEl.createEl(
 					"span",
@@ -832,7 +833,7 @@ export class TableRenderer extends Component {
 						if (mark !== " ") {
 							checkbox.checked = true;
 						}
-					}
+					},
 				);
 				item.titleEl.createEl("span", {
 					cls: "status-option",
@@ -864,12 +865,12 @@ export class TableRenderer extends Component {
 		if (priority) {
 			// Add priority icon
 			const priorityIcon = priorityContainer.createSpan(
-				"task-table-priority-icon"
+				"task-table-priority-icon",
 			);
 
 			// Add priority text with emoji and label
 			const priorityText = priorityContainer.createSpan(
-				"task-table-priority-text"
+				"task-table-priority-text",
 			);
 
 			// Update priority icons and text according to 5-level system
@@ -897,7 +898,7 @@ export class TableRenderer extends Component {
 		} else {
 			// Empty priority cell
 			const emptyText = priorityContainer.createSpan(
-				"task-table-priority-empty"
+				"task-table-priority-empty",
 			);
 			emptyText.textContent = "\u00A0"; // Non-breaking space for invisible whitespace
 			emptyText.addClass("empty-priority");
@@ -1007,7 +1008,7 @@ export class TableRenderer extends Component {
 			now.setHours(0, 0, 0, 0); // Zero out time for consistent comparison
 
 			const diffDays = Math.floor(
-				(date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+				(date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
 			);
 
 			// Add date text
@@ -1016,7 +1017,7 @@ export class TableRenderer extends Component {
 
 			// Add relative indicator
 			const relativeIndicator = dateContainer.createSpan(
-				"task-table-date-relative"
+				"task-table-date-relative",
 			);
 			if (diffDays === 0) {
 				relativeIndicator.textContent = t("Today");
@@ -1079,7 +1080,7 @@ export class TableRenderer extends Component {
 		const popover = new DatePickerPopover(
 			this.app,
 			this.plugin,
-			currentDate
+			currentDate,
 		);
 
 		popover.onDateSelected = (dateStr: string | null) => {
@@ -1107,7 +1108,7 @@ export class TableRenderer extends Component {
 			// Create editable input for tags
 			const input = tagsContainer.createEl(
 				"input",
-				"task-table-tags-input"
+				"task-table-tags-input",
 			);
 			input.type = "text";
 			const initialValue = tags?.join(", ") || "";
@@ -1189,7 +1190,7 @@ export class TableRenderer extends Component {
 	private renderTextCell(
 		cellEl: HTMLElement,
 		cell: TableCell,
-		row?: TableRow
+		row?: TableRow,
 	) {
 		cellEl.addClass("task-table-text");
 
@@ -1208,7 +1209,7 @@ export class TableRenderer extends Component {
 			isReadonly = isProjectReadonly(row.task);
 		} else if (isContentColumn) {
 			displayText = clearAllMarks(
-				(cell.value as string) || cell.displayValue
+				(cell.value as string) || cell.displayValue,
 			);
 			effectiveValue = displayText;
 		} else {
@@ -1281,7 +1282,7 @@ export class TableRenderer extends Component {
 				this.registerDomEvent(cellEl, "click", (e) => {
 					e.stopPropagation();
 					const file = this.plugin.app.vault.getFileByPath(
-						cell.value as string
+						cell.value as string,
 					);
 					if (file) {
 						this.plugin.app.workspace.getLeaf(true).openFile(file);
@@ -1295,7 +1296,9 @@ export class TableRenderer extends Component {
 		if (
 			isProjectColumn &&
 			row?.task?.metadata?.tgProject &&
-			(!row.task.metadata.project || typeof row.task.metadata.project !== 'string' || !row.task.metadata.project.trim())
+			(!row.task.metadata.project ||
+				typeof row.task.metadata.project !== "string" ||
+				!row.task.metadata.project.trim())
 		) {
 			const tgProject = row.task.metadata.tgProject;
 			const indicator = cellEl.createDiv({
@@ -1376,7 +1379,7 @@ export class TableRenderer extends Component {
 	public updateSortIndicators(sortField: string, sortOrder: "asc" | "desc") {
 		// Clear all sort indicators
 		const sortIcons = this.headerEl.querySelectorAll(
-			".task-table-sort-icon"
+			".task-table-sort-icon",
 		);
 		sortIcons.forEach((icon) => {
 			icon.empty();
@@ -1386,17 +1389,17 @@ export class TableRenderer extends Component {
 
 		// Set active sort indicator
 		const activeHeader = this.headerEl.querySelector(
-			`th[data-column-id="${sortField}"]`
+			`th[data-column-id="${sortField}"]`,
 		);
 		if (activeHeader) {
 			const sortIcon = activeHeader.querySelector(
-				".task-table-sort-icon"
+				".task-table-sort-icon",
 			);
 			if (sortIcon) {
 				sortIcon.empty();
 				setIcon(
 					sortIcon as HTMLElement,
-					sortOrder === "asc" ? "chevron-up" : "chevron-down"
+					sortOrder === "asc" ? "chevron-up" : "chevron-down",
 				);
 				sortIcon.addClass(sortOrder);
 			}
@@ -1410,12 +1413,12 @@ export class TableRenderer extends Component {
 		this.registerDomEvent(
 			document,
 			"mousemove",
-			this.handleMouseMove.bind(this)
+			this.handleMouseMove.bind(this),
 		);
 		this.registerDomEvent(
 			document,
 			"mouseup",
-			this.handleMouseUp.bind(this)
+			this.handleMouseUp.bind(this),
 		);
 	}
 
@@ -1438,7 +1441,7 @@ export class TableRenderer extends Component {
 	private startResize(
 		event: MouseEvent,
 		columnId: string,
-		currentWidth: number
+		currentWidth: number,
 	) {
 		event.preventDefault();
 		event.stopPropagation(); // Prevent triggering sort
@@ -1469,7 +1472,7 @@ export class TableRenderer extends Component {
 	private updateColumnWidth(columnId: string, newWidth: number) {
 		// Update header
 		const headerCell = this.headerEl.querySelector(
-			`th[data-column-id="${columnId}"]`
+			`th[data-column-id="${columnId}"]`,
 		) as HTMLElement;
 		if (headerCell) {
 			headerCell.style.width = `${newWidth}px`;
@@ -1478,7 +1481,7 @@ export class TableRenderer extends Component {
 
 		// Update body cells
 		const bodyCells = this.bodyEl.querySelectorAll(
-			`td[data-column-id="${columnId}"]`
+			`td[data-column-id="${columnId}"]`,
 		);
 		bodyCells.forEach((cell) => {
 			const cellEl = cell as HTMLElement;
@@ -1574,12 +1577,20 @@ export class TableRenderer extends Component {
 					});
 					break;
 				case "project":
-					if (task.metadata.project && typeof task.metadata.project === 'string' && task.metadata.project.trim()) {
+					if (
+						task.metadata.project &&
+						typeof task.metadata.project === "string" &&
+						task.metadata.project.trim()
+					) {
 						values.add(task.metadata.project);
 					}
 					break;
 				case "context":
-					if (task.metadata.context && typeof task.metadata.context === 'string' && task.metadata.context.trim()) {
+					if (
+						task.metadata.context &&
+						typeof task.metadata.context === "string" &&
+						task.metadata.context.trim()
+					) {
 						values.add(task.metadata.context);
 					}
 					break;
@@ -1631,11 +1642,11 @@ export class TableRenderer extends Component {
 	 */
 	private ensureTreeStateConsistency(
 		rowEl: HTMLTableRowElement,
-		row: TableRow
+		row: TableRow,
 	) {
 		// Find the expansion button in the row
 		const expandBtn = rowEl.querySelector(
-			".task-table-expand-btn"
+			".task-table-expand-btn",
 		) as HTMLElement;
 
 		if (expandBtn && row.hasChildren) {
@@ -1655,8 +1666,8 @@ export class TableRenderer extends Component {
 					? t("Collapse")
 					: t("Collapse subtasks")
 				: row.level > 0
-				? t("Expand")
-				: t("Expand subtasks");
+					? t("Expand")
+					: t("Expand subtasks");
 		}
 	}
 }

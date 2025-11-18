@@ -9,6 +9,7 @@ import {
 	DEFAULT_SETTINGS,
 } from "../common/setting-definition";
 import { t } from "../translations/helper";
+import { getTaskStatusConfig } from "../utils/status-cycle-resolver";
 
 // Task statuses (aligned with common usage and sorting needs)
 export enum SortableTaskStatus {
@@ -70,7 +71,7 @@ export function parseTasksForSorting(
 	lineOffset: number = 0,
 	filePath: string, // Added filePath
 	format: MetadataFormat, // Added format
-	plugin?: TaskProgressBarPlugin // Added plugin for configurable prefix support
+	plugin?: TaskProgressBarPlugin, // Added plugin for configurable prefix support
 ): SortableTask[] {
 	const lines = blockText.split("\n");
 	const tasks: SortableTask[] = [];
@@ -88,7 +89,7 @@ export function parseTasksForSorting(
 			line,
 			lineNumber + 1,
 			format,
-			plugin // Pass plugin for configurable prefix support
+			plugin, // Pass plugin for configurable prefix support
 		); // Pass 1-based line number
 
 		if (parsedTask) {
@@ -112,7 +113,7 @@ export function parseTasksForSorting(
 			} else {
 				// Ensure the original status maps to the enum if possible
 				calculatedStatus = Object.values(SortableTaskStatus).includes(
-					parsedTask.status as SortableTaskStatus
+					parsedTask.status as SortableTaskStatus,
 				)
 					? (parsedTask.status as SortableTaskStatus)
 					: parsedTask.status;
@@ -188,14 +189,16 @@ function getDynamicStatusOrder(settings: TaskProgressBarSettings): {
 	// order[SortableTaskStatus.DueSoon] = currentOrder++;
 
 	// --- Statuses from Cycle ---
-	const cycle = settings.taskStatusCycle || [];
-	const marks = settings.taskStatusMarks || {};
-	const exclude = settings.excludeMarksFromCycle || [];
+	const {
+		cycle,
+		marks,
+		excludeMarksFromCycle: exclude,
+	} = getTaskStatusConfig(settings);
 	const completedMarkers = (settings.taskStatuses?.completed || "x|X").split(
-		"|"
+		"|",
 	);
 	const cancelledMarkers = (settings.taskStatuses?.abandoned || "-").split(
-		"|"
+		"|",
 	); // Example: Use abandoned as cancelled
 
 	const includedInCycle: string[] = [];
@@ -284,12 +287,12 @@ function compareTasks<
 		line?: number;
 		lineNumber?: number;
 		metadata?: Record<string, any>;
-	}
+	},
 >(
 	taskA: T,
 	taskB: T,
 	criteria: SortCriterion[],
-	statusOrder: { [key: string]: number }
+	statusOrder: { [key: string]: number },
 ): number {
 	// Helper to read field from top-level or metadata fallback
 	const getField = (obj: any, field: string) => {
@@ -311,8 +314,10 @@ function compareTasks<
 		status: (a: T, b: T, order: "asc" | "desc") => {
 			// Status comparison logic (relies on statusOrder having numbers)
 			// 使用calculatedStatus优先，如果没有则使用status
-			const statusA = (a as any).calculatedStatus || (a as any).status || "";
-			const statusB = (b as any).calculatedStatus || (b as any).status || "";
+			const statusA =
+				(a as any).calculatedStatus || (a as any).status || "";
+			const statusB =
+				(b as any).calculatedStatus || (b as any).status || "";
 
 			const valA = statusOrder[statusA] ?? 1000; // Assign a high number for unknown statuses
 			const valB = statusOrder[statusB] ?? 1000;
@@ -323,7 +328,7 @@ function compareTasks<
 			} else {
 				// Fallback if statusOrder contains non-numbers (shouldn't happen ideally)
 				console.warn(
-					`Non-numeric status order values detected: ${valA}, ${valB}`
+					`Non-numeric status order values detected: ${valA}, ${valB}`,
 				);
 				return 0; // Treat as equal if non-numeric
 			}
@@ -348,8 +353,10 @@ function compareTasks<
 			// Priority comparison: higher number means higher priority (1=Lowest, 5=Highest)
 			const valA = getField(a, "priority");
 			const valB = getField(b, "priority");
-			const aHasPriority = valA !== undefined && valA !== null && valA > 0;
-			const bHasPriority = valB !== undefined && valB !== null && valB > 0;
+			const aHasPriority =
+				valA !== undefined && valA !== null && valA > 0;
+			const bHasPriority =
+				valB !== undefined && valB !== null && valB > 0;
 
 			// Handle null/empty values - empty values should always go to the end
 			if (!aHasPriority && !bHasPriority) {
@@ -427,10 +434,10 @@ function compareTasks<
 		},
 
 		project: (a: T, b: T, order: "asc" | "desc") => {
-			const projectA = (getField(a, "project") as string | undefined)
-				?.trim() || null;
-			const projectB = (getField(b, "project") as string | undefined)
-				?.trim() || null;
+			const projectA =
+				(getField(a, "project") as string | undefined)?.trim() || null;
+			const projectB =
+				(getField(b, "project") as string | undefined)?.trim() || null;
 
 			// Handle null/empty values - empty values should always go to the end
 			if (!projectA && !projectB) return 0;
@@ -442,10 +449,10 @@ function compareTasks<
 		},
 
 		context: (a: T, b: T, order: "asc" | "desc") => {
-			const contextA = (getField(a, "context") as string | undefined)
-				?.trim() || null;
-			const contextB = (getField(b, "context") as string | undefined)
-				?.trim() || null;
+			const contextA =
+				(getField(a, "context") as string | undefined)?.trim() || null;
+			const contextB =
+				(getField(b, "context") as string | undefined)?.trim() || null;
 
 			// Handle null/empty values - empty values should always go to the end
 			if (!contextA && !contextB) return 0;
@@ -457,10 +464,12 @@ function compareTasks<
 		},
 
 		recurrence: (a: T, b: T, order: "asc" | "desc") => {
-			const recurrenceA = (getField(a, "recurrence") as string | undefined)
-				?.trim() || null;
-			const recurrenceB = (getField(b, "recurrence") as string | undefined)
-				?.trim() || null;
+			const recurrenceA =
+				(getField(a, "recurrence") as string | undefined)?.trim() ||
+				null;
+			const recurrenceB =
+				(getField(b, "recurrence") as string | undefined)?.trim() ||
+				null;
 
 			// Handle null/empty values - empty values should always go to the end
 			if (!recurrenceA && !recurrenceB) return 0;
@@ -499,7 +508,7 @@ function compareTasks<
 			| "completedDate",
 		a: T,
 		b: T,
-		order: "asc" | "desc"
+		order: "asc" | "desc",
 	): number {
 		const valA = getField(a, field);
 		const valB = getField(b, field);
@@ -562,13 +571,21 @@ function compareTasks<
 	if (filePathA !== filePathB) {
 		return filePathA.localeCompare(filePathB);
 	}
-	if ((taskA as any).line !== undefined && (taskB as any).line !== undefined) {
-		return ((taskA as any).line as number) - ((taskB as any).line as number);
+	if (
+		(taskA as any).line !== undefined &&
+		(taskB as any).line !== undefined
+	) {
+		return (
+			((taskA as any).line as number) - ((taskB as any).line as number)
+		);
 	} else if (
 		(taskA as any).lineNumber !== undefined &&
 		(taskB as any).lineNumber !== undefined
 	) {
-		return ((taskA as any).lineNumber as number) - ((taskB as any).lineNumber as number);
+		return (
+			((taskA as any).lineNumber as number) -
+			((taskB as any).lineNumber as number)
+		);
 	}
 	// Final fallback on id for deterministic order
 	const idA = (taskA as any).id ?? "";
@@ -579,7 +596,7 @@ function compareTasks<
 
 // Find continuous task blocks (including subtasks)
 export function findContinuousTaskBlocks(
-	tasks: SortableTask[]
+	tasks: SortableTask[],
 ): SortableTask[][] {
 	if (tasks.length === 0) return [];
 
@@ -650,11 +667,11 @@ export function sortTasks<
 		filePath?: string;
 		line?: number;
 		children?: any[]; // Accept any children type
-	}
+	},
 >(
 	tasks: T[],
 	criteria: SortCriterion[],
-	settings: TaskProgressBarSettings
+	settings: TaskProgressBarSettings,
 ): T[] {
 	const statusOrder = getDynamicStatusOrder(settings);
 
@@ -679,7 +696,7 @@ export function sortTasks<
 function sortTasksRecursively(
 	tasks: SortableTask[],
 	criteria: SortCriterion[],
-	settings: TaskProgressBarSettings
+	settings: TaskProgressBarSettings,
 ): SortableTask[] {
 	const statusOrder = getDynamicStatusOrder(settings);
 	// Sort tasks at the current level
@@ -692,7 +709,7 @@ function sortTasksRecursively(
 			task.children = sortTasksRecursively(
 				task.children,
 				criteria,
-				settings
+				settings,
 			);
 		}
 	}
@@ -704,7 +721,7 @@ function sortTasksRecursively(
 export function sortTasksInDocument(
 	view: EditorView,
 	plugin: TaskProgressBarPlugin,
-	fullDocument: boolean = false
+	fullDocument: boolean = false,
 ): string | null {
 	const app = plugin.app;
 	const activeFile = app.workspace.getActiveFile(); // Assume command runs on active file
@@ -728,8 +745,8 @@ export function sortTasksInDocument(
 	if (!settings.sortTasks || !sortCriteria || sortCriteria.length === 0) {
 		new Notice(
 			t(
-				"Task sorting is disabled or no sort criteria are defined in settings."
-			)
+				"Task sorting is disabled or no sort criteria are defined in settings.",
+			),
 		);
 		return null; // Exit if sorting is disabled or no criteria
 	}
@@ -794,7 +811,7 @@ export function sortTasksInDocument(
 	}
 	const originalBlockText = doc.sliceString(
 		fromOffsetOriginal,
-		toOffsetOriginal
+		toOffsetOriginal,
 	);
 
 	// 1. Parse tasks *using the new function*, providing offset, path, and format
@@ -803,7 +820,7 @@ export function sortTasksInDocument(
 		startLine,
 		filePath,
 		metadataFormat, // Pass determined format
-		plugin // Pass plugin for configurable prefix support
+		plugin, // Pass plugin for configurable prefix support
 	);
 	if (blockTasks.length === 0) {
 		const noticeMsg = `Sort Tasks: No tasks found in the ${scopeMessage} (Lines ${
@@ -823,7 +840,7 @@ export function sortTasksInDocument(
 		taskBlocks[i] = sortTasksRecursively(
 			taskBlocks[i],
 			sortCriteria, // Use criteria from settings
-			settings
+			settings,
 		);
 	}
 

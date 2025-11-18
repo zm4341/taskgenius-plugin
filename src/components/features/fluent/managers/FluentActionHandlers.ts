@@ -16,6 +16,12 @@ import {
 } from "@/utils/dateOperations";
 import { t } from "@/translations/helper";
 import { ViewMode } from "../components/FluentTopNavigation";
+import {
+	findApplicableCycles,
+	getAllStatusNames,
+	getNextStatusPrimary,
+	getAllStatusMarks,
+} from "@/utils/status-cycle-resolver";
 
 /**
  * FluentActionHandlers - Handles all user actions and task operations
@@ -50,7 +56,7 @@ export class FluentActionHandlers extends Component {
 		private app: App,
 		private plugin: TaskProgressBarPlugin,
 		private getWorkspaceId: () => string,
-		private useSideLeaves: () => boolean
+		private useSideLeaves: () => boolean,
 	) {
 		super();
 	}
@@ -167,7 +173,7 @@ export class FluentActionHandlers extends Component {
 	async handleTaskUpdate(
 		originalTask: Task,
 		updatedTask: Task,
-		successMessage?: string
+		successMessage?: string,
 	): Promise<void> {
 		if (!this.plugin.writeAPI) {
 			console.error("WriteAPI not available");
@@ -177,7 +183,7 @@ export class FluentActionHandlers extends Component {
 		try {
 			const updates = this.extractChangedFields(
 				originalTask,
-				updatedTask
+				updatedTask,
 			);
 			const writeResult = await this.plugin.writeAPI.updateTask({
 				taskId: originalTask.id,
@@ -205,13 +211,13 @@ export class FluentActionHandlers extends Component {
 	 */
 	async handleKanbanTaskStatusUpdate(
 		task: Task,
-		newStatusMark: string
+		newStatusMark: string,
 	): Promise<void> {
 		console.log(
-			`[FluentActionHandlers] Processing kanban status update for task ${task.id}`
+			`[FluentActionHandlers] Processing kanban status update for task ${task.id}`,
 		);
 		console.log(
-			`[FluentActionHandlers] Status change: ${task.status} -> ${newStatusMark}`
+			`[FluentActionHandlers] Status change: ${task.status} -> ${newStatusMark}`,
 		);
 
 		const isCompleted = this.isCompletedMark(newStatusMark);
@@ -219,7 +225,7 @@ export class FluentActionHandlers extends Component {
 
 		if (task.status !== newStatusMark || task.completed !== isCompleted) {
 			console.log(
-				"[FluentActionHandlers] Status change detected, calling handleTaskUpdate..."
+				"[FluentActionHandlers] Status change detected, calling handleTaskUpdate...",
 			);
 			await this.handleTaskUpdate(task, {
 				...task,
@@ -233,7 +239,7 @@ export class FluentActionHandlers extends Component {
 			console.log("[FluentActionHandlers] handleTaskUpdate completed");
 		} else {
 			console.log(
-				"[FluentActionHandlers] No status change needed, skipping update"
+				"[FluentActionHandlers] No status change needed, skipping update",
 			);
 		}
 	}
@@ -257,51 +263,175 @@ export class FluentActionHandlers extends Component {
 			item.setTitle(t("Switch status"));
 			const submenu = item.setSubmenu();
 
-			// Get unique statuses from taskStatusMarks
-			const statusMarks = this.plugin.settings.taskStatusMarks;
-			const uniqueStatuses = new Map<string, string>();
+			// Check if multi-cycle is enabled
+			if (
+				this.plugin.settings.statusCycles &&
+				this.plugin.settings.statusCycles.length > 0
+			) {
+				// Multi-cycle mode: show applicable cycles first
+				const currentMark = task.status || " ";
+				const applicableCycles = findApplicableCycles(
+					currentMark,
+					this.plugin.settings.statusCycles,
+				);
 
-			// Build a map of unique mark -> status name to avoid duplicates
-			for (const status of Object.keys(statusMarks)) {
-				const mark = statusMarks[status as keyof typeof statusMarks];
-				if (!Array.from(uniqueStatuses.values()).includes(mark)) {
-					uniqueStatuses.set(status, mark);
+				if (applicableCycles.length > 0) {
+					// Show cycle options
+					submenu.addItem((subItem) => {
+						subItem.setTitle(t("Cycle to next:"));
+						subItem.setDisabled(true);
+					});
+
+					for (const cycle of applicableCycles) {
+						const nextStatusResult = getNextStatusPrimary(
+							currentMark,
+							[cycle],
+						);
+						if (nextStatusResult) {
+							submenu.addItem((subItem) => {
+								const priorityIndicator =
+									cycle.priority === 0 ? "★ " : "";
+								subItem.titleEl.createEl(
+									"span",
+									{
+										cls: "status-option-checkbox",
+									},
+									(el) => {
+										createTaskCheckbox(
+											nextStatusResult.mark,
+											task,
+											el,
+										);
+									},
+								);
+								subItem.titleEl.createEl("span", {
+									cls: "status-option",
+									text: `${priorityIndicator}${cycle.name}: → ${nextStatusResult.statusName}`,
+								});
+								subItem.onClick(async () => {
+									const willComplete = this.isCompletedMark(
+										nextStatusResult.mark,
+									);
+									const updatedTask = {
+										...task,
+										status: nextStatusResult.mark,
+										completed: willComplete,
+									};
+
+									if (!task.completed && willComplete) {
+										updatedTask.metadata.completedDate =
+											Date.now();
+									} else if (
+										task.completed &&
+										!willComplete
+									) {
+										updatedTask.metadata.completedDate =
+											undefined;
+									}
+
+									await this.handleKanbanTaskStatusUpdate(
+										updatedTask,
+										nextStatusResult.mark,
+									);
+								});
+							});
+						}
+					}
+
+					submenu.addSeparator();
+					submenu.addItem((subItem) => {
+						subItem.setTitle(t("Or choose any:"));
+						subItem.setDisabled(true);
+					});
 				}
-			}
 
-			// Create menu items from unique statuses
-			for (const [status, mark] of uniqueStatuses) {
-				submenu.addItem((subItem) => {
-					subItem.titleEl.createEl(
-						"span",
-						{
-							cls: "status-option-checkbox",
-						},
-						(el) => {
-							createTaskCheckbox(mark, task, el);
+				// Show all available statuses
+				const allStatusNames = getAllStatusNames(
+					this.plugin.settings.statusCycles,
+				);
+				for (const statusName of Array.from(allStatusNames)) {
+					// Find the mark for this status
+					let mark = " ";
+					for (const cycle of this.plugin.settings.statusCycles) {
+						if (statusName in cycle.marks) {
+							mark = cycle.marks[statusName];
+							break;
 						}
-					);
-					subItem.titleEl.createEl("span", {
-						cls: "status-option",
-						text: status,
-					});
-					subItem.onClick(async () => {
-						const willComplete = this.isCompletedMark(mark);
-						const updatedTask = {
-							...task,
-							status: mark,
-							completed: willComplete,
-						};
+					}
 
-						if (!task.completed && willComplete) {
-							updatedTask.metadata.completedDate = Date.now();
-						} else if (task.completed && !willComplete) {
-							updatedTask.metadata.completedDate = undefined;
-						}
+					submenu.addItem((subItem) => {
+						subItem.titleEl.createEl(
+							"span",
+							{
+								cls: "status-option-checkbox",
+							},
+							(el) => {
+								createTaskCheckbox(mark, task, el);
+							},
+						);
+						subItem.titleEl.createEl("span", {
+							cls: "status-option",
+							text: statusName,
+						});
+						subItem.onClick(async () => {
+							const willComplete = this.isCompletedMark(mark);
+							const updatedTask = {
+								...task,
+								status: mark,
+								completed: willComplete,
+							};
 
-						await this.handleTaskUpdate(task, updatedTask);
+							if (!task.completed && willComplete) {
+								updatedTask.metadata.completedDate = Date.now();
+							} else if (task.completed && !willComplete) {
+								updatedTask.metadata.completedDate = undefined;
+							}
+
+							await this.handleKanbanTaskStatusUpdate(
+								updatedTask,
+								mark,
+							);
+						});
 					});
-				});
+				}
+			} else {
+				// Legacy single-cycle mode
+				const uniqueStatuses = getAllStatusMarks(this.plugin.settings);
+
+				// Create menu items from unique statuses (note: getAllStatusMarks returns mark -> status)
+				for (const [mark, status] of uniqueStatuses) {
+					submenu.addItem((subItem) => {
+						subItem.titleEl.createEl(
+							"span",
+							{
+								cls: "status-option-checkbox",
+							},
+							(el) => {
+								createTaskCheckbox(mark, task, el);
+							},
+						);
+						subItem.titleEl.createEl("span", {
+							cls: "status-option",
+							text: status,
+						});
+						subItem.onClick(async () => {
+							const willComplete = this.isCompletedMark(mark);
+							const updatedTask = {
+								...task,
+								status: mark,
+								completed: willComplete,
+							};
+
+							if (!task.completed && willComplete) {
+								updatedTask.metadata.completedDate = Date.now();
+							} else if (task.completed && !willComplete) {
+								updatedTask.metadata.completedDate = undefined;
+							}
+
+							await this.handleTaskUpdate(task, updatedTask);
+						});
+					});
+				}
 			}
 		});
 
@@ -432,7 +562,7 @@ export class FluentActionHandlers extends Component {
 	private addPostponeDateMenu(
 		menu: Menu,
 		task: Task,
-		dateType: TaskDateType
+		dateType: TaskDateType,
 	): void {
 		menu.addItem((item) => {
 			const subMenu = item
@@ -470,7 +600,7 @@ export class FluentActionHandlers extends Component {
 	private async postponeDate(
 		task: Task,
 		dateType: TaskDateType,
-		offsetDays: number
+		offsetDays: number,
 	): Promise<void> {
 		try {
 			const currentTimestamp = task.metadata?.[dateType];
@@ -484,7 +614,7 @@ export class FluentActionHandlers extends Component {
 				task,
 				dateType,
 				newTimestamp,
-				offsetDays
+				offsetDays,
 			);
 
 			const updatedTask: Task = {
@@ -494,14 +624,14 @@ export class FluentActionHandlers extends Component {
 
 			const action = offsetDays > 0 ? "postponed" : "advanced";
 			const message = `${this.getDateLabel(
-				dateType
+				dateType,
 			)} ${action} by ${Math.abs(offsetDays)} day(s)`;
 
 			await this.handleTaskUpdate(task, updatedTask, t(message));
 		} catch (error) {
 			console.error(
 				"[FluentActionHandlers] Failed to postpone date:",
-				error
+				error,
 			);
 			new Notice(t("Failed to postpone date"));
 		}
@@ -510,7 +640,7 @@ export class FluentActionHandlers extends Component {
 	private openDatePicker(
 		task: Task,
 		dateType: TaskDateType,
-		isPostpone: boolean = false
+		isPostpone: boolean = false,
 	): void {
 		const currentDate = task.metadata?.[dateType];
 		const initialDate =
@@ -522,7 +652,7 @@ export class FluentActionHandlers extends Component {
 			this.app,
 			this.plugin,
 			initialDate,
-			this.getDateMark(dateType)
+			this.getDateMark(dateType),
 		);
 
 		modal.onDateSelected = async (dateStr: string | null) => {
@@ -536,14 +666,14 @@ export class FluentActionHandlers extends Component {
 
 			if (isPostpone && typeof currentDate === "number") {
 				const offsetDays = Math.round(
-					(newTimestamp - currentDate) / (24 * 60 * 60 * 1000)
+					(newTimestamp - currentDate) / (24 * 60 * 60 * 1000),
 				);
 
 				const updatedMetadata = smartPostponeRelatedDates(
 					task,
 					dateType,
 					newTimestamp,
-					offsetDays
+					offsetDays,
 				);
 
 				const updatedTask: Task = {
@@ -554,7 +684,7 @@ export class FluentActionHandlers extends Component {
 				await this.handleTaskUpdate(
 					task,
 					updatedTask,
-					t(`${this.getDateLabel(dateType)} updated`)
+					t(`${this.getDateLabel(dateType)} updated`),
 				);
 			} else {
 				const updatedTask: Task = {
@@ -568,7 +698,7 @@ export class FluentActionHandlers extends Component {
 				await this.handleTaskUpdate(
 					task,
 					updatedTask,
-					t(`${this.getDateLabel(dateType)} updated`)
+					t(`${this.getDateLabel(dateType)} updated`),
 				);
 			}
 		};
@@ -679,7 +809,7 @@ export class FluentActionHandlers extends Component {
 		} catch (error) {
 			console.error(
 				"[FluentActionHandlers] Failed to duplicate task:",
-				error
+				error,
 			);
 			new Notice(t("Failed to duplicate task"));
 		}
@@ -775,7 +905,7 @@ export class FluentActionHandlers extends Component {
 	 */
 	private async deleteTask(
 		task: Task,
-		deleteChildren: boolean
+		deleteChildren: boolean,
 	): Promise<void> {
 		if (!this.plugin.writeAPI) {
 			console.error("WriteAPI not available for deleteTask");
@@ -803,13 +933,13 @@ export class FluentActionHandlers extends Component {
 				new Notice(
 					t("Failed to delete task") +
 						": " +
-						(result.error || "Unknown error")
+						(result.error || "Unknown error"),
 				);
 			}
 		} catch (error) {
 			console.error("Error deleting task:", error);
 			new Notice(
-				t("Failed to delete task") + ": " + (error as any).message
+				t("Failed to delete task") + ": " + (error as any).message,
 			);
 		}
 	}
@@ -865,7 +995,7 @@ export class FluentActionHandlers extends Component {
 		try {
 			const lower = mark.toLowerCase();
 			const completedCfg = String(
-				this.plugin.settings.taskStatuses?.completed || "x"
+				this.plugin.settings.taskStatuses?.completed || "x",
 			);
 			const completedSet = completedCfg
 				.split("|")
@@ -882,7 +1012,7 @@ export class FluentActionHandlers extends Component {
 	 */
 	private extractChangedFields(
 		originalTask: Task,
-		updatedTask: Task
+		updatedTask: Task,
 	): Partial<Task> {
 		const changes: Partial<Task> = {};
 

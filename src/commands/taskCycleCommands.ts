@@ -1,5 +1,11 @@
 import { Editor, MarkdownFileInfo, MarkdownView } from "obsidian";
 import TaskProgressBarPlugin from "../index";
+import {
+	getNextStatusPrimary,
+	getPreviousStatusPrimary,
+	findPrimaryCycle,
+	getTaskStatusConfig,
+} from "@/utils/status-cycle-resolver";
 
 /**
  * Cycles the task status on the current line forward
@@ -13,7 +19,7 @@ export function cycleTaskStatusForward(
 	checking: boolean,
 	editor: Editor,
 	ctx: MarkdownView | MarkdownFileInfo,
-	plugin: TaskProgressBarPlugin
+	plugin: TaskProgressBarPlugin,
 ): boolean {
 	return cycleTaskStatus(checking, editor, plugin, "forward");
 }
@@ -30,7 +36,7 @@ export function cycleTaskStatusBackward(
 	checking: boolean,
 	editor: Editor,
 	ctx: MarkdownView | MarkdownFileInfo,
-	plugin: TaskProgressBarPlugin
+	plugin: TaskProgressBarPlugin,
 ): boolean {
 	return cycleTaskStatus(checking, editor, plugin, "backward");
 }
@@ -47,7 +53,7 @@ function cycleTaskStatus(
 	checking: boolean,
 	editor: Editor,
 	plugin: TaskProgressBarPlugin,
-	direction: "forward" | "backward"
+	direction: "forward" | "backward",
 ): boolean {
 	// Get the current cursor position
 	const cursor = editor.getCursor();
@@ -69,47 +75,76 @@ function cycleTaskStatus(
 		return true;
 	}
 
-	// Get the task cycle and marks from plugin settings
-	const { cycle, marks, excludeMarksFromCycle } = getTaskStatusConfig(plugin);
-	const remainingCycle = cycle.filter(
-		(state) => !excludeMarksFromCycle.includes(state)
-	);
-
-	// If no cycle is defined, don't do anything
-	if (remainingCycle.length === 0) {
-		return false;
-	}
-
 	// Get the current mark
 	const currentMark = match[2];
 
-	// Find the current status in the cycle
-	let currentStatusIndex = -1;
-	for (let i = 0; i < remainingCycle.length; i++) {
-		const state = remainingCycle[i];
-		if (marks[state] === currentMark) {
-			currentStatusIndex = i;
-			break;
+	// Calculate next mark using multi-cycle resolver
+	let nextMark: string;
+
+	// Try multi-cycle configuration first
+	if (
+		plugin.settings.statusCycles &&
+		plugin.settings.statusCycles.length > 0
+	) {
+		const nextStatusResult =
+			direction === "forward"
+				? getNextStatusPrimary(
+						currentMark,
+						plugin.settings.statusCycles,
+					)
+				: getPreviousStatusPrimary(
+						currentMark,
+						plugin.settings.statusCycles,
+					);
+
+		if (nextStatusResult) {
+			nextMark = nextStatusResult.mark;
+		} else {
+			// No applicable cycle found, don't do anything
+			return false;
 		}
-	}
-
-	// If we couldn't find the current status in the cycle, start from the first one
-	if (currentStatusIndex === -1) {
-		currentStatusIndex = 0;
-	}
-
-	// Calculate the next status based on direction
-	let nextStatusIndex;
-	if (direction === "forward") {
-		nextStatusIndex = (currentStatusIndex + 1) % remainingCycle.length;
 	} else {
-		nextStatusIndex =
-			(currentStatusIndex - 1 + remainingCycle.length) %
-			remainingCycle.length;
-	}
+		// Fall back to legacy single-cycle logic
+		const { cycle, marks, excludeMarksFromCycle } = getTaskStatusConfig(
+			plugin.settings,
+		);
+		const remainingCycle = cycle.filter(
+			(state) => !excludeMarksFromCycle.includes(state),
+		);
 
-	const nextStatus = remainingCycle[nextStatusIndex];
-	const nextMark = marks[nextStatus] || " ";
+		// If no cycle is defined, don't do anything
+		if (remainingCycle.length === 0) {
+			return false;
+		}
+
+		// Find the current status in the cycle
+		let currentStatusIndex = -1;
+		for (let i = 0; i < remainingCycle.length; i++) {
+			const state = remainingCycle[i];
+			if (marks[state] === currentMark) {
+				currentStatusIndex = i;
+				break;
+			}
+		}
+
+		// If we couldn't find the current status in the cycle, start from the first one
+		if (currentStatusIndex === -1) {
+			currentStatusIndex = 0;
+		}
+
+		// Calculate the next status based on direction
+		let nextStatusIndex;
+		if (direction === "forward") {
+			nextStatusIndex = (currentStatusIndex + 1) % remainingCycle.length;
+		} else {
+			nextStatusIndex =
+				(currentStatusIndex - 1 + remainingCycle.length) %
+				remainingCycle.length;
+		}
+
+		const nextStatus = remainingCycle[nextStatusIndex];
+		nextMark = marks[nextStatus] || " ";
+	}
 
 	// Find the positions of the mark in the line
 	const startPos = line.indexOf("[") + 1;
@@ -118,21 +153,8 @@ function cycleTaskStatus(
 	editor.replaceRange(
 		nextMark,
 		{ line: cursor.line, ch: startPos },
-		{ line: cursor.line, ch: startPos + 1 }
+		{ line: cursor.line, ch: startPos + 1 },
 	);
 
 	return true;
-}
-
-/**
- * Gets the task status configuration from the plugin settings
- * @param plugin The plugin instance
- * @returns Object containing the task cycle and marks
- */
-function getTaskStatusConfig(plugin: TaskProgressBarPlugin) {
-	return {
-		cycle: plugin.settings.taskStatusCycle,
-		excludeMarksFromCycle: plugin.settings.excludeMarksFromCycle || [],
-		marks: plugin.settings.taskStatusMarks,
-	};
 }

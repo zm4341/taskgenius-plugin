@@ -6,6 +6,8 @@
 import { Task } from "@/types/task";
 import { GroupByDimension, TaskGroup } from "@/types/groupBy";
 import { t } from "@/translations/helper";
+import { getTaskStatusConfig } from "@/utils/status-cycle-resolver";
+import type { TaskProgressBarSettings } from "@/common/setting-definition";
 
 /**
  * Default status mark to display name mapping
@@ -14,38 +16,38 @@ import { t } from "@/translations/helper";
  */
 const DEFAULT_STATUS_NAMES: Record<string, string> = {
 	// Standard statuses
-	" ": "Todo",           // Incomplete/Not started
-	"x": "Done",           // Completed (lowercase)
-	"X": "Done",           // Completed (uppercase)
-	"-": "Cancelled",      // Cancelled/Abandoned
+	" ": "Todo", // Incomplete/Not started
+	x: "Done", // Completed (lowercase)
+	X: "Done", // Completed (uppercase)
+	"-": "Cancelled", // Cancelled/Abandoned
 
 	// Progress indicators
-	"/": "In Progress",    // Half-done/In progress
-	">": "Forwarded",      // Deferred/Forwarded
-	"<": "Scheduled",      // Scheduled for later
+	"/": "In Progress", // Half-done/In progress
+	">": "Forwarded", // Deferred/Forwarded
+	"<": "Scheduled", // Scheduled for later
 
 	// Priority/importance markers
-	"!": "Important",      // Important/High priority
-	"*": "Star",           // Starred/Favorite
+	"!": "Important", // Important/High priority
+	"*": "Star", // Starred/Favorite
 
 	// Question/tentative
-	"?": "Question",       // Uncertain/Question
+	"?": "Question", // Uncertain/Question
 
 	// Extended status marks (from various task management systems)
-	"i": "Info",           // Information
-	"I": "Idea",           // Idea
-	"S": "Started",        // Started
-	"p": "Pro",            // Pro/Professional
-	"c": "Choice",         // Choice
-	"l": "Location",       // Location-based
-	"b": "Bookmark",       // Bookmarked
-	"f": "Fire",           // Urgent/Fire
-	"k": "Key",            // Key task
-	"w": "Win",            // Won/Achieved
-	"u": "Up",             // Ongoing/Up
-	"d": "Down",           // Deprecated/Down
-	'"': "Quote",          // Quoted/Referenced
-	"B": "Bug",            // Bug/Issue
+	i: "Info", // Information
+	I: "Idea", // Idea
+	S: "Started", // Started
+	p: "Pro", // Pro/Professional
+	c: "Choice", // Choice
+	l: "Location", // Location-based
+	b: "Bookmark", // Bookmarked
+	f: "Fire", // Urgent/Fire
+	k: "Key", // Key task
+	w: "Win", // Won/Achieved
+	u: "Up", // Ongoing/Up
+	d: "Down", // Deprecated/Down
+	'"': "Quote", // Quoted/Referenced
+	B: "Bug", // Bug/Issue
 
 	// Numeric progress indicators (0-5 scale)
 	"0": "0/5",
@@ -56,7 +58,7 @@ const DEFAULT_STATUS_NAMES: Record<string, string> = {
 	"5": "5/5",
 
 	// Other
-	"n": "Note",           // Note
+	n: "Note", // Note
 };
 
 /**
@@ -71,41 +73,48 @@ function formatStatusKey(key: string): string {
 		.replace(/[-_]+/g, " ") // snake_case/kebab-case -> spaces
 		.split(" ")
 		.filter(Boolean)
-		.map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+		.map(
+			(part) =>
+				part.charAt(0).toUpperCase() + part.slice(1).toLowerCase(),
+		)
 		.join(" ");
 }
 
 /**
  * Convert status mark to display name using task status marks mapping
- * Performs reverse lookup in taskStatusMarks to find the configured status name
+ * Performs reverse lookup to find the configured status name
  * Falls back to default status names, then formatting if no mapping is found
  *
  * Lookup priority:
- * 1. User-configured taskStatusMarks (highest priority)
+ * 1. User-configured status marks (highest priority)
  * 2. DEFAULT_STATUS_NAMES (common status marks)
  * 3. formatStatusKey (generic formatting fallback)
  *
  * @param mark - Status mark from task (e.g., "x", ">", "-", " ")
- * @param taskStatusMarks - Status marks mapping from plugin settings
+ * @param settings - Optional plugin settings object
  * @returns Display name (e.g., "Completed", "In Progress", "Abandoned")
  *
  * @example
- * // With taskStatusMarks = { "Completed": "x", "In Progress": ">", "Abandoned": "-" }
- * getStatusDisplayName("x", taskStatusMarks) => "Completed"
- * getStatusDisplayName(">", taskStatusMarks) => "In Progress"
- * getStatusDisplayName("/", taskStatusMarks) => "In Progress" (from DEFAULT_STATUS_NAMES)
- * getStatusDisplayName("unknown", taskStatusMarks) => "Unknown" (from formatStatusKey)
+ * getStatusDisplayName("x", settings) => "Completed"
+ * getStatusDisplayName(">", settings) => "In Progress"
+ * getStatusDisplayName("/", settings) => "In Progress" (from DEFAULT_STATUS_NAMES)
+ * getStatusDisplayName("unknown", settings) => "Unknown" (from formatStatusKey)
  */
 function getStatusDisplayName(
 	mark: string,
-	taskStatusMarks?: Record<string, string>
+	settings?: TaskProgressBarSettings,
 ): string {
-	// Priority 1: User-configured taskStatusMarks
-	if (taskStatusMarks) {
-		for (const [statusName, statusMark] of Object.entries(taskStatusMarks)) {
+	// Priority 1: User-configured status marks
+	if (settings) {
+		const { marks: taskStatusMarks } = getTaskStatusConfig(settings);
+		for (const [statusName, statusMark] of Object.entries(
+			taskStatusMarks,
+		)) {
 			// Match both exact and case-insensitive
-			if (statusMark === mark ||
-			    (statusMark && statusMark.toLowerCase() === mark.toLowerCase())) {
+			if (
+				statusMark === mark ||
+				(statusMark && statusMark.toLowerCase() === mark.toLowerCase())
+			) {
 				return statusName;
 			}
 		}
@@ -132,7 +141,7 @@ function getStatusDisplayName(
 export function groupTasksBy(
 	tasks: Task[],
 	dimension: GroupByDimension,
-	taskStatusMarks?: Record<string, string>
+	settings?: TaskProgressBarSettings,
 ): TaskGroup[] {
 	switch (dimension) {
 		case "none":
@@ -148,7 +157,7 @@ export function groupTasksBy(
 		case "tags":
 			return groupTasksByTags(tasks);
 		case "status":
-			return groupTasksByStatus(tasks, taskStatusMarks);
+			return groupTasksByStatus(tasks, settings);
 		default:
 			return groupTasksNone(tasks);
 	}
@@ -199,7 +208,7 @@ export function groupTasksByFilePath(tasks: Task[]): TaskGroup[] {
 		// Extract filename for display, but keep folder path for context
 		const lastSlashIndex = Math.max(
 			key.lastIndexOf("/"),
-			key.lastIndexOf("\\")
+			key.lastIndexOf("\\"),
 		);
 
 		let displayTitle: string;
@@ -209,9 +218,10 @@ export function groupTasksByFilePath(tasks: Task[]): TaskGroup[] {
 
 			// Remove file extension (only the last one, e.g., "file.backup.md" -> "file.backup")
 			const lastDotIndex = filename.lastIndexOf(".");
-			const fileBaseName = lastDotIndex > 0
-				? filename.substring(0, lastDotIndex)
-				: filename;
+			const fileBaseName =
+				lastDotIndex > 0
+					? filename.substring(0, lastDotIndex)
+					: filename;
 
 			// Show filename prominently, with folder path in subdued style
 			displayTitle = folder
@@ -220,9 +230,8 @@ export function groupTasksByFilePath(tasks: Task[]): TaskGroup[] {
 		} else {
 			// File at root, remove extension if present
 			const lastDotIndex = key.lastIndexOf(".");
-			displayTitle = lastDotIndex > 0
-				? key.substring(0, lastDotIndex)
-				: key;
+			displayTitle =
+				lastDotIndex > 0 ? key.substring(0, lastDotIndex) : key;
 		}
 
 		groups.push({
@@ -244,13 +253,11 @@ export function groupTasksByFilePath(tasks: Task[]): TaskGroup[] {
 function extractFileBaseName(filePath: string): string {
 	const lastSlashIndex = Math.max(
 		filePath.lastIndexOf("/"),
-		filePath.lastIndexOf("\\")
+		filePath.lastIndexOf("\\"),
 	);
 	const fileName = filePath.substring(lastSlashIndex + 1);
 	const lastDotIndex = fileName.lastIndexOf(".");
-	return lastDotIndex > 0
-		? fileName.substring(0, lastDotIndex)
-		: fileName;
+	return lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
 }
 
 /**
@@ -269,7 +276,7 @@ export function groupTasksByFilePathNested(tasks: Task[]): TaskGroup[] {
 
 		const lastSlashIndex = Math.max(
 			filePath.lastIndexOf("/"),
-			filePath.lastIndexOf("\\")
+			filePath.lastIndexOf("\\"),
 		);
 
 		if (lastSlashIndex >= 0) {
@@ -300,7 +307,7 @@ export function groupTasksByFilePathNested(tasks: Task[]): TaskGroup[] {
 
 	// Sort folders alphabetically
 	const sortedFolders = Array.from(folderMap.keys()).sort((a, b) =>
-		a.localeCompare(b)
+		a.localeCompare(b),
 	);
 
 	// Create folder groups with file children
@@ -311,7 +318,7 @@ export function groupTasksByFilePathNested(tasks: Task[]): TaskGroup[] {
 		// Create child groups for each file in the folder
 		const children: TaskGroup[] = [];
 		const sortedFiles = Array.from(fileMap.keys()).sort((a, b) =>
-			a.localeCompare(b)
+			a.localeCompare(b),
 		);
 
 		sortedFiles.forEach((filePath, fileIndex) => {
@@ -332,7 +339,8 @@ export function groupTasksByFilePathNested(tasks: Task[]): TaskGroup[] {
 
 		// Get folder display name (last segment of path)
 		const folderSegments = folderPath.split(/[/\\]/);
-		const folderDisplayName = folderSegments[folderSegments.length - 1] || folderPath;
+		const folderDisplayName =
+			folderSegments[folderSegments.length - 1] || folderPath;
 
 		// Create folder group
 		groups.push({
@@ -350,7 +358,7 @@ export function groupTasksByFilePathNested(tasks: Task[]): TaskGroup[] {
 	if (rootFiles.size > 0) {
 		const rootChildren: TaskGroup[] = [];
 		const sortedRootFiles = Array.from(rootFiles.keys()).sort((a, b) =>
-			a.localeCompare(b)
+			a.localeCompare(b),
 		);
 
 		sortedRootFiles.forEach((filePath, fileIndex) => {
@@ -659,15 +667,15 @@ export function groupTasksByTags(tasks: Task[]): TaskGroup[] {
 
 /**
  * Group tasks by status
- * Uses taskStatusMarks mapping to display user-configured status names
+ * Uses status marks mapping to display user-configured status names
  *
  * @param tasks - Array of tasks to group
- * @param taskStatusMarks - Optional status marks mapping from plugin settings
+ * @param settings - Optional plugin settings object
  * @returns Array of task groups organized by status
  */
 export function groupTasksByStatus(
 	tasks: Task[],
-	taskStatusMarks?: Record<string, string>
+	settings?: TaskProgressBarSettings,
 ): TaskGroup[] {
 	const groupMap = new Map<string, Task[]>();
 
@@ -702,7 +710,7 @@ export function groupTasksByStatus(
 
 	sortedKeys.forEach((key, index) => {
 		// Get display name using status marks mapping or fallback formatting
-		const displayStatus = getStatusDisplayName(key, taskStatusMarks);
+		const displayStatus = getStatusDisplayName(key, settings);
 
 		groups.push({
 			title: displayStatus,

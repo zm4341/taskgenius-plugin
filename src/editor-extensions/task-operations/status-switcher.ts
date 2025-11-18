@@ -21,6 +21,12 @@ import { Annotation, EditorSelection } from "@codemirror/state";
 // @ts-ignore - This import is necessary but TypeScript can't find it
 import { syntaxTree, tokenClassNodeProp } from "@codemirror/language";
 import { getTasksAPI } from "@/utils";
+import {
+	findApplicableCycles,
+	getNextStatusPrimary,
+	getAllStatusNames,
+	getTaskStatusConfig,
+} from "@/utils/status-cycle-resolver";
 
 export type TaskState = string;
 export const taskStatusChangeAnnotation = Annotation.define();
@@ -165,21 +171,100 @@ class TaskStatusWidget extends WidgetType {
 			}
 		});
 
-		// Right-click to show menu with all available states
+		// Right-click to show menu with all available states and cycles
 		statusText.addEventListener("contextmenu", (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 			const menu = new Menu();
 
-			// Add each available state to the menu
-			for (const state of this.cycle) {
-				menu.addItem((item) => {
-					item.setTitle(state);
-					// When clicked, directly set to the selected state
-					item.onClick(() => {
-						this.setTaskState(state);
+			// Get current mark from the status text
+			const currentMark = this.marks[this.currentState] || " ";
+
+			// Check if multi-cycle is enabled
+			if (
+				this.plugin.settings.statusCycles &&
+				this.plugin.settings.statusCycles.length > 0
+			) {
+				const applicableCycles = findApplicableCycles(
+					currentMark,
+					this.plugin.settings.statusCycles,
+				);
+
+				if (applicableCycles.length > 0) {
+					// Show each applicable cycle with its next status
+					menu.addItem((item) => {
+						item.setTitle("Switch using cycle:");
+						item.setDisabled(true);
 					});
-				});
+
+					for (const cycle of applicableCycles) {
+						const nextStatusResult = getNextStatusPrimary(
+							currentMark,
+							[cycle],
+						);
+
+						if (nextStatusResult) {
+							menu.addItem((item) => {
+								const priorityIndicator =
+									cycle.priority === 0 ? "★ " : "";
+								item.setTitle(
+									`${priorityIndicator}${cycle.name}: → ${nextStatusResult.statusName}`,
+								);
+								item.onClick(() => {
+									this.setTaskState(
+										nextStatusResult.statusName,
+									);
+								});
+							});
+						}
+					}
+
+					menu.addSeparator();
+
+					// Add "Choose any status" section
+					menu.addItem((item) => {
+						item.setTitle("Choose any status:");
+						item.setDisabled(true);
+					});
+
+					// Get all unique status names from all cycles
+					const allStatusNames = getAllStatusNames(
+						this.plugin.settings.statusCycles,
+					);
+					for (const statusName of Array.from(allStatusNames)) {
+						menu.addItem((item) => {
+							const isCurrent = statusName === this.currentState;
+							item.setTitle(
+								isCurrent
+									? `${statusName} (current)`
+									: statusName,
+							);
+							item.onClick(() => {
+								this.setTaskState(statusName);
+							});
+						});
+					}
+				} else {
+					// No applicable cycles, show all states from current cycle
+					for (const state of this.cycle) {
+						menu.addItem((item) => {
+							item.setTitle(state);
+							item.onClick(() => {
+								this.setTaskState(state);
+							});
+						});
+					}
+				}
+			} else {
+				// Legacy single-cycle mode: show all states from current cycle
+				for (const state of this.cycle) {
+					menu.addItem((item) => {
+						item.setTitle(state);
+						item.onClick(() => {
+							this.setTaskState(state);
+						});
+					});
+				}
 			}
 
 			// Show the menu at the mouse position
@@ -196,7 +281,33 @@ class TaskStatusWidget extends WidgetType {
 
 		if (!currentMarkMatch) return;
 
-		const nextMark = this.marks[status] || " ";
+		// Find the mark for the given status, checking multi-cycle config first
+		let nextMark: string = " "; // Default to space
+
+		if (
+			this.plugin.settings.statusCycles &&
+			this.plugin.settings.statusCycles.length > 0
+		) {
+			// Search all enabled cycles for this status
+			const enabledCycles = this.plugin.settings.statusCycles
+				.filter((c) => c.enabled)
+				.sort((a, b) => a.priority - b.priority);
+
+			let found = false;
+			for (const cycle of enabledCycles) {
+				if (status in cycle.marks) {
+					nextMark = cycle.marks[status];
+					found = true;
+					break;
+				}
+			}
+
+			if (!found) {
+				nextMark = this.marks[status] || " ";
+			}
+		} else {
+			nextMark = this.marks[status] || " ";
+		}
 
 		// Replace text with the selected state's mark
 		const newText = currentText.replace(/\[(.)]/, `[${nextMark}]`);
@@ -231,15 +342,11 @@ class TaskStatusWidget extends WidgetType {
 				cycle: Object.keys(STATE_MARK_MAP),
 				marks: STATE_MARK_MAP,
 				excludeMarksFromCycle: [],
+				isMultiCycle: false,
 			};
 		}
 
-		return {
-			cycle: this.plugin.settings.taskStatusCycle,
-			excludeMarksFromCycle:
-				this.plugin.settings.excludeMarksFromCycle || [],
-			marks: this.plugin.settings.taskStatusMarks,
-		};
+		return getTaskStatusConfig(this.plugin.settings);
 	}
 
 	// Cycle through task states
@@ -332,10 +439,8 @@ export function taskStatusSwitcherExtension(
 				const checkboxWithSpace = match[3];
 				const checkbox = checkboxWithSpace.trim();
 				const isLivePreview = this.isLivePreview(view.state);
-				const cycle = plugin.settings.taskStatusCycle;
-				const marks = plugin.settings.taskStatusMarks;
-				const excludeMarksFromCycle =
-					plugin.settings.excludeMarksFromCycle || [];
+				const { cycle, marks, excludeMarksFromCycle } =
+					getTaskStatusConfig(plugin.settings);
 				const remainingCycle = cycle.filter(
 					(state) => !excludeMarksFromCycle.includes(state),
 				);

@@ -63,7 +63,7 @@
 	border-color: var(--interactive-accent);
 }
 
-.list-config-delete-btn {
+button.list-config-delete-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -75,6 +75,8 @@
 	border-radius: var(--radius-s);
 	cursor: pointer;
 	transition: background-color 0.2s ease;
+
+	box-shadow: none;
 }
 
 .list-config-delete-btn:hover {

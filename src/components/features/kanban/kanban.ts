@@ -26,6 +26,7 @@ import {
 	getEffectiveProject,
 	isProjectReadonly,
 } from "@/utils/task/task-operations";
+import { getTaskStatusConfig } from "@/utils/status-cycle-resolver";
 
 export interface KanbanSortOption {
 	field:
@@ -554,7 +555,8 @@ export class KanbanComponent extends Component {
 	}
 
 	private renderStatusColumns() {
-		const statusCycle = this.plugin.settings.taskStatusCycle;
+		const { cycle: statusCycle, excludeMarksFromCycle } =
+			getTaskStatusConfig(this.plugin.settings);
 		let statusNames =
 			statusCycle.length > 0
 				? statusCycle
@@ -568,8 +570,8 @@ export class KanbanComponent extends Component {
 			const statusMark = this.resolveStatusMark(statusName) ?? " ";
 
 			if (
-				this.plugin.settings.excludeMarksFromCycle &&
-				this.plugin.settings.excludeMarksFromCycle.includes(statusName)
+				excludeMarksFromCycle &&
+				excludeMarksFromCycle.includes(statusName)
 			) {
 				return;
 			}
@@ -1039,13 +1041,13 @@ export class KanbanComponent extends Component {
 		if (trimmed.length === 1) {
 			return trimmed;
 		}
+		// Get marks from configuration
+		const { marks } = getTaskStatusConfig(this.plugin.settings);
 		// Try exact match
-		const exact = (this.plugin.settings.taskStatusMarks as any)[trimmed];
+		const exact = (marks as any)[trimmed];
 		if (typeof exact === "string") return exact;
 		// Try case-insensitive match
-		for (const [name, mark] of Object.entries(
-			this.plugin.settings.taskStatusMarks,
-		)) {
+		for (const [name, mark] of Object.entries(marks)) {
 			if (name.toLowerCase() === trimmed.toLowerCase()) {
 				return mark as string;
 			}
@@ -1061,21 +1063,30 @@ export class KanbanComponent extends Component {
 		taskId: string,
 		newStatusMark: string,
 	): Promise<void> {
-		console.log(`[Kanban] handleStatusUpdate called: taskId=${taskId}, mark=${newStatusMark}`);
-		console.log('[Kanban] onTaskStatusUpdate callback exists:', !!this.params.onTaskStatusUpdate);
+		console.log(
+			`[Kanban] handleStatusUpdate called: taskId=${taskId}, mark=${newStatusMark}`,
+		);
+		console.log(
+			"[Kanban] onTaskStatusUpdate callback exists:",
+			!!this.params.onTaskStatusUpdate,
+		);
 
 		if (this.params.onTaskStatusUpdate) {
 			try {
-				console.log('[Kanban] Calling onTaskStatusUpdate callback...');
+				console.log("[Kanban] Calling onTaskStatusUpdate callback...");
 				await this.params.onTaskStatusUpdate(taskId, newStatusMark);
-				console.log('[Kanban] onTaskStatusUpdate callback completed successfully');
+				console.log(
+					"[Kanban] onTaskStatusUpdate callback completed successfully",
+				);
 			} catch (error) {
 				console.error("[Kanban] Failed to update task status:", error);
 				console.error("[Kanban] Error details:", error.stack);
 			}
 		} else {
-			console.error('[Kanban] CRITICAL: onTaskStatusUpdate callback is not defined!');
-			console.error('[Kanban] this.params:', this.params);
+			console.error(
+				"[Kanban] CRITICAL: onTaskStatusUpdate callback is not defined!",
+			);
+			console.error("[Kanban] this.params:", this.params);
 		}
 	}
 

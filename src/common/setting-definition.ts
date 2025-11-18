@@ -246,6 +246,28 @@ export interface TaskStatusCycle {
 	[key: string]: string;
 }
 
+/** Define the structure for a single status cycle */
+export interface StatusCycle {
+	/** Unique identifier for this cycle */
+	id: string;
+	/** Display name for this cycle */
+	name: string;
+	/** Optional description */
+	description?: string;
+	/** Priority level (lower number = higher priority, 0 is highest) */
+	priority: number;
+	/** Ordered list of status names in this cycle */
+	cycle: string[];
+	/** Mapping from status name to checkbox mark character */
+	marks: Record<string, string>;
+	/** Whether this cycle is currently enabled */
+	enabled: boolean;
+	/** Optional color for UI visualization */
+	color?: string;
+	/** Optional icon for UI visualization */
+	icon?: string;
+}
+
 /** Define the structure for completed task mover settings */
 export interface CompletedTaskMoverSettings {
 	enableCompletedTaskMover: boolean;
@@ -738,9 +760,12 @@ export interface TaskProgressBarSettings {
 	enableCustomTaskMarks: boolean;
 	enableTextMarkInSourceMode: boolean;
 	enableCycleCompleteStatus: boolean; // Enable cycling through task statuses when clicking on task checkboxes
-	taskStatusCycle: string[];
-	taskStatusMarks: TaskStatusCycle;
-	excludeMarksFromCycle: string[];
+	taskStatusCycle: string[]; // @deprecated Use statusCycles instead
+	taskStatusMarks: TaskStatusCycle; // @deprecated Use statusCycles instead
+	excludeMarksFromCycle: string[]; // @deprecated Use statusCycles instead
+
+	/** Multiple status cycles configuration (replaces taskStatusCycle/taskStatusMarks) */
+	statusCycles?: StatusCycle[];
 
 	enableTaskGeniusIcons: boolean;
 
@@ -952,6 +977,32 @@ export const DEFAULT_SETTINGS: TaskProgressBarSettings = {
 		Planned: "?",
 	},
 	excludeMarksFromCycle: [],
+
+	// Multiple status cycles (new feature)
+	statusCycles: [
+		{
+			id: "default-cycle",
+			name: t("Default Cycle"),
+			description: t("Standard task lifecycle with all states"),
+			priority: 0,
+			cycle: [
+				"Not Started",
+				"In Progress",
+				"Completed",
+				"Abandoned",
+				"Planned",
+			],
+			marks: {
+				"Not Started": " ",
+				"In Progress": "/",
+				Completed: "x",
+				Abandoned: "-",
+				Planned: "?",
+			},
+			enabled: true,
+		},
+	],
+
 	enableTaskGeniusIcons: false,
 
 	// Priority & Date Defaults
@@ -1757,7 +1808,7 @@ export const DEFAULT_SETTINGS: TaskProgressBarSettings = {
 // Helper function to get view settings safely
 export function getViewSettingOrDefault(
 	plugin: TaskProgressBarPlugin,
-	viewId: ViewMode
+	viewId: ViewMode,
 ): ViewConfig {
 	const viewConfiguration =
 		plugin.settings.viewConfiguration || DEFAULT_SETTINGS.viewConfiguration;
@@ -1767,7 +1818,7 @@ export function getViewSettingOrDefault(
 
 	// Then check if it exists in default settings
 	const defaultConfig = DEFAULT_SETTINGS.viewConfiguration.find(
-		(v) => v.id === viewId
+		(v) => v.id === viewId,
 	);
 
 	// If neither exists, create a fallback default for custom views
@@ -1799,7 +1850,7 @@ export function getViewSettingOrDefault(
 			? {
 					...(baseConfig.filterRules || {}), // Start with base's filterRules
 					...savedConfig.filterRules, // Override with saved filterRules properties
-			  }
+				}
 			: baseConfig.filterRules || {}, // If no saved filterRules, use base's
 		// Merge specificConfig: Saved overrides default, default overrides base (which might be fallback without specificConfig)
 		// Ensure that the spread of savedConfig doesn't overwrite specificConfig object entirely if base has one and saved doesn't.
@@ -1809,7 +1860,7 @@ export function getViewSettingOrDefault(
 						// If saved has specificConfig, merge it onto base's
 						...(baseConfig.specificConfig || {}),
 						...savedConfig.specificConfig,
-				  }
+					}
 				: baseConfig.specificConfig, // Otherwise, just use base's specificConfig (could be undefined)
 	};
 

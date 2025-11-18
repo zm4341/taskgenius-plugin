@@ -16,6 +16,7 @@ import { BulkDatePickerModal } from "@/components/ui/date-picker/BulkDatePickerM
 import { BulkDateOffsetModal } from "@/components/ui/date-picker/BulkDateOffsetModal";
 import { addDays } from "date-fns";
 import { getCachedData } from "@/components/ui/inputs/AutoComplete";
+import { getAllStatusMarks } from "@/utils/status-cycle-resolver";
 
 /**
  * Create and show bulk operations menu
@@ -94,20 +95,11 @@ function addBulkStatusChangeMenu(
 		item.setTitle(t("Bulk change status"));
 		const submenu = item.setSubmenu();
 
-		// Get unique statuses from taskStatusMarks
-		const statusMarks = plugin.settings.taskStatusMarks;
-		const uniqueStatuses = new Map<string, string>();
+		// Get unique statuses from configuration (mark -> status)
+		const uniqueStatuses = getAllStatusMarks(plugin.settings);
 
-		// Build a map of unique mark -> status name to avoid duplicates
-		for (const status of Object.keys(statusMarks)) {
-			const mark = statusMarks[status as keyof typeof statusMarks];
-			if (!Array.from(uniqueStatuses.values()).includes(mark)) {
-				uniqueStatuses.set(status, mark);
-			}
-		}
-
-		// Create menu items from unique statuses
-		for (const [status, mark] of uniqueStatuses) {
+		// Create menu items from unique statuses (getAllStatusMarks returns mark -> status)
+		for (const [mark, status] of uniqueStatuses) {
 			submenu.addItem((subItem) => {
 				// Create checkbox indicator
 				subItem.titleEl.createEl(
