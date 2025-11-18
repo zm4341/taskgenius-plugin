@@ -88,7 +88,7 @@ export class PlacementStep {
 	 * Create Sideleaves preview
 	 */
 	private static createSideleavesPreview(): HTMLElement {
-		const preview = document.createElement("div");
+		const preview = createEl("div");
 		preview.addClass("placement-preview", "placement-preview-sideleaves");
 
 		// Left sidebar (active)
@@ -144,7 +144,7 @@ export class PlacementStep {
 	 * Create Inline preview
 	 */
 	private static createInlinePreview(): HTMLElement {
-		const preview = document.createElement("div");
+		const preview = createEl("div");
 		preview.addClass("placement-preview", "placement-preview-inline");
 
 		// Left sidebar (inactive/dimmed)

@@ -739,7 +739,9 @@ export class KanbanComponent extends Component {
 						onFilterApply: this.handleFilterApply,
 					},
 				);
-				this.addChild(otherColumn);
+				this.addChild(otherColumn); // Must call addChild first to trigger onload()
+				// Mark this as the Other column to prevent drag-in
+				otherColumn.getElement().dataset.isOtherColumn = "true";
 				this.columns.push(otherColumn);
 			}
 		}
@@ -1050,8 +1052,17 @@ export class KanbanComponent extends Component {
 
 		this.columns.forEach((col) => {
 			const columnContent = col.getContentElement();
+			const columnElement = col.getElement();
+			const isOtherColumn =
+				columnElement?.dataset.isOtherColumn === "true";
+
+			// Configure group: Other column cannot accept drops (put: false)
+			const groupConfig = isOtherColumn
+				? { name: "kanban-group", put: false, pull: true }
+				: "kanban-group";
+
 			const instance = Sortable.create(columnContent, {
-				group: "kanban-group",
+				group: groupConfig,
 				animation: 150,
 				ghostClass: "tg-kanban-card-ghost",
 				dragClass: "tg-kanban-card-dragging",

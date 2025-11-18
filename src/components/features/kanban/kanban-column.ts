@@ -246,6 +246,11 @@ export class KanbanColumnComponent extends Component {
 		return this.contentEl;
 	}
 
+	// Public getter for the column element
+	public getElement(): HTMLElement {
+		return this.element;
+	}
+
 	// Get the number of tasks in this column
 	public getTaskCount(): number {
 		return this.tasks.length;

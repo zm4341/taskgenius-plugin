@@ -38,7 +38,7 @@ export class ProjectPopover extends Component {
 		plugin: TaskProgressBarPlugin,
 		referenceEl: HTMLElement,
 		onSave: (project: CustomProject) => void,
-		onClose: () => void
+		onClose: () => void,
 	) {
 		super();
 		this.plugin = plugin;
@@ -58,7 +58,7 @@ export class ProjectPopover extends Component {
 	}
 
 	private createPopover() {
-		this.popoverEl = document.createElement("div");
+		this.popoverEl = createEl("div");
 		this.popoverEl.addClass("fluent-project-popover-container");
 		document.body.appendChild(this.popoverEl);
 
@@ -67,21 +67,21 @@ export class ProjectPopover extends Component {
 		});
 
 		// Arrow
-		const arrow = popover.createDiv({cls: "fluent-popover-arrow"});
+		const arrow = popover.createDiv({ cls: "fluent-popover-arrow" });
 		arrow.setAttribute("data-popper-arrow", "");
 
 		// Content
-		const content = popover.createDiv({cls: "fluent-popover-content"});
+		const content = popover.createDiv({ cls: "fluent-popover-content" });
 
 		// Title
-		const header = content.createDiv({cls: "fluent-popover-header"});
-		header.createEl("h3", {text: t("New Project")});
+		const header = content.createDiv({ cls: "fluent-popover-header" });
+		header.createEl("h3", { text: t("New Project") });
 
 		// Name input
 		const nameSection = content.createDiv({
 			cls: "fluent-popover-section",
 		});
-		nameSection.createEl("label", {text: t("Project Name")});
+		nameSection.createEl("label", { text: t("Project Name") });
 		this.nameInput = nameSection.createEl("input", {
 			cls: "fluent-popover-input",
 			attr: {
@@ -94,13 +94,13 @@ export class ProjectPopover extends Component {
 		const colorSection = content.createDiv({
 			cls: "fluent-popover-section",
 		});
-		colorSection.createEl("label", {text: t("Choose Color")});
+		colorSection.createEl("label", { text: t("Choose Color") });
 
-		const colorGrid = colorSection.createDiv({cls: "fluent-color-grid"});
+		const colorGrid = colorSection.createDiv({ cls: "fluent-color-grid" });
 		this.colors.forEach((color) => {
 			const colorButton = colorGrid.createDiv({
 				cls: "fluent-color-button",
-				attr: {"data-color": color},
+				attr: { "data-color": color },
 			});
 			colorButton.style.backgroundColor = color;
 
@@ -114,7 +114,7 @@ export class ProjectPopover extends Component {
 		});
 
 		// Action buttons
-		const actions = content.createDiv({cls: "fluent-popover-actions"});
+		const actions = content.createDiv({ cls: "fluent-popover-actions" });
 
 		const cancelBtn = actions.createEl("button", {
 			cls: "fluent-button fluent-button-secondary",
@@ -143,7 +143,7 @@ export class ProjectPopover extends Component {
 		if (!this.popoverEl) return;
 
 		const popover = this.popoverEl.querySelector(
-			".fluent-project-popover"
+			".fluent-project-popover",
 		) as HTMLElement;
 		if (!popover) return;
 
@@ -220,7 +220,7 @@ export class ProjectPopover extends Component {
 				btn.removeClass("is-selected");
 			});
 		const selectedBtn = this.popoverEl.querySelector(
-			`[data-color="${color}"]`
+			`[data-color="${color}"]`,
 		);
 		selectedBtn?.addClass("is-selected");
 	}
@@ -322,12 +322,12 @@ export class EditProjectPopover extends Component {
 		referenceEl: HTMLElement,
 		project: CustomProject,
 		onSave: (project: CustomProject) => void,
-		onClose: () => void
+		onClose: () => void,
 	) {
 		super();
 		this.plugin = plugin;
 		this.referenceEl = referenceEl;
-		this.project = {...project}; // Clone the project to avoid direct mutation
+		this.project = { ...project }; // Clone the project to avoid direct mutation
 		this.onSave = onSave;
 		this.onClose = onClose;
 		this.selectedColor = project.color || "#3498db";
@@ -344,7 +344,7 @@ export class EditProjectPopover extends Component {
 	}
 
 	private createPopover() {
-		this.popoverEl = document.createElement("div");
+		this.popoverEl = createEl("div");
 		this.popoverEl.addClass("fluent-project-popover-container");
 		document.body.appendChild(this.popoverEl);
 
@@ -353,21 +353,21 @@ export class EditProjectPopover extends Component {
 		});
 
 		// Arrow
-		const arrow = popover.createDiv({cls: "fluent-popover-arrow"});
+		const arrow = popover.createDiv({ cls: "fluent-popover-arrow" });
 		arrow.setAttribute("data-popper-arrow", "");
 
 		// Content
-		const content = popover.createDiv({cls: "fluent-popover-content"});
+		const content = popover.createDiv({ cls: "fluent-popover-content" });
 
 		// Title
-		const header = content.createDiv({cls: "fluent-popover-header"});
-		header.createEl("h3", {text: t("Edit Project")});
+		const header = content.createDiv({ cls: "fluent-popover-header" });
+		header.createEl("h3", { text: t("Edit Project") });
 
 		// Display name input
 		const displayNameSection = content.createDiv({
 			cls: "fluent-popover-section",
 		});
-		displayNameSection.createEl("label", {text: t("Display Name")});
+		displayNameSection.createEl("label", { text: t("Display Name") });
 		this.displayNameInput = displayNameSection.createEl("input", {
 			cls: "fluent-popover-input",
 			attr: {
@@ -381,13 +381,13 @@ export class EditProjectPopover extends Component {
 		const colorSection = content.createDiv({
 			cls: "fluent-popover-section",
 		});
-		colorSection.createEl("label", {text: t("Choose Color")});
+		colorSection.createEl("label", { text: t("Choose Color") });
 
-		const colorGrid = colorSection.createDiv({cls: "fluent-color-grid"});
+		const colorGrid = colorSection.createDiv({ cls: "fluent-color-grid" });
 		this.colors.forEach((color) => {
 			const colorButton = colorGrid.createDiv({
 				cls: "fluent-color-button",
-				attr: {"data-color": color},
+				attr: { "data-color": color },
 			});
 			colorButton.style.backgroundColor = color;
 
@@ -401,7 +401,7 @@ export class EditProjectPopover extends Component {
 		});
 
 		// Action buttons
-		const actions = content.createDiv({cls: "fluent-popover-actions"});
+		const actions = content.createDiv({ cls: "fluent-popover-actions" });
 
 		const cancelBtn = actions.createEl("button", {
 			cls: "fluent-button fluent-button-secondary",
@@ -423,7 +423,7 @@ export class EditProjectPopover extends Component {
 				if (e.key === "Enter") {
 					this.save();
 				}
-			}
+			},
 		);
 
 		// Focus input
@@ -434,7 +434,7 @@ export class EditProjectPopover extends Component {
 		if (!this.popoverEl) return;
 
 		const popover = this.popoverEl.querySelector(
-			".fluent-project-popover"
+			".fluent-project-popover",
 		) as HTMLElement;
 		if (!popover) return;
 
@@ -511,7 +511,7 @@ export class EditProjectPopover extends Component {
 				btn.removeClass("is-selected");
 			});
 		const selectedBtn = this.popoverEl.querySelector(
-			`[data-color="${color}"]`
+			`[data-color="${color}"]`,
 		);
 		selectedBtn?.addClass("is-selected");
 	}
@@ -592,7 +592,7 @@ export class ProjectModal extends Modal {
 	constructor(
 		app: App,
 		plugin: TaskProgressBarPlugin,
-		onSave: (project: CustomProject) => void
+		onSave: (project: CustomProject) => void,
 	) {
 		super(app);
 		this.plugin = plugin;
@@ -602,26 +602,26 @@ export class ProjectModal extends Modal {
 	private addEventListener(
 		element: HTMLElement,
 		event: string,
-		handler: EventListener
+		handler: EventListener,
 	) {
 		element.addEventListener(event, handler);
-		this.eventListeners.push({element, event, handler});
+		this.eventListeners.push({ element, event, handler });
 	}
 
 	onOpen() {
-		const {contentEl} = this;
+		const { contentEl } = this;
 
 		// Add custom class for styling
 		this.modalEl.addClass("fluent-project-modal");
 
 		// Title
-		contentEl.createEl("h2", {text: t("Create New Project")});
+		contentEl.createEl("h2", { text: t("Create New Project") });
 
 		// Name input section
 		const nameSection = contentEl.createDiv({
 			cls: "fluent-modal-section",
 		});
-		nameSection.createEl("label", {text: t("Project Name")});
+		nameSection.createEl("label", { text: t("Project Name") });
 		this.nameInput = nameSection.createEl("input", {
 			cls: "fluent-modal-input",
 			attr: {
@@ -634,7 +634,7 @@ export class ProjectModal extends Modal {
 		const colorSection = contentEl.createDiv({
 			cls: "fluent-modal-section",
 		});
-		colorSection.createEl("label", {text: t("Choose Color")});
+		colorSection.createEl("label", { text: t("Choose Color") });
 
 		const colorGrid = colorSection.createDiv({
 			cls: "fluent-modal-color-grid",
@@ -642,7 +642,7 @@ export class ProjectModal extends Modal {
 		this.colors.forEach((color) => {
 			const colorButton = colorGrid.createDiv({
 				cls: "fluent-modal-color-button",
-				attr: {"data-color": color},
+				attr: { "data-color": color },
 			});
 			colorButton.style.backgroundColor = color;
 
@@ -659,7 +659,7 @@ export class ProjectModal extends Modal {
 		const previewSection = contentEl.createDiv({
 			cls: "fluent-modal-section",
 		});
-		previewSection.createEl("label", {text: t("Preview")});
+		previewSection.createEl("label", { text: t("Preview") });
 		const preview = previewSection.createDiv({
 			cls: "fluent-modal-preview",
 		});
@@ -681,7 +681,7 @@ export class ProjectModal extends Modal {
 		previewName.setText(t("Project Name"));
 
 		// Footer with action buttons
-		const footer = contentEl.createDiv({cls: "fluent-modal-footer"});
+		const footer = contentEl.createDiv({ cls: "fluent-modal-footer" });
 
 		const cancelBtn = footer.createEl("button", {
 			cls: "fluent-button fluent-button-secondary",
@@ -708,13 +708,13 @@ export class ProjectModal extends Modal {
 
 	onClose() {
 		// Clean up all event listeners
-		this.eventListeners.forEach(({element, event, handler}) => {
+		this.eventListeners.forEach(({ element, event, handler }) => {
 			element.removeEventListener(event, handler);
 		});
 		this.eventListeners = [];
 
 		// Clear content
-		const {contentEl} = this;
+		const { contentEl } = this;
 		contentEl.empty();
 	}
 
@@ -728,13 +728,13 @@ export class ProjectModal extends Modal {
 				btn.removeClass("is-selected");
 			});
 		const selectedBtn = this.modalEl.querySelector(
-			`[data-color="${color}"]`
+			`[data-color="${color}"]`,
 		);
 		selectedBtn?.addClass("is-selected");
 
 		// Update preview
 		const previewColor = this.modalEl.querySelector(
-			".fluent-project-color"
+			".fluent-project-color",
 		) as HTMLElement;
 		if (previewColor) {
 			previewColor.style.backgroundColor = color;
@@ -807,11 +807,11 @@ export class EditProjectModal extends Modal {
 		app: App,
 		plugin: TaskProgressBarPlugin,
 		project: CustomProject,
-		onSave: (project: CustomProject) => void
+		onSave: (project: CustomProject) => void,
 	) {
 		super(app);
 		this.plugin = plugin;
-		this.project = {...project}; // Clone to avoid direct mutation
+		this.project = { ...project }; // Clone to avoid direct mutation
 		this.onSave = onSave;
 		this.selectedColor = project.color || "#3498db";
 	}
@@ -819,26 +819,26 @@ export class EditProjectModal extends Modal {
 	private addEventListener(
 		element: HTMLElement,
 		event: string,
-		handler: EventListener
+		handler: EventListener,
 	) {
 		element.addEventListener(event, handler);
-		this.eventListeners.push({element, event, handler});
+		this.eventListeners.push({ element, event, handler });
 	}
 
 	onOpen() {
-		const {contentEl} = this;
+		const { contentEl } = this;
 
 		// Add custom class for styling
 		this.modalEl.addClass("fluent-project-modal");
 
 		// Title
-		contentEl.createEl("h2", {text: t("Edit Project")});
+		contentEl.createEl("h2", { text: t("Edit Project") });
 
 		// Display name input section
 		const displayNameSection = contentEl.createDiv({
 			cls: "fluent-modal-section",
 		});
-		displayNameSection.createEl("label", {text: t("Display Name")});
+		displayNameSection.createEl("label", { text: t("Display Name") });
 		this.displayNameInput = displayNameSection.createEl("input", {
 			cls: "fluent-modal-input",
 			attr: {
@@ -852,7 +852,7 @@ export class EditProjectModal extends Modal {
 		const colorSection = contentEl.createDiv({
 			cls: "fluent-modal-section",
 		});
-		colorSection.createEl("label", {text: t("Choose Color")});
+		colorSection.createEl("label", { text: t("Choose Color") });
 
 		const colorGrid = colorSection.createDiv({
 			cls: "fluent-modal-color-grid",
@@ -860,7 +860,7 @@ export class EditProjectModal extends Modal {
 		this.colors.forEach((color) => {
 			const colorButton = colorGrid.createDiv({
 				cls: "fluent-modal-color-button",
-				attr: {"data-color": color},
+				attr: { "data-color": color },
 			});
 			colorButton.style.backgroundColor = color;
 
@@ -877,7 +877,7 @@ export class EditProjectModal extends Modal {
 		const previewSection = contentEl.createDiv({
 			cls: "fluent-modal-section",
 		});
-		previewSection.createEl("label", {text: t("Preview")});
+		previewSection.createEl("label", { text: t("Preview") });
 		const preview = previewSection.createDiv({
 			cls: "fluent-modal-preview",
 		});
@@ -895,13 +895,13 @@ export class EditProjectModal extends Modal {
 		// Update preview on name change
 		this.addEventListener(this.displayNameInput, "input", () => {
 			previewName.setText(
-				this.displayNameInput?.value || this.project.name
+				this.displayNameInput?.value || this.project.name,
 			);
 		});
 		previewName.setText(this.project.displayName || this.project.name);
 
 		// Footer with action buttons
-		const footer = contentEl.createDiv({cls: "fluent-modal-footer"});
+		const footer = contentEl.createDiv({ cls: "fluent-modal-footer" });
 
 		const cancelBtn = footer.createEl("button", {
 			cls: "fluent-button fluent-button-secondary",
@@ -923,7 +923,7 @@ export class EditProjectModal extends Modal {
 				if (e.key === "Enter") {
 					this.save();
 				}
-			}
+			},
 		);
 
 		// Focus input
@@ -935,13 +935,13 @@ export class EditProjectModal extends Modal {
 
 	onClose() {
 		// Clean up all event listeners
-		this.eventListeners.forEach(({element, event, handler}) => {
+		this.eventListeners.forEach(({ element, event, handler }) => {
 			element.removeEventListener(event, handler);
 		});
 		this.eventListeners = [];
 
 		// Clear content
-		const {contentEl} = this;
+		const { contentEl } = this;
 		contentEl.empty();
 	}
 
@@ -955,13 +955,13 @@ export class EditProjectModal extends Modal {
 				btn.removeClass("is-selected");
 			});
 		const selectedBtn = this.modalEl.querySelector(
-			`[data-color="${color}"]`
+			`[data-color="${color}"]`,
 		);
 		selectedBtn?.addClass("is-selected");
 
 		// Update preview
 		const previewColor = this.modalEl.querySelector(
-			".fluent-project-color"
+			".fluent-project-color",
 		) as HTMLElement;
 		if (previewColor) {
 			previewColor.style.backgroundColor = color;
