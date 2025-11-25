@@ -118,6 +118,11 @@ export interface CalendarSpecificConfig {
 	viewType: "calendar"; // Discriminator
 	firstDayOfWeek?: number; // 0=Sun, 1=Mon, ..., 6=Sat; undefined=locale default
 	hideWeekends?: boolean; // Whether to hide weekend columns/cells in calendar views
+
+	// Working hours configuration (v0.6.0+)
+	showWorkingHoursOnly?: boolean; // Only show working hours in week/day views
+	workingHoursStart?: number; // Start hour (0-23), default: 9
+	workingHoursEnd?: number; // End hour (0-23), default: 18
 }
 
 export interface GanttSpecificConfig {
@@ -1347,6 +1352,9 @@ export const DEFAULT_SETTINGS: TaskProgressBarSettings = {
 				viewType: "calendar",
 				firstDayOfWeek: undefined, // Use locale default initially
 				hideWeekends: false, // Show weekends by default
+				showWorkingHoursOnly: false, // Show all hours by default
+				workingHoursStart: 9, // Default: 9 AM
+				workingHoursEnd: 18, // Default: 6 PM
 			} as CalendarSpecificConfig,
 		},
 		{

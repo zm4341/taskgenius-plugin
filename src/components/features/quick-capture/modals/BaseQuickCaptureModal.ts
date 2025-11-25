@@ -75,16 +75,14 @@ export abstract class BaseQuickCaptureModal extends Modal {
 		app: App,
 		plugin: TaskProgressBarPlugin,
 		initialMode: QuickCaptureMode = "checkbox",
-		metadata?: TaskMetadata
+		metadata?: TaskMetadata,
 	) {
 		super(app);
 		this.plugin = plugin;
 		this.currentMode = initialMode;
 
-		const scopeControls =
-			this.plugin.settings.fileFilter?.scopeControls;
-		this.inlineModeAvailable =
-			scopeControls?.inlineTasksEnabled !== false;
+		const scopeControls = this.plugin.settings.fileFilter?.scopeControls;
+		this.inlineModeAvailable = scopeControls?.inlineTasksEnabled !== false;
 		this.fileModeAvailable =
 			(this.plugin.settings.fileSource?.enabled ?? false) &&
 			scopeControls?.fileTasksEnabled !== false;
@@ -102,7 +100,7 @@ export abstract class BaseQuickCaptureModal extends Modal {
 
 		// Initialize metadata
 		if (metadata) {
-			this.taskMetadata = metadata;
+			this.taskMetadata = this.normalizeMetadataDates(metadata);
 			// Auto-switch to file mode if location is file
 			if (metadata.location === "file") {
 				this.currentMode = "file";
@@ -127,6 +125,31 @@ export abstract class BaseQuickCaptureModal extends Modal {
 
 		// Initialize target file path
 		this.initializeTargetFile();
+	}
+
+	private normalizeMetadataDates(metadata: TaskMetadata): TaskMetadata {
+		const normalize = (value?: Date | string | number | null) => {
+			if (value === null || value === undefined) return undefined;
+			if (value instanceof Date) return value;
+			if (typeof value === "number") {
+				const fromNumber = new Date(value);
+				return isNaN(fromNumber.getTime()) ? undefined : fromNumber;
+			}
+			if (typeof value === "string") {
+				const isoParsed = moment(value, moment.ISO_8601, true);
+				if (isoParsed.isValid()) return isoParsed.toDate();
+				const strictDate = moment(value, "YYYY-MM-DD", true);
+				if (strictDate.isValid()) return strictDate.toDate();
+			}
+			return undefined;
+		};
+
+		return {
+			...metadata,
+			startDate: normalize(metadata.startDate),
+			dueDate: normalize(metadata.dueDate),
+			scheduledDate: normalize(metadata.scheduledDate),
+		};
 	}
 
 	/**
@@ -155,7 +178,7 @@ export abstract class BaseQuickCaptureModal extends Modal {
 	 * Called when the modal is opened
 	 */
 	onOpen() {
-		const {contentEl} = this;
+		const { contentEl } = this;
 		this.modalEl.toggleClass("quick-capture-modal", true);
 		this.modalEl.toggleClass(`quick-capture-${this.currentMode}`, true);
 
@@ -220,11 +243,11 @@ export abstract class BaseQuickCaptureModal extends Modal {
 			checkboxButtonEl.setAttribute("role", "tab");
 			checkboxButtonEl.setAttribute(
 				"aria-selected",
-				String(this.currentMode === "checkbox")
+				String(this.currentMode === "checkbox"),
 			);
 			checkboxButtonEl.setAttribute(
 				"aria-controls",
-				"quick-capture-content"
+				"quick-capture-content",
 			);
 			checkboxButtonEl.setAttribute("data-mode", "checkbox");
 
@@ -256,7 +279,7 @@ export abstract class BaseQuickCaptureModal extends Modal {
 			fileButtonEl.setAttribute("role", "tab");
 			fileButtonEl.setAttribute(
 				"aria-selected",
-				String(this.currentMode === "file")
+				String(this.currentMode === "file"),
 			);
 			fileButtonEl.setAttribute("aria-controls", "quick-capture-content");
 			fileButtonEl.setAttribute("data-mode", "file");
@@ -311,7 +334,7 @@ export abstract class BaseQuickCaptureModal extends Modal {
 			cls: "quick-capture-continue",
 		});
 		continueButton.addEventListener("click", () =>
-			this.handleContinueCreate()
+			this.handleContinueCreate(),
 		);
 
 		// Right side: Main action buttons
@@ -343,8 +366,8 @@ export abstract class BaseQuickCaptureModal extends Modal {
 		if (mode === "file" && !this.fileModeAvailable) {
 			new Notice(
 				t(
-					"File Task is disabled. Enable FileSource in Settings to use File mode."
-				)
+					"File Task is disabled. Enable FileSource in Settings to use File mode.",
+				),
 			);
 			return;
 		}
@@ -354,20 +377,19 @@ export abstract class BaseQuickCaptureModal extends Modal {
 
 		// Save current state
 		const savedContent = this.capturedContent;
-		const savedMetadata = {...this.taskMetadata};
+		const savedMetadata = { ...this.taskMetadata };
 
 		// Update mode
 		this.currentMode = mode;
 		// Persist last used mode to local storage
 		try {
 			this.app.saveLocalStorage(LAST_USED_MODE_KEY, mode);
-		} catch {
-		}
+		} catch {}
 
 		// Update modal classes
 		this.modalEl.removeClass(
 			"quick-capture-checkbox",
-			"quick-capture-file"
+			"quick-capture-file",
 		);
 		this.modalEl.addClass(`quick-capture-${mode}`);
 
@@ -391,11 +413,11 @@ export abstract class BaseQuickCaptureModal extends Modal {
 
 		// Update button text
 		const submitButton = this.footerContainer?.querySelector(
-			".mod-cta"
+			".mod-cta",
 		) as HTMLButtonElement;
 		if (submitButton) {
 			submitButton.setText(
-				mode === "file" ? t("Save as File") : t("Add Task")
+				mode === "file" ? t("Save as File") : t("Add Task"),
 			);
 		}
 	}
@@ -470,7 +492,7 @@ export abstract class BaseQuickCaptureModal extends Modal {
 			new Notice(
 				this.currentMode === "file"
 					? t("File saved successfully")
-					: t("Task added successfully")
+					: t("Task added successfully"),
 			);
 
 			if (!this.keepOpenAfterCapture) {
@@ -506,12 +528,12 @@ export abstract class BaseQuickCaptureModal extends Modal {
 				!targetFile.includes("/")
 			) {
 				targetFile = this.sanitizeFilePath(
-					`${defaultFolder}/${targetFile}`
+					`${defaultFolder}/${targetFile}`,
 				);
 			}
 			processedContent = await this.buildFileModeContent(
 				content,
-				processedContent
+				processedContent,
 			);
 		}
 
@@ -618,10 +640,9 @@ export abstract class BaseQuickCaptureModal extends Modal {
 	protected async buildFileModeContent(
 		rawContent: string,
 		processedContent: string,
-		options: { preview?: boolean } = {}
+		options: { preview?: boolean } = {},
 	): Promise<string> {
-		const createFileMode =
-			this.plugin.settings.quickCapture.createFileMode;
+		const createFileMode = this.plugin.settings.quickCapture.createFileMode;
 		const useTemplate = !!createFileMode?.useTemplate;
 
 		if (useTemplate) {
@@ -635,37 +656,35 @@ export abstract class BaseQuickCaptureModal extends Modal {
 							await this.app.vault.read(templateFile);
 						const merged = this.mergeContentIntoTemplate(
 							templateContent,
-							processedContent
+							processedContent,
 						);
 						return this.ensureMinimalFrontmatter(merged);
 					} catch (error) {
 						console.error(
 							"Failed to read quick capture template:",
-							error
+							error,
 						);
 						if (!options.preview) {
 							new Notice(
-								`${t("Failed to read template file:")} ${templatePath}`
+								`${t("Failed to read template file:")} ${templatePath}`,
 							);
 						}
 					}
 				} else if (!options.preview) {
 					new Notice(
-						`${t("Template file not found:")} ${templatePath}`
+						`${t("Template file not found:")} ${templatePath}`,
 					);
 				}
 			} else if (!options.preview) {
 				new Notice(
 					t(
-						"Template file is not configured for Quick Capture file mode."
-					)
+						"Template file is not configured for Quick Capture file mode.",
+					),
 				);
 			}
 		}
 
-		const hasFrontmatter = processedContent
-			.trimStart()
-			.startsWith("---");
+		const hasFrontmatter = processedContent.trimStart().startsWith("---");
 		if (useTemplate && hasFrontmatter) {
 			return processedContent;
 		}
@@ -679,7 +698,7 @@ export abstract class BaseQuickCaptureModal extends Modal {
 
 	private mergeContentIntoTemplate(
 		templateContent: string,
-		captureContent: string
+		captureContent: string,
 	): string {
 		if (!templateContent) {
 			return captureContent;
@@ -701,14 +720,12 @@ export abstract class BaseQuickCaptureModal extends Modal {
 			return content;
 		}
 		const statusText = this.mapStatusToText(this.taskMetadata.status);
-		return `---\nstatus: ${JSON.stringify(
-			statusText
-		)}\n---\n\n${content}`;
+		return `---\nstatus: ${JSON.stringify(statusText)}\n---\n\n${content}`;
 	}
 
 	private buildFullFrontmatter(
 		processedContent: string,
-		rawContent: string
+		rawContent: string,
 	): string {
 		const trimmed = processedContent.trimStart();
 		if (trimmed.startsWith("---")) {
@@ -743,19 +760,22 @@ export abstract class BaseQuickCaptureModal extends Modal {
 		const yamlLines: string[] = [];
 		yamlLines.push(`status: ${JSON.stringify(statusText)}`);
 		if (dueDate) yamlLines.push(`dueDate: ${JSON.stringify(dueDate)}`);
-		if (startDate) yamlLines.push(`startDate: ${JSON.stringify(startDate)}`);
+		if (startDate)
+			yamlLines.push(`startDate: ${JSON.stringify(startDate)}`);
 		if (scheduledDate)
 			yamlLines.push(`scheduledDate: ${JSON.stringify(scheduledDate)}`);
 		if (priorityVal)
 			yamlLines.push(`priority: ${JSON.stringify(priorityVal)}`);
-		if (projectVal) yamlLines.push(`project: ${JSON.stringify(projectVal)}`);
-		if (contextVal) yamlLines.push(`context: ${JSON.stringify(contextVal)}`);
+		if (projectVal)
+			yamlLines.push(`project: ${JSON.stringify(projectVal)}`);
+		if (contextVal)
+			yamlLines.push(`context: ${JSON.stringify(contextVal)}`);
 		if (repeatVal) yamlLines.push(`repeat: ${JSON.stringify(repeatVal)}`);
 		if (mergedTags.length > 0) {
 			yamlLines.push(
 				`tags: [${mergedTags
 					.map((t) => JSON.stringify(t))
-					.join(", ")}]`
+					.join(", ")}]`,
 			);
 		}
 
@@ -791,7 +811,7 @@ export abstract class BaseQuickCaptureModal extends Modal {
 	protected formatDate(date: Date): string {
 		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
 			2,
-			"0"
+			"0",
 		)}-${String(date.getDate()).padStart(2, "0")}`;
 	}
 

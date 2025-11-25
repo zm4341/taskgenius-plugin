@@ -124,7 +124,7 @@ export class QuickCaptureModal extends Modal {
 		app: App,
 		plugin: TaskProgressBarPlugin,
 		metadata?: TaskMetadata,
-		useFullFeaturedMode: boolean = false
+		useFullFeaturedMode: boolean = false,
 	) {
 		super(app);
 		this.plugin = plugin;
@@ -135,7 +135,7 @@ export class QuickCaptureModal extends Modal {
 		// Initialize target file path based on target type
 		if (this.plugin.settings.quickCapture.targetType === "daily-note") {
 			const dateStr = moment().format(
-				this.plugin.settings.quickCapture.dailyNoteSettings.format
+				this.plugin.settings.quickCapture.dailyNoteSettings.format,
 			);
 			// For daily notes, the format might include path separators (e.g., YYYY-MM/YYYY-MM-DD)
 			// We need to preserve the path structure and only sanitize the final filename
@@ -153,11 +153,18 @@ export class QuickCaptureModal extends Modal {
 
 		// Initialize time parsing service
 		this.timeParsingService = new TimeParsingService(
-			this.plugin.settings.timeParsing || DEFAULT_TIME_PARSING_CONFIG
+			this.plugin.settings.timeParsing || DEFAULT_TIME_PARSING_CONFIG,
 		);
 
 		if (metadata) {
-			this.taskMetadata = metadata;
+			this.taskMetadata = {
+				...metadata,
+				startDate: this.normalizeIncomingDate(metadata.startDate),
+				dueDate: this.normalizeIncomingDate(metadata.dueDate),
+				scheduledDate: this.normalizeIncomingDate(
+					metadata.scheduledDate,
+				),
+			};
 		}
 
 		this.useFullFeaturedMode = useFullFeaturedMode && !Platform.isPhone;
@@ -182,7 +189,7 @@ export class QuickCaptureModal extends Modal {
 			if (this.markdownEditor?.editor?.editor) {
 				this.universalSuggest =
 					this.suggestManager.enableForQuickCaptureModal(
-						this.markdownEditor.editor.editor
+						this.markdownEditor.editor.editor,
 					);
 				this.universalSuggest.enable();
 			}
@@ -241,7 +248,7 @@ export class QuickCaptureModal extends Modal {
 					this.tempTargetFilePath = file.path;
 					// Focus current editor
 					this.markdownEditor?.editor?.focus();
-				}
+				},
 			);
 		}
 	}
@@ -294,7 +301,7 @@ export class QuickCaptureModal extends Modal {
 					targetFileEl.textContent = file.path;
 					this.tempTargetFilePath = file.path;
 					this.markdownEditor?.editor?.focus();
-				}
+				},
 			);
 		}
 
@@ -330,7 +337,7 @@ export class QuickCaptureModal extends Modal {
 					this.taskMetadata.status = status;
 					this.updatePreview();
 				},
-			}
+			},
 		);
 		statusComponent.load();
 
@@ -340,7 +347,7 @@ export class QuickCaptureModal extends Modal {
 				.setValue(
 					this.taskMetadata.startDate
 						? this.formatDate(this.taskMetadata.startDate)
-						: ""
+						: "",
 				)
 				.onChange((value) => {
 					if (value) {
@@ -366,7 +373,7 @@ export class QuickCaptureModal extends Modal {
 				.setValue(
 					this.taskMetadata.dueDate
 						? this.formatDate(this.taskMetadata.dueDate)
-						: ""
+						: "",
 				)
 				.onChange((value) => {
 					if (value) {
@@ -394,7 +401,7 @@ export class QuickCaptureModal extends Modal {
 					.setValue(
 						this.taskMetadata.scheduledDate
 							? this.formatDate(this.taskMetadata.scheduledDate)
-							: ""
+							: "",
 					)
 					.onChange((value) => {
 						if (value) {
@@ -405,8 +412,7 @@ export class QuickCaptureModal extends Modal {
 							this.taskMetadata.scheduledDate = undefined;
 							// Reset manual flag when cleared
 							if (this.taskMetadata.manuallySet) {
-								this.taskMetadata.manuallySet.scheduledDate =
-									false;
+								this.taskMetadata.manuallySet.scheduledDate = false;
 							}
 						}
 						this.updatePreview();
@@ -486,7 +492,7 @@ export class QuickCaptureModal extends Modal {
 			this.app,
 			this.previewContainerEl,
 			"",
-			false
+			false,
 		);
 
 		this.setupMarkdownEditor(editorContainer);
@@ -512,7 +518,7 @@ export class QuickCaptureModal extends Modal {
 	updatePreview() {
 		if (this.previewContainerEl) {
 			this.markdownRenderer?.render(
-				this.processContentWithMetadata(this.capturedContent)
+				this.processContentWithMetadata(this.capturedContent),
 			);
 		}
 	}
@@ -564,7 +570,7 @@ export class QuickCaptureModal extends Modal {
 							this.updatePreview();
 						}
 					},
-				}
+				},
 			);
 
 			this.markdownEditor?.scope.register(
@@ -580,7 +586,7 @@ export class QuickCaptureModal extends Modal {
 						this.handleSubmit();
 					}
 					return true;
-				}
+				},
 			);
 
 			if (targetFileEl) {
@@ -597,7 +603,7 @@ export class QuickCaptureModal extends Modal {
 							targetFileEl.focus();
 						}
 						return true;
-					}
+					},
 				);
 			}
 
@@ -668,14 +674,17 @@ export class QuickCaptureModal extends Modal {
 				// Preserve the original indentation from the original line
 				const originalIndent = indentMatch[1];
 				const cleanedContent = this.cleanTemporaryMarks(
-					cleanedLine.trim()
+					cleanedLine.trim(),
 				);
 				processedLines.push(originalIndent + cleanedContent);
 			} else if (isTaskOrList) {
 				// If it's a task, add line-specific metadata
 				if (cleanedLine.trim().match(/^(-|\d+\.|\*|\+)\s+\[[^\]]+\]/)) {
 					processedLines.push(
-						this.addLineMetadataToTask(cleanedLine, lineParseResult)
+						this.addLineMetadataToTask(
+							cleanedLine,
+							lineParseResult,
+						),
 					);
 				} else {
 					// If it's a list item but not a task, convert to task and add line-specific metadata
@@ -686,14 +695,14 @@ export class QuickCaptureModal extends Modal {
 						cleanedLine
 							.trim()
 							.substring(listPrefix?.length || 0)
-							.trim()
+							.trim(),
 					);
 
 					// Use the specified status or default to empty checkbox
 					const statusMark = this.taskMetadata.status || " ";
 					const taskLine = `${listPrefix} [${statusMark}] ${restOfLine}`;
 					processedLines.push(
-						this.addLineMetadataToTask(taskLine, lineParseResult)
+						this.addLineMetadataToTask(taskLine, lineParseResult),
 					);
 				}
 			} else {
@@ -703,7 +712,7 @@ export class QuickCaptureModal extends Modal {
 				const cleanedContent = this.cleanTemporaryMarks(cleanedLine);
 				const taskLine = `- [${statusMark}] ${cleanedContent}`;
 				processedLines.push(
-					this.addLineMetadataToTask(taskLine, lineParseResult)
+					this.addLineMetadataToTask(taskLine, lineParseResult),
 				);
 			}
 		}
@@ -726,7 +735,7 @@ export class QuickCaptureModal extends Modal {
 	 */
 	addLineMetadataToTask(
 		taskLine: string,
-		lineParseResult: LineParseResult
+		lineParseResult: LineParseResult,
 	): string {
 		const metadata = this.generateLineMetadata(lineParseResult);
 		if (!metadata) return taskLine;
@@ -756,7 +765,7 @@ export class QuickCaptureModal extends Modal {
 			metadata.push(
 				useDataviewFormat
 					? `[start:: ${formattedStartDate}]`
-					: `🛫 ${formattedStartDate}`
+					: `🛫 ${formattedStartDate}`,
 			);
 		}
 
@@ -765,7 +774,7 @@ export class QuickCaptureModal extends Modal {
 			metadata.push(
 				useDataviewFormat
 					? `[due:: ${formattedDueDate}]`
-					: `📅 ${formattedDueDate}`
+					: `📅 ${formattedDueDate}`,
 			);
 		}
 
@@ -774,7 +783,7 @@ export class QuickCaptureModal extends Modal {
 			metadata.push(
 				useDataviewFormat
 					? `[scheduled:: ${formattedScheduledDate}]`
-					: `⏳ ${formattedScheduledDate}`
+					: `⏳ ${formattedScheduledDate}`,
 			);
 		}
 
@@ -837,7 +846,7 @@ export class QuickCaptureModal extends Modal {
 						this.plugin.settings.preferMetadataFormat
 					] || "project";
 				metadata.push(
-					`[${projectPrefix}:: ${this.taskMetadata.project}]`
+					`[${projectPrefix}:: ${this.taskMetadata.project}]`,
 				);
 			} else {
 				const projectPrefix =
@@ -856,7 +865,7 @@ export class QuickCaptureModal extends Modal {
 						this.plugin.settings.preferMetadataFormat
 					] || "context";
 				metadata.push(
-					`[${contextPrefix}:: ${this.taskMetadata.context}]`
+					`[${contextPrefix}:: ${this.taskMetadata.context}]`,
 				);
 			} else {
 				const contextPrefix =
@@ -872,7 +881,7 @@ export class QuickCaptureModal extends Modal {
 			metadata.push(
 				useDataviewFormat
 					? `[repeat:: ${this.taskMetadata.recurrence}]`
-					: `🔁 ${this.taskMetadata.recurrence}`
+					: `🔁 ${this.taskMetadata.recurrence}`,
 			);
 		}
 
@@ -886,12 +895,12 @@ export class QuickCaptureModal extends Modal {
 		// Format dates to strings in YYYY-MM-DD format
 		if (this.taskMetadata.startDate) {
 			const formattedStartDate = this.formatDate(
-				this.taskMetadata.startDate
+				this.taskMetadata.startDate,
 			);
 			metadata.push(
 				useDataviewFormat
 					? `[start:: ${formattedStartDate}]`
-					: `🛫 ${formattedStartDate}`
+					: `🛫 ${formattedStartDate}`,
 			);
 		}
 
@@ -900,18 +909,18 @@ export class QuickCaptureModal extends Modal {
 			metadata.push(
 				useDataviewFormat
 					? `[due:: ${formattedDueDate}]`
-					: `📅 ${formattedDueDate}`
+					: `📅 ${formattedDueDate}`,
 			);
 		}
 
 		if (this.taskMetadata.scheduledDate) {
 			const formattedScheduledDate = this.formatDate(
-				this.taskMetadata.scheduledDate
+				this.taskMetadata.scheduledDate,
 			);
 			metadata.push(
 				useDataviewFormat
 					? `[scheduled:: ${formattedScheduledDate}]`
-					: `⏳ ${formattedScheduledDate}`
+					: `⏳ ${formattedScheduledDate}`,
 			);
 		}
 
@@ -974,7 +983,7 @@ export class QuickCaptureModal extends Modal {
 						this.plugin.settings.preferMetadataFormat
 					] || "project";
 				metadata.push(
-					`[${projectPrefix}:: ${this.taskMetadata.project}]`
+					`[${projectPrefix}:: ${this.taskMetadata.project}]`,
 				);
 			} else {
 				const projectPrefix =
@@ -993,7 +1002,7 @@ export class QuickCaptureModal extends Modal {
 						this.plugin.settings.preferMetadataFormat
 					] || "context";
 				metadata.push(
-					`[${contextPrefix}:: ${this.taskMetadata.context}]`
+					`[${contextPrefix}:: ${this.taskMetadata.context}]`,
 				);
 			} else {
 				const contextPrefix =
@@ -1009,7 +1018,7 @@ export class QuickCaptureModal extends Modal {
 			metadata.push(
 				useDataviewFormat
 					? `[repeat:: ${this.taskMetadata.recurrence}]`
-					: `🔁 ${this.taskMetadata.recurrence}`
+					: `🔁 ${this.taskMetadata.recurrence}`,
 			);
 		}
 
@@ -1019,13 +1028,32 @@ export class QuickCaptureModal extends Modal {
 	formatDate(date: Date): string {
 		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
 			2,
-			"0"
+			"0",
 		)}-${String(date.getDate()).padStart(2, "0")}`;
 	}
 
 	parseDate(dateString: string): Date {
 		const [year, month, day] = dateString.split("-").map(Number);
 		return new Date(year, month - 1, day); // month is 0-indexed in JavaScript Date
+	}
+
+	private normalizeIncomingDate(
+		value?: Date | string | number | null,
+	): Date | undefined {
+		if (value === null || value === undefined) return undefined;
+		if (value instanceof Date) return value;
+		if (typeof value === "number") {
+			const fromNumber = new Date(value);
+			return isNaN(fromNumber.getTime()) ? undefined : fromNumber;
+		}
+		if (typeof value === "string") {
+			// Try strict ISO/known formats first, then fall back to YYYY-MM-DD parser
+			const parsed = moment(value, moment.ISO_8601, true);
+			if (parsed.isValid()) return parsed.toDate();
+			const fallback = this.parseDate(value);
+			return isNaN(fallback.getTime()) ? undefined : fallback;
+		}
+		return undefined;
 	}
 
 	/**
@@ -1132,7 +1160,7 @@ export class QuickCaptureModal extends Modal {
 			// Update UI input field
 			if (this.scheduledDateInput) {
 				this.scheduledDateInput.value = this.formatDate(
-					aggregatedScheduledDate
+					aggregatedScheduledDate,
 				);
 			}
 		}
