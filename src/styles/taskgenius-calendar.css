@@ -381,11 +381,20 @@
 
 /* Vertical resize handle (time view) */
 .tg-resize-v {
-	bottom: 0;
 	left: 0;
 	right: 0;
 	height: 8px;
 	cursor: row-resize;
+}
+
+.tg-resize-v.tg-top {
+	top: 0;
+	bottom: auto;
+}
+
+.tg-resize-v.tg-bottom {
+	bottom: 0;
+	top: auto;
 }
 
 /* Ghost element for drag preview */

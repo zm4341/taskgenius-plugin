@@ -100,7 +100,7 @@ class NormalizedDateFnsAdapter implements DateAdapter<Date> {
 	format(date: Date, formatStr: string) {
 		return this.fns.format(
 			date,
-			this.normalizeFormat(formatStr) ?? formatStr,
+			this.normalizeFormat(formatStr) ?? formatStr
 		);
 	}
 
@@ -216,7 +216,7 @@ class NormalizedDateFnsAdapter implements DateAdapter<Date> {
 		if (!unit) return this.fns.isBefore(date1, date2);
 		return this.fns.isBefore(
 			this.startOf(date1, unit),
-			this.startOf(date2, unit),
+			this.startOf(date2, unit)
 		);
 	}
 
@@ -224,7 +224,7 @@ class NormalizedDateFnsAdapter implements DateAdapter<Date> {
 		if (!unit) return this.fns.isAfter(date1, date2);
 		return this.fns.isAfter(
 			this.startOf(date1, unit),
-			this.startOf(date2, unit),
+			this.startOf(date2, unit)
 		);
 	}
 
@@ -232,7 +232,7 @@ class NormalizedDateFnsAdapter implements DateAdapter<Date> {
 		if (!unit) return this.fns.isEqual(date1, date2);
 		return this.fns.isEqual(
 			this.startOf(date1, unit),
-			this.startOf(date2, unit),
+			this.startOf(date2, unit)
 		);
 	}
 }
@@ -276,7 +276,7 @@ export class CalendarComponent extends Component {
 			onTaskCompleted?: (task: Task) => void;
 			onEventContextMenu?: (ev: MouseEvent, event: CalendarEvent) => void;
 		} = {},
-		private viewId: string = "calendar",
+		private viewId: string = "calendar"
 	) {
 		super();
 		this.app = app;
@@ -286,12 +286,12 @@ export class CalendarComponent extends Component {
 
 		this.headerEl = this.containerEl.createDiv("calendar-header");
 		this.viewContainerEl = this.containerEl.createDiv(
-			"calendar-view-container",
+			"calendar-view-container"
 		);
 
 		// Load saved view mode
 		const savedView = this.app.loadLocalStorage(
-			"task-genius:calendar-view",
+			"task-genius:calendar-view"
 		);
 		if (savedView) {
 			this.currentViewMode = savedView as CalendarViewMode;
@@ -495,10 +495,10 @@ export class CalendarComponent extends Component {
 					.addOption("day", t("Day"))
 					.addOption("agenda", t("Agenda"))
 					.onChange((value) =>
-						this.setView(value as CalendarViewMode),
+						this.setView(value as CalendarViewMode)
 					)
 					.setValue(this.currentViewMode);
-			},
+			}
 		);
 	}
 
@@ -525,7 +525,7 @@ export class CalendarComponent extends Component {
 			"view-month",
 			"view-week",
 			"view-day",
-			"view-agenda",
+			"view-agenda"
 		);
 		this.viewContainerEl.addClass(`view-${this.currentViewMode}`);
 
@@ -562,8 +562,8 @@ export class CalendarComponent extends Component {
 						this.currentViewMode === "day")
 						? workingHours(
 								config.workingHoursStart ?? 9,
-								config.workingHoursEnd ?? 18,
-							)
+								config.workingHoursEnd ?? 18
+						  )
 						: undefined,
 			},
 			dateAdapter: new NormalizedDateFnsAdapter(dateFns),
@@ -589,18 +589,24 @@ export class CalendarComponent extends Component {
 					event: "var(--font-ui-smaller)",
 				},
 			},
-			// Event interactions
-			onEventClick: this.handleTGEventClick.bind(this),
-			onEventDrop: this.handleTGEventDrop.bind(this),
-			// Date interactions (v0.6.0+)
-			onDateClick: this.handleDateClick.bind(this),
-			onDateDoubleClick: this.handleDateDoubleClick.bind(this),
-			onDateContextMenu: this.handleDateContextMenu.bind(this),
+			// Event interactions - use arrow functions for safe binding
+			onEventClick: (event: any) => this.handleTGEventClick(event),
+			onEventDrop: (event: any, newStart: any, newEnd: any) =>
+				this.handleTGEventDrop(event, newStart, newEnd),
+			onEventResize: (event: any, newStart: any, newEnd: any) =>
+				this.handleTGEventResize(event, newStart, newEnd),
+			// Date interactions (v0.6.0+) - match library's callback signatures
+			onDateClick: (date: Date) => this.handleDateClick(date),
+			onDateDoubleClick: (date: Date) => this.handleDateDoubleClick(date),
+			onDateContextMenu: (date: Date, x: number, y: number) =>
+				this.handleDateContextMenu(date, x, y),
 			// Time slot interactions (week/day views, v0.6.0+)
-			onTimeSlotClick: this.handleTimeSlotClick.bind(this),
-			onTimeSlotDoubleClick: this.handleTimeSlotDoubleClick.bind(this),
+			onTimeSlotClick: (dateTime: Date) =>
+				this.handleTimeSlotClick(dateTime),
+			onTimeSlotDoubleClick: (dateTime: Date) =>
+				this.handleTimeSlotDoubleClick(dateTime),
 			// Custom cell rendering
-			onRenderDateCell: this.handleTGRenderDateCell.bind(this),
+			onRenderDateCell: (ctx: any) => this.handleTGRenderDateCell(ctx),
 		};
 
 		this.tgCalendar = new Calendar(this.viewContainerEl, calendarConfig);
@@ -621,7 +627,7 @@ export class CalendarComponent extends Component {
 				onEventHover: this.onEventHover,
 				onEventContextMenu: this.onEventContextMenu,
 				onEventComplete: this.onEventComplete,
-			},
+			}
 		);
 		this.addChild(this.agendaView);
 		this.agendaView.updateEvents(this.events);
@@ -643,7 +649,7 @@ export class CalendarComponent extends Component {
 				onMonthClick: this.onMonthClick,
 				onMonthHover: this.onMonthHover,
 			},
-			config,
+			config
 		);
 		this.addChild(this.yearView);
 		this.yearView.updateEvents(this.events);
@@ -653,7 +659,7 @@ export class CalendarComponent extends Component {
 	//  Event Handlers
 	// ============================================
 
-	private handleTGEventClick(event: TGCalendarEvent) {
+	private handleTGEventClick(event: AdapterCalendarEvent) {
 		const task = getTaskFromEvent(event as any);
 		if (task) {
 			this.params?.onTaskSelected?.(task);
@@ -661,9 +667,9 @@ export class CalendarComponent extends Component {
 	}
 
 	private async handleTGEventDrop(
-		event: TGCalendarEvent,
+		event: AdapterCalendarEvent,
 		newStart: Date | string,
-		newEnd: Date | string,
+		newEnd: Date | string
 	) {
 		const task = getTaskFromEvent(event as any);
 		if (!task) {
@@ -676,8 +682,8 @@ export class CalendarComponent extends Component {
 		if (isIcsTask) {
 			new Notice(
 				t(
-					"Cannot move external calendar events. Please update them in the original calendar.",
-				),
+					"Cannot move external calendar events. Please update them in the original calendar."
+				)
 			);
 			// Refresh to reset the visual position
 			setTimeout(() => {
@@ -687,97 +693,166 @@ export class CalendarComponent extends Component {
 			return;
 		}
 
-		// Normalize to Date objects (temporary compatibility for v0.8.0 transition)
 		const newStartDate =
 			newStart instanceof Date ? newStart : new Date(newStart);
-		const newEndDate = newEnd instanceof Date ? newEnd : new Date(newEnd);
+		const newEndInput = newEnd ?? newStart;
+		const newEndDate =
+			newEndInput instanceof Date ? newEndInput : new Date(newEndInput);
+		const oldStartDate = new Date(event.start);
+		const oldEndDate = event.end ? new Date(event.end) : oldStartDate;
 
-		// Get original dates (normalized to day start)
-		const oldStartDate = startOfDay(new Date(event.start));
-		const oldEndDate = event.end
-			? startOfDay(new Date(event.end))
-			: oldStartDate;
+		if (
+			Number.isNaN(newStartDate.getTime()) ||
+			Number.isNaN(newEndDate.getTime()) ||
+			Number.isNaN(oldStartDate.getTime()) ||
+			Number.isNaN(oldEndDate.getTime())
+		) {
+			console.warn("Calendar: Invalid date detected during drag/drop", {
+				event,
+				newStart,
+				newEnd,
+			});
+			return;
+		}
 
-		// Calculate changes using date-fns
-		const startDiff = differenceInDays(
-			startOfDay(newStartDate),
-			oldStartDate,
-		);
-		const endDiff = differenceInDays(startOfDay(newEndDate), oldEndDate);
-
-		// No change at all
-		if (startDiff === 0 && endDiff === 0) return;
+		const isAllDayEvent = event.allDay === true;
 
 		try {
 			const updates: any = { metadata: {} };
 			let updatedFields: string[] = [];
 
-			// Determine the operation type:
-			// - If both start and end moved by the same amount: it's a MOVE (drag)
-			// - If only start changed: RESIZE from start
-			// - If only end changed: RESIZE from end
-			const isMove = startDiff === endDiff;
-			const isResizeStart = startDiff !== 0 && startDiff !== endDiff;
-			const isResizeEnd = endDiff !== 0 && startDiff !== endDiff;
+			if (isAllDayEvent) {
+				const normalizedNewStart = startOfDay(newStartDate);
+				const normalizedNewEnd = startOfDay(newEndDate);
+				const normalizedOldStart = startOfDay(oldStartDate);
+				const normalizedOldEnd = startOfDay(oldEndDate);
 
-			if (isMove) {
-				// MOVE: Shift all date fields by the same amount
-				if (task.metadata.dueDate) {
-					updates.metadata.dueDate = addDays(
-						task.metadata.dueDate,
-						startDiff,
-					).getTime();
-					updatedFields.push("due date");
-				}
+				const startDiff = differenceInDays(
+					normalizedNewStart,
+					normalizedOldStart
+				);
+				const endDiff = differenceInDays(
+					normalizedNewEnd,
+					normalizedOldEnd
+				);
 
-				if (task.metadata.scheduledDate) {
-					updates.metadata.scheduledDate = addDays(
-						task.metadata.scheduledDate,
-						startDiff,
-					).getTime();
-					updatedFields.push("scheduled date");
-				}
+				if (startDiff === 0 && endDiff === 0) return;
 
-				if (task.metadata.startDate) {
-					updates.metadata.startDate = addDays(
-						task.metadata.startDate,
-						startDiff,
-					).getTime();
+				const isMove = startDiff === endDiff;
+				const isResizeStart = startDiff !== 0 && startDiff !== endDiff;
+				const isResizeEnd = endDiff !== 0 && startDiff !== endDiff;
+
+				if (isMove) {
+					if (task.metadata.dueDate) {
+						updates.metadata.dueDate = addDays(
+							startOfDay(new Date(task.metadata.dueDate)),
+							startDiff
+						).getTime();
+						updatedFields.push("due date");
+					}
+
+					if (task.metadata.scheduledDate) {
+						updates.metadata.scheduledDate = addDays(
+							startOfDay(new Date(task.metadata.scheduledDate)),
+							startDiff
+						).getTime();
+						updatedFields.push("scheduled date");
+					}
+
+					if (task.metadata.startDate) {
+						updates.metadata.startDate = addDays(
+							startOfDay(new Date(task.metadata.startDate)),
+							startDiff
+						).getTime();
+						updatedFields.push("start date");
+					}
+
+					if (updatedFields.length === 0) {
+						updates.metadata.dueDate = normalizedNewStart.getTime();
+						updatedFields.push("due date");
+					}
+				} else if (isResizeStart) {
+					updates.metadata.startDate = normalizedNewStart.getTime();
 					updatedFields.push("start date");
-				}
 
-				// If no date fields found, set dueDate
-				if (updatedFields.length === 0) {
-					updates.metadata.dueDate =
-						startOfDay(newStartDate).getTime();
+					if (
+						!task.metadata.dueDate &&
+						differenceInDays(newEndDate, newStartDate) > 0
+					) {
+						updates.metadata.dueDate = normalizedNewEnd.getTime();
+						updatedFields.push("due date");
+					}
+				} else if (isResizeEnd) {
+					updates.metadata.dueDate = normalizedNewEnd.getTime();
 					updatedFields.push("due date");
-				}
-			} else if (isResizeStart) {
-				// RESIZE from START: Update startDate
-				updates.metadata.startDate = startOfDay(newStartDate).getTime();
-				updatedFields.push("start date");
 
-				// If we're creating a multi-day event and don't have an end date, set dueDate
-				if (
-					!task.metadata.dueDate &&
-					differenceInDays(newEndDate, newStartDate) > 0
-				) {
-					updates.metadata.dueDate = startOfDay(newEndDate).getTime();
-					updatedFields.push("due date");
+					if (
+						!task.metadata.startDate &&
+						differenceInDays(newEndDate, newStartDate) > 0
+					) {
+						updates.metadata.startDate =
+							normalizedNewStart.getTime();
+						updatedFields.push("start date");
+					}
 				}
-			} else if (isResizeEnd) {
-				// RESIZE from END: Update dueDate
-				updates.metadata.dueDate = startOfDay(newEndDate).getTime();
-				updatedFields.push("due date");
+			} else {
+				const startDiffMs =
+					newStartDate.getTime() - oldStartDate.getTime();
+				const endDiffMs = newEndDate.getTime() - oldEndDate.getTime();
 
-				// If we're creating a multi-day event and don't have a start date, set startDate
-				if (
-					!task.metadata.startDate &&
-					differenceInDays(newEndDate, newStartDate) > 0
-				) {
-					updates.metadata.startDate =
-						startOfDay(newStartDate).getTime();
+				if (startDiffMs === 0 && endDiffMs === 0) return;
+
+				const isMove = startDiffMs === endDiffMs;
+				const isResizeStart =
+					startDiffMs !== 0 && startDiffMs !== endDiffMs;
+				const isResizeEnd =
+					endDiffMs !== 0 && startDiffMs !== endDiffMs;
+
+				if (isMove) {
+					if (task.metadata.dueDate) {
+						updates.metadata.dueDate =
+							task.metadata.dueDate + startDiffMs;
+						updatedFields.push("due date");
+					}
+
+					if (task.metadata.scheduledDate) {
+						updates.metadata.scheduledDate =
+							task.metadata.scheduledDate + startDiffMs;
+						updatedFields.push("scheduled date");
+					}
+
+					if (task.metadata.startDate) {
+						updates.metadata.startDate =
+							task.metadata.startDate + startDiffMs;
+						updatedFields.push("start date");
+					}
+
+					if (updatedFields.length === 0) {
+						updates.metadata.dueDate = newStartDate.getTime();
+						updatedFields.push("due date");
+					}
+				} else if (isResizeStart) {
+					updates.metadata.startDate = newStartDate.getTime();
 					updatedFields.push("start date");
+
+					if (
+						!task.metadata.dueDate &&
+						newEndDate.getTime() !== newStartDate.getTime()
+					) {
+						updates.metadata.dueDate = newEndDate.getTime();
+						updatedFields.push("due date");
+					}
+				} else if (isResizeEnd) {
+					updates.metadata.dueDate = newEndDate.getTime();
+					updatedFields.push("due date");
+
+					if (
+						!task.metadata.startDate &&
+						newEndDate.getTime() !== newStartDate.getTime()
+					) {
+						updates.metadata.startDate = newStartDate.getTime();
+						updatedFields.push("start date");
+					}
 				}
 			}
 
@@ -805,12 +880,117 @@ export class CalendarComponent extends Component {
 			} else {
 				console.error(
 					"Calendar: Failed to update task after drag:",
-					result.error,
+					result.error
 				);
 				new Notice(t("Failed to update task"));
 			}
 		} catch (error) {
 			console.error("Calendar: Error updating task after drag:", error);
+			new Notice(t("Failed to update task"));
+		}
+	}
+
+	private async handleTGEventResize(
+		event: AdapterCalendarEvent,
+		newStart: Date | string,
+		newEnd: Date | string
+	) {
+		const task = getTaskFromEvent(event as any);
+		if (!task) {
+			new Notice(t("Failed to update task: Task not found"));
+			return;
+		}
+
+		const isIcsTask = (task as any).source?.type === "ics";
+		if (isIcsTask) {
+			new Notice(
+				"In current version, cannot resize external calendar events"
+			);
+			setTimeout(() => {
+				this.processTasks();
+				this.renderCurrentView();
+			}, 100);
+			return;
+		}
+
+		const newStartDate =
+			newStart instanceof Date ? newStart : new Date(newStart);
+		const newEndDate = newEnd instanceof Date ? newEnd : new Date(newEnd);
+		const oldStartDate = new Date(event.start);
+		const oldEndDate = event.end ? new Date(event.end) : oldStartDate;
+		const isAllDayEvent = event.allDay === true;
+
+		const normalizedNewStart = isAllDayEvent
+			? startOfDay(newStartDate)
+			: newStartDate;
+		const normalizedNewEnd = isAllDayEvent
+			? startOfDay(newEndDate)
+			: newEndDate;
+		const normalizedOldStart = isAllDayEvent
+			? startOfDay(oldStartDate)
+			: oldStartDate;
+		const normalizedOldEnd = isAllDayEvent
+			? startOfDay(oldEndDate)
+			: oldEndDate;
+
+		const startChanged =
+			normalizedNewStart.getTime() !== normalizedOldStart.getTime();
+		const endChanged =
+			normalizedNewEnd.getTime() !== normalizedOldEnd.getTime();
+
+		if (!startChanged && !endChanged) return;
+
+		const updates: any = { metadata: {} };
+		const updatedFields: string[] = [];
+		const newStartMs = normalizedNewStart.getTime();
+		const newEndMs = normalizedNewEnd.getTime();
+		const setField = (
+			key: "startDate" | "dueDate",
+			value: number,
+			label: string
+		) => {
+			if (updates.metadata[key] === undefined) {
+				updates.metadata[key] = value;
+				updatedFields.push(label);
+			}
+		};
+
+		if (startChanged) {
+			setField("startDate", newStartMs, "start date");
+		}
+
+		if (endChanged) {
+			setField("dueDate", newEndMs, "due date");
+		}
+
+		// If a task only had one date, ensure both ends are updated for the new range
+		if (!task.metadata.startDate) {
+			setField("startDate", newStartMs, "start date");
+		}
+		if (!task.metadata.dueDate) {
+			setField("dueDate", newEndMs, "due date");
+		}
+
+		if (updatedFields.length === 0) return;
+
+		if (!this.plugin.writeAPI) {
+			new Notice(t("Task update system not available"));
+			return;
+		}
+
+		const result = await this.plugin.writeAPI.updateTask({
+			taskId: task.id,
+			updates,
+		});
+
+		if (result.success) {
+			new Notice(t("Task time updated: ") + updatedFields.join(", "));
+			setTimeout(() => {
+				this.processTasks();
+				this.renderCurrentView();
+			}, 100);
+		} else {
+			console.error("Calendar: Failed to resize task:", result.error);
 			new Notice(t("Failed to update task"));
 		}
 	}
@@ -827,7 +1007,7 @@ export class CalendarComponent extends Component {
 			const dateHeader = cellEl.querySelector(".tg-date-header");
 			if (dateHeader) {
 				const badgesContainer = dateHeader.createDiv(
-					"calendar-badges-container",
+					"calendar-badges-container"
 				);
 				badgeEvents.forEach((badgeEvent) => {
 					const badgeEl = badgesContainer.createEl("div", {
@@ -903,7 +1083,7 @@ export class CalendarComponent extends Component {
 							if (!task.completed) {
 								this.app.workspace.trigger(
 									"task-genius:task-completed",
-									task,
+									task
 								);
 							}
 
@@ -936,7 +1116,7 @@ export class CalendarComponent extends Component {
 	/**
 	 * Handle single click on a date cell (month view)
 	 */
-	private handleDateClick(date: Date, ev: MouseEvent) {
+	private handleDateClick(date: Date) {
 		// Allow event bubbling for other interactions
 		// This maintains compatibility with existing click behavior
 	}
@@ -944,19 +1124,19 @@ export class CalendarComponent extends Component {
 	/**
 	 * Handle double click on a date cell - opens quick capture modal
 	 */
-	private handleDateDoubleClick(date: Date, ev: MouseEvent) {
+	private handleDateDoubleClick(date: Date) {
 		new QuickCaptureModal(
 			this.app,
 			this.plugin,
 			{ dueDate: date },
-			true,
+			true
 		).open();
 	}
 
 	/**
 	 * Handle context menu (right-click) on a date cell
 	 */
-	private handleDateContextMenu(date: Date, ev: MouseEvent) {
+	private handleDateContextMenu(date: Date, x?: number, y?: number) {
 		// Can be extended to show custom context menu
 		// For now, allow default browser context menu
 	}
@@ -964,20 +1144,20 @@ export class CalendarComponent extends Component {
 	/**
 	 * Handle click on time slot (week/day view)
 	 */
-	private handleTimeSlotClick(date: Date, ev: MouseEvent) {
+	private handleTimeSlotClick(dateTime: Date) {
 		// Single click on time slot - could show tooltip or select
 	}
 
 	/**
 	 * Handle double click on time slot - opens quick capture with time
 	 */
-	private handleTimeSlotDoubleClick(date: Date, ev: MouseEvent) {
+	private handleTimeSlotDoubleClick(dateTime: Date) {
 		// Create task with specific time
 		new QuickCaptureModal(
 			this.app,
 			this.plugin,
-			{ dueDate: date },
-			true,
+			{ dueDate: dateTime },
+			true
 		).open();
 	}
 
@@ -996,7 +1176,7 @@ export class CalendarComponent extends Component {
 	private onDayClick = (
 		ev: MouseEvent,
 		day: number,
-		options: { behavior: "open-quick-capture" | "open-task-view" },
+		options: { behavior: "open-quick-capture" | "open-task-view" }
 	) => {
 		const dayDate = new Date(day);
 		if (this.currentViewMode === "year") {
@@ -1008,7 +1188,7 @@ export class CalendarComponent extends Component {
 				this.app,
 				this.plugin,
 				{ dueDate: dayDate },
-				true,
+				true
 			).open();
 		}
 	};
@@ -1079,7 +1259,7 @@ export class CalendarComponent extends Component {
 					task.metadata.startDate !== task.metadata.dueDate
 				) {
 					const taskStart = startOfDay(
-						new Date(task.metadata.startDate),
+						new Date(task.metadata.startDate)
 					);
 					const taskDue = startOfDay(new Date(task.metadata.dueDate));
 					if (isBefore(taskStart, taskDue)) {
@@ -1111,7 +1291,7 @@ export class CalendarComponent extends Component {
 
 	private convertTasksToTGEvents(): AdapterCalendarEvent[] {
 		const tasksWithDates = this.tasks.filter((task) =>
-			hasDateInformation(task),
+			hasDateInformation(task)
 		);
 		return tasksToCalendarEvents(tasksWithDates);
 	}
@@ -1122,19 +1302,19 @@ export class CalendarComponent extends Component {
 		return this.tasks.filter((task) => {
 			if (task.metadata.dueDate) {
 				const dueDate = this.normalizeDateToDay(
-					new Date(task.metadata.dueDate),
+					new Date(task.metadata.dueDate)
 				);
 				if (dueDate.getTime() === targetTime) return true;
 			}
 			if (task.metadata.scheduledDate) {
 				const scheduledDate = this.normalizeDateToDay(
-					new Date(task.metadata.scheduledDate),
+					new Date(task.metadata.scheduledDate)
 				);
 				if (scheduledDate.getTime() === targetTime) return true;
 			}
 			if (task.metadata.startDate) {
 				const startDate = this.normalizeDateToDay(
-					new Date(task.metadata.startDate),
+					new Date(task.metadata.startDate)
 				);
 				if (startDate.getTime() === targetTime) return true;
 			}
@@ -1174,17 +1354,25 @@ export class CalendarComponent extends Component {
 				const endOfWeek = this.currentDate.clone().endOf("week");
 				if (startOfWeek.month() !== endOfWeek.month()) {
 					if (startOfWeek.year() !== endOfWeek.year()) {
-						return `${startOfWeek.format("MMM D, YYYY")} - ${endOfWeek.format("MMM D, YYYY")}`;
+						return `${startOfWeek.format(
+							"MMM D, YYYY"
+						)} - ${endOfWeek.format("MMM D, YYYY")}`;
 					}
-					return `${startOfWeek.format("MMM D")} - ${endOfWeek.format("MMM D, YYYY")}`;
+					return `${startOfWeek.format("MMM D")} - ${endOfWeek.format(
+						"MMM D, YYYY"
+					)}`;
 				}
-				return `${startOfWeek.format("MMM D")} - ${endOfWeek.format("D, YYYY")}`;
+				return `${startOfWeek.format("MMM D")} - ${endOfWeek.format(
+					"D, YYYY"
+				)}`;
 			}
 			case "day":
 				return this.currentDate.format("dddd, MMMM D, YYYY");
 			case "agenda": {
 				const endOfAgenda = this.currentDate.clone().add(6, "days");
-				return `${this.currentDate.format("MMM D")} - ${endOfAgenda.format("MMM D, YYYY")}`;
+				return `${this.currentDate.format(
+					"MMM D"
+				)} - ${endOfAgenda.format("MMM D, YYYY")}`;
 			}
 			default:
 				return this.currentDate.format("MMMM YYYY");
@@ -1193,7 +1381,7 @@ export class CalendarComponent extends Component {
 
 	private getEffectiveCalendarConfig(): Partial<CalendarSpecificConfig> {
 		const baseCfg = this.plugin.settings.viewConfiguration.find(
-			(v) => v.id === this.viewId,
+			(v) => v.id === this.viewId
 		)?.specificConfig as Partial<CalendarSpecificConfig> | undefined;
 
 		return { ...(baseCfg ?? {}), ...(this.configOverride ?? {}) };
