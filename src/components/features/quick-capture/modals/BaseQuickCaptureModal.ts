@@ -13,7 +13,10 @@ import {
 	processDateTemplates,
 } from "@/utils/file/file-operations";
 import { t } from "@/translations/helper";
-import { formatDateSmart, isDateOnly } from "@/utils/date/date-utils";
+import {
+	formatDate as formatDateSmart,
+	isDateOnly,
+} from "@/utils/date/date-utils";
 import { SuggestManager } from "@/components/ui/suggest";
 import { EmbeddableMarkdownEditor } from "@/editor-extensions/core/markdown-editor";
 

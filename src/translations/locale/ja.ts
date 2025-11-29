@@ -498,6 +498,9 @@ const translations = {
 		"フォーマットで式をサポートする、例えばdata.percentagesを使用して完了したタスクのパーセンテージを取得する。また、数学や繰り返し関数を使用して結果を取得する。",
 	"Target File:": "対象ファイル：",
 	"Task Properties": "タスクのプロパティ",
+	"Include time": "時刻を含める",
+	"Toggle between date-only and date+time input":
+		"日付のみと日付+時刻入力を切り替え",
 	"Start Date": "開始日",
 	"Due Date": "期限日",
 	"Scheduled Date": "予定日",

@@ -1,7 +1,7 @@
 import { App, Notice, moment } from "obsidian";
 import TaskProgressBarPlugin from "../index";
 import { t } from "../translations/helper";
-import { formatDateSmart } from "@/utils/date/date-utils";
+import { formatDate as formatDateSmart } from "@/utils/date/date-utils";
 
 export class ElectronQuickCapture {
 	private captureWindow: any = null;
@@ -95,7 +95,7 @@ export class ElectronQuickCapture {
 				// Generate and load the HTML content
 				const html = this.generateCaptureHTML();
 				this.captureWindow.loadURL(
-					`data:text/html;charset=utf-8,${encodeURIComponent(html)}`
+					`data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
 				);
 
 				// Setup IPC handlers
@@ -104,7 +104,10 @@ export class ElectronQuickCapture {
 				// Handle window events
 				this.captureWindow.once("ready-to-show", () => {
 					// Use showInactive on macOS to avoid bringing main window to front
-					if (process.platform === "darwin" && this.captureWindow?.showInactive) {
+					if (
+						process.platform === "darwin" &&
+						this.captureWindow?.showInactive
+					) {
 						this.captureWindow.showInactive();
 					} else {
 						this.captureWindow?.show();
@@ -115,30 +118,41 @@ export class ElectronQuickCapture {
 					}, 100);
 					// Send initial data to window
 					this.captureWindow.webContents.executeJavaScript(`
-						window.postMessage({ 
-							type: 'init', 
+						window.postMessage({
+							type: 'init',
 							settings: ${JSON.stringify(this.getQuickCaptureSettings())}
 						}, '*');
 					`);
 				});
 
 				// Auto-adjust window size to content after loading
-				this.captureWindow.webContents.once("did-finish-load", async () => {
-					try {
-						const size = await this.captureWindow?.webContents.executeJavaScript(
-							`({w:document.documentElement.scrollWidth,h:document.documentElement.scrollHeight})`
-						);
-						if (size && this.captureWindow && !this.captureWindow.isDestroyed()) {
-							this.captureWindow.setContentSize(
-								Math.max(500, Math.min(800, size.w)), 
-								Math.max(320, Math.min(600, size.h)), 
-								true
+				this.captureWindow.webContents.once(
+					"did-finish-load",
+					async () => {
+						try {
+							const size =
+								await this.captureWindow?.webContents.executeJavaScript(
+									`({w:document.documentElement.scrollWidth,h:document.documentElement.scrollHeight})`,
+								);
+							if (
+								size &&
+								this.captureWindow &&
+								!this.captureWindow.isDestroyed()
+							) {
+								this.captureWindow.setContentSize(
+									Math.max(500, Math.min(800, size.w)),
+									Math.max(320, Math.min(600, size.h)),
+									true,
+								);
+							}
+						} catch (e) {
+							console.log(
+								"Could not auto-adjust window size:",
+								e,
 							);
 						}
-					} catch (e) {
-						console.log('Could not auto-adjust window size:', e);
-					}
-				});
+					},
+				);
 
 				this.captureWindow.on("closed", () => {
 					this.captureWindow = null;
@@ -155,7 +169,6 @@ export class ElectronQuickCapture {
 					this.captureReject = null;
 					this.isClosingNormally = false;
 				});
-
 			} catch (error) {
 				console.error("Failed to create capture window:", error);
 				new Notice(t("Failed to open quick capture window"));
@@ -177,68 +190,103 @@ export class ElectronQuickCapture {
 			// Use ipcMain handlers (preferred method)
 			try {
 				// Remove existing handlers if any
-				ipcMain.removeHandler('quick-capture-save');
-				ipcMain.removeHandler('quick-capture-cancel');
-				ipcMain.removeHandler('quick-capture-request-data');
+				ipcMain.removeHandler("quick-capture-save");
+				ipcMain.removeHandler("quick-capture-cancel");
+				ipcMain.removeHandler("quick-capture-request-data");
 
 				// Handle save
-				ipcMain.handle('quick-capture-save', async (event: any, data: any) => {
-					console.log("[ElectronQuickCapture] IPC received save:", data);
-					await this.handleSaveTask(data);
-				});
+				ipcMain.handle(
+					"quick-capture-save",
+					async (event: any, data: any) => {
+						console.log(
+							"[ElectronQuickCapture] IPC received save:",
+							data,
+						);
+						await this.handleSaveTask(data);
+					},
+				);
 
-				// Handle cancel  
-				ipcMain.handle('quick-capture-cancel', async () => {
+				// Handle cancel
+				ipcMain.handle("quick-capture-cancel", async () => {
 					console.log("[ElectronQuickCapture] IPC received cancel");
 					this.closeCaptureWindow();
 				});
 
 				// Handle data requests
-				ipcMain.handle('quick-capture-request-data', async (event: any, type: string) => {
-					console.log("[ElectronQuickCapture] IPC requesting data:", type);
-					return await this.getDataForWindow(type);
-				});
+				ipcMain.handle(
+					"quick-capture-request-data",
+					async (event: any, type: string) => {
+						console.log(
+							"[ElectronQuickCapture] IPC requesting data:",
+							type,
+						);
+						return await this.getDataForWindow(type);
+					},
+				);
 
 				(this as any)._ipcHandlers = { ipcMain, registered: true };
-				console.log("[ElectronQuickCapture] IPC handlers registered with ipcMain.handle");
+				console.log(
+					"[ElectronQuickCapture] IPC handlers registered with ipcMain.handle",
+				);
 			} catch (e) {
-				console.warn("[ElectronQuickCapture] Failed to set up ipcMain handlers:", e);
+				console.warn(
+					"[ElectronQuickCapture] Failed to set up ipcMain handlers:",
+					e,
+				);
 			}
 		}
 
 		// Fallback: Listen for regular IPC messages
-		this.captureWindow.webContents.on('ipc-message', async (_event: any, channel: string, ...args: any[]) => {
-			console.log("[ElectronQuickCapture] Received ipc-message:", channel, args);
-			if (channel === 'quick-capture-save') {
-				await this.handleSaveTask(args[0]);
-			} else if (channel === 'quick-capture-cancel') {
-				this.closeCaptureWindow();
-			} else if (channel === 'quick-capture-request-data') {
-				const data = await this.getDataForWindow(args[0]);
-				// Send data back to window
-				this.captureWindow?.webContents?.executeJavaScript(`
+		this.captureWindow.webContents.on(
+			"ipc-message",
+			async (_event: any, channel: string, ...args: any[]) => {
+				console.log(
+					"[ElectronQuickCapture] Received ipc-message:",
+					channel,
+					args,
+				);
+				if (channel === "quick-capture-save") {
+					await this.handleSaveTask(args[0]);
+				} else if (channel === "quick-capture-cancel") {
+					this.closeCaptureWindow();
+				} else if (channel === "quick-capture-request-data") {
+					const data = await this.getDataForWindow(args[0]);
+					// Send data back to window
+					this.captureWindow?.webContents?.executeJavaScript(`
 					window.receiveSuggestions('${args[0]}', ${JSON.stringify(data)});
 				`);
-			}
-		});
+				}
+			},
+		);
 
 		// Also listen for direct channel messages (for newer Electron versions)
 		if (ipcMain) {
-			ipcMain.on('quick-capture-save', async (event: any, data: any) => {
-				console.log("[ElectronQuickCapture] Direct IPC received save:", data);
+			ipcMain.on("quick-capture-save", async (event: any, data: any) => {
+				console.log(
+					"[ElectronQuickCapture] Direct IPC received save:",
+					data,
+				);
 				await this.handleSaveTask(data);
 			});
 
-			ipcMain.on('quick-capture-cancel', () => {
-				console.log("[ElectronQuickCapture] Direct IPC received cancel");
+			ipcMain.on("quick-capture-cancel", () => {
+				console.log(
+					"[ElectronQuickCapture] Direct IPC received cancel",
+				);
 				this.closeCaptureWindow();
 			});
 
-			ipcMain.on('quick-capture-request-data', async (event: any, type: string) => {
-				console.log("[ElectronQuickCapture] Direct IPC requesting data:", type);
-				const data = await this.getDataForWindow(type);
-				event.reply('quick-capture-data-response', type, data);
-			});
+			ipcMain.on(
+				"quick-capture-request-data",
+				async (event: any, type: string) => {
+					console.log(
+						"[ElectronQuickCapture] Direct IPC requesting data:",
+						type,
+					);
+					const data = await this.getDataForWindow(type);
+					event.reply("quick-capture-data-response", type, data);
+				},
+			);
 
 			(this as any)._ipcHandlers = { ipcMain, registered: true };
 		}
@@ -251,7 +299,7 @@ export class ElectronQuickCapture {
 
 		const handleSave = `
 			window.handleQuickCaptureSave = async (data) => {
-				return ${JSON.stringify({ handler: 'save' })};
+				return ${JSON.stringify({ handler: "save" })};
 			};
 		`;
 
@@ -265,13 +313,16 @@ export class ElectronQuickCapture {
 		this.captureWindow.webContents.executeJavaScript(handleCancel);
 
 		// Set up message passing through window.postMessage
-		this.captureWindow.webContents.on('ipc-message', async (_event: any, channel: string, ...args: any[]) => {
-			if (channel === 'quick-capture-save') {
-				await this.handleSaveTask(args[0]);
-			} else if (channel === 'quick-capture-cancel') {
-				this.closeCaptureWindow();
-			}
-		});
+		this.captureWindow.webContents.on(
+			"ipc-message",
+			async (_event: any, channel: string, ...args: any[]) => {
+				if (channel === "quick-capture-save") {
+					await this.handleSaveTask(args[0]);
+				} else if (channel === "quick-capture-cancel") {
+					this.closeCaptureWindow();
+				}
+			},
+		);
 	}
 
 	private cleanupIPCHandlers(): void {
@@ -285,7 +336,7 @@ export class ElectronQuickCapture {
 				ipcMain.removeHandler("quick-capture-save");
 				ipcMain.removeHandler("quick-capture-cancel");
 				ipcMain.removeHandler("quick-capture-request-data");
-				
+
 				// Remove event-based listeners
 				ipcMain.removeAllListeners("quick-capture-save");
 				ipcMain.removeAllListeners("quick-capture-cancel");
@@ -300,7 +351,10 @@ export class ElectronQuickCapture {
 
 	private async handleSaveTask(data: any): Promise<void> {
 		try {
-			console.log("[ElectronQuickCapture] handleSaveTask called with data:", data);
+			console.log(
+				"[ElectronQuickCapture] handleSaveTask called with data:",
+				data,
+			);
 			// Parse the task content and metadata
 			const { content, project, context, dueDate, priority, tags } = data;
 
@@ -331,7 +385,10 @@ export class ElectronQuickCapture {
 			}
 
 			// Create the task using the write API
-			console.log("[ElectronQuickCapture] Calling createTask with args:", taskArgs);
+			console.log(
+				"[ElectronQuickCapture] Calling createTask with args:",
+				taskArgs,
+			);
 			const result = await this.createTask(taskArgs);
 
 			if (result.success) {
@@ -373,23 +430,33 @@ export class ElectronQuickCapture {
 			let result;
 			if (targetType === "daily-note") {
 				// Create in daily note
-				console.log("[ElectronQuickCapture] Creating task in daily note");
+				console.log(
+					"[ElectronQuickCapture] Creating task in daily note",
+				);
 				result = await this.plugin.writeAPI.createTaskInDailyNote(args);
 			} else if (targetType === "fixed" && qc?.targetFile) {
 				// Create in fixed file
-				console.log("[ElectronQuickCapture] Creating task in fixed file:", qc.targetFile);
+				console.log(
+					"[ElectronQuickCapture] Creating task in fixed file:",
+					qc.targetFile,
+				);
 				args.filePath = qc.targetFile;
 				result = await this.plugin.writeAPI.createTask(args);
 			} else {
 				// Default to daily note
-				console.log("[ElectronQuickCapture] Creating task in daily note (default)");
+				console.log(
+					"[ElectronQuickCapture] Creating task in daily note (default)",
+				);
 				result = await this.plugin.writeAPI.createTaskInDailyNote(args);
 			}
 			console.log("[ElectronQuickCapture] Task creation result:", result);
 			return result;
 		} catch (error) {
 			console.error("[ElectronQuickCapture] Error creating task:", error);
-			return { success: false, error: error.message || "Failed to create task" };
+			return {
+				success: false,
+				error: error.message || "Failed to create task",
+			};
 		}
 	}
 
@@ -426,7 +493,12 @@ export class ElectronQuickCapture {
 			// Try parsing with strict formats (supporting date and datetime)
 			const parsed = moment(
 				trimmed,
-				[moment.ISO_8601, "YYYY-MM-DD HH:mm", "YYYY-MM-DDTHH:mm", "YYYY-MM-DD"],
+				[
+					moment.ISO_8601,
+					"YYYY-MM-DD HH:mm",
+					"YYYY-MM-DDTHH:mm",
+					"YYYY-MM-DD",
+				],
 				true,
 			);
 			const strictFormatted = normalize(parsed);
@@ -456,7 +528,9 @@ export class ElectronQuickCapture {
 
 	private async getProjects(): Promise<string[]> {
 		try {
-			const queryAPI = (this.plugin as any).dataflowOrchestrator?.getQueryAPI?.();
+			const queryAPI = (
+				this.plugin as any
+			).dataflowOrchestrator?.getQueryAPI?.();
 			if (!queryAPI) return [];
 			const allTasks = await queryAPI.getAllTasks();
 			const projects = new Set<string>();
@@ -473,7 +547,9 @@ export class ElectronQuickCapture {
 
 	private async getContexts(): Promise<string[]> {
 		try {
-			const queryAPI = (this.plugin as any).dataflowOrchestrator?.getQueryAPI?.();
+			const queryAPI = (
+				this.plugin as any
+			).dataflowOrchestrator?.getQueryAPI?.();
 			if (!queryAPI) return [];
 			const allTasks = await queryAPI.getAllTasks();
 			const contexts = new Set<string>();
@@ -490,7 +566,9 @@ export class ElectronQuickCapture {
 
 	private async getTags(): Promise<string[]> {
 		try {
-			const queryAPI = (this.plugin as any).dataflowOrchestrator?.getQueryAPI?.();
+			const queryAPI = (
+				this.plugin as any
+			).dataflowOrchestrator?.getQueryAPI?.();
 			if (!queryAPI) return [];
 			const allTasks = await queryAPI.getAllTasks();
 			const tags = new Set<string>();
@@ -530,7 +608,10 @@ export class ElectronQuickCapture {
 			const electron = this.getElectron();
 			const nativeTheme =
 				electron?.nativeTheme || electron?.remote?.nativeTheme;
-			if (nativeTheme && typeof nativeTheme.shouldUseDarkColors === "boolean") {
+			if (
+				nativeTheme &&
+				typeof nativeTheme.shouldUseDarkColors === "boolean"
+			) {
 				return nativeTheme.shouldUseDarkColors;
 			}
 			return window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -555,7 +636,7 @@ export class ElectronQuickCapture {
 
 	private generateCaptureHTML(): string {
 		const isDark = this.isDarkTheme();
-		
+
 		// Define Obsidian-like CSS variables for consistent styling
 		const cssVars = `
 		:root {
@@ -585,7 +666,7 @@ export class ElectronQuickCapture {
 	<title>Quick Capture - Task Genius</title>
 	<style>
 		${cssVars}
-		
+
 		* {
 			margin: 0;
 			padding: 0;
@@ -797,11 +878,11 @@ export class ElectronQuickCapture {
 <body>
 	<div class="container">
 		<div class="title">Quick Capture</div>
-		
+
 		<div class="input-group">
-			<textarea 
-				id="task-content" 
-				placeholder="Enter your task..." 
+			<textarea
+				id="task-content"
+				placeholder="Enter your task..."
 				autofocus
 			></textarea>
 			<div class="error-message" id="content-error"></div>
@@ -891,7 +972,7 @@ export class ElectronQuickCapture {
 			// Try to get ipcRenderer from various sources
 			const electron = window.require ? window.require('electron') : null;
 			const ipcRenderer = electron?.ipcRenderer;
-			
+
 			if (ipcRenderer) {
 				console.log('IPC bridge established');
 				bridge = {
@@ -931,14 +1012,14 @@ export class ElectronQuickCapture {
 		// Auto-resize textarea
 		function autoResizeTextarea(textarea) {
 			if (!textarea) return;
-			
+
 			// Reset height to measure content
 			textarea.style.height = 'auto';
-			
+
 			// Calculate new height based on scroll height
 			const newHeight = Math.min(textarea.scrollHeight, 300);
 			textarea.style.height = newHeight + 'px';
-			
+
 			// Don't resize the window - let the container handle overflow
 			// The window size should remain stable
 		}
@@ -946,16 +1027,16 @@ export class ElectronQuickCapture {
 		// Initialize
 		document.addEventListener('DOMContentLoaded', () => {
 			const taskContent = document.getElementById('task-content');
-			
+
 			// Focus on task content
 			if (taskContent) {
 				taskContent.focus();
-				
+
 				// Auto-resize on input
 				taskContent.addEventListener('input', () => {
 					autoResizeTextarea(taskContent);
 				});
-				
+
 				// Initial resize
 				setTimeout(() => autoResizeTextarea(taskContent), 0);
 			}
@@ -977,14 +1058,14 @@ export class ElectronQuickCapture {
 			['start', 'due', 'scheduled'].forEach(dateType => {
 				const picker = document.getElementById(dateType + '-date-picker');
 				const text = document.getElementById(dateType + '-date-text');
-				
+
 				if (picker) {
 					picker.addEventListener('change', (e) => {
 						// Sync to text field
 						if (text) text.value = e.target.value;
 					});
 				}
-				
+
 				// Handle natural language date input
 				if (text) {
 					text.addEventListener('blur', (e) => {
@@ -1000,7 +1081,7 @@ export class ElectronQuickCapture {
 			// Handle priority buttons
 			document.querySelectorAll('.priority-btn').forEach(btn => {
 				btn.addEventListener('click', () => {
-					document.querySelectorAll('.priority-btn').forEach(b => 
+					document.querySelectorAll('.priority-btn').forEach(b =>
 						b.classList.remove('selected')
 					);
 					btn.classList.add('selected');
@@ -1054,9 +1135,9 @@ export class ElectronQuickCapture {
 		function toggleDateInput(dateType) {
 			const picker = document.getElementById(dateType + '-date-picker');
 			const text = document.getElementById(dateType + '-date-text');
-			
+
 			if (!picker || !text) return;
-			
+
 			if (dateInputModes[dateType] === 'picker') {
 				picker.style.display = 'none';
 				text.style.display = 'block';
@@ -1077,11 +1158,11 @@ export class ElectronQuickCapture {
 					// Request and populate projects
 					const projects = await bridge.requestData('projects');
 					populateDatalist('project-list', projects || []);
-					
+
 					// Request and populate contexts
 					const contexts = await bridge.requestData('contexts');
 					populateDatalist('context-list', contexts || []);
-					
+
 					// Request and populate tags
 					const tags = await bridge.requestData('tags');
 					populateDatalist('tags-list', tags || []);
@@ -1095,7 +1176,7 @@ export class ElectronQuickCapture {
 		function populateDatalist(listId, items) {
 			const datalist = document.getElementById(listId);
 			if (!datalist || !items) return;
-			
+
 			datalist.innerHTML = '';
 			items.forEach(item => {
 				const option = document.createElement('option');
@@ -1107,7 +1188,7 @@ export class ElectronQuickCapture {
 		function applySettings(settings) {
 			// Show/hide metadata fields based on settings
 			const metadata = document.getElementById('metadata-section');
-			if (!settings.showProject && !settings.showContext && 
+			if (!settings.showProject && !settings.showContext &&
 				!settings.showDueDate && !settings.showPriority) {
 				metadata.style.display = 'none';
 			} else {
@@ -1141,7 +1222,7 @@ export class ElectronQuickCapture {
 
 		async function save() {
 			const content = document.getElementById('task-content').value;
-			
+
 			if (!content.trim()) {
 				showError('Task content cannot be empty');
 				return;
@@ -1162,7 +1243,7 @@ export class ElectronQuickCapture {
 			// Get tags and split by comma
 			const tagsInput = document.getElementById('tags').value.trim();
 			const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t) : [];
-			
+
 			// Process content to convert to task format if needed
 			const processedContent = processTaskContent(content.trim());
 
@@ -1214,20 +1295,20 @@ export class ElectronQuickCapture {
 				errorEl.classList.remove('show');
 			}, 3000);
 		}
-		
+
 		// Process content to ensure it's in task format
 		function processTaskContent(content) {
 			if (!content) return '';
-			
+
 			const lines = content.split('\\n');
 			const processedLines = [];
-			
+
 			for (let line of lines) {
 				if (!line.trim()) {
 					processedLines.push(line);
 					continue;
 				}
-				
+
 				// Check if line starts with a task marker
 				const taskRegex = /^[\\s]*[-*+\\d+.]\\s*(\\[[^\\]]*\\])?/;
 				if (taskRegex.test(line)) {
@@ -1238,18 +1319,18 @@ export class ElectronQuickCapture {
 					processedLines.push('- [ ] ' + line.trim());
 				}
 			}
-			
+
 			return processedLines.join('\\n');
 		}
-		
+
 		// Parse natural language dates
 		function parseNaturalDate(input) {
 			if (!input) return '';
-			
+
 			const trimmed = input.trim();
 			const lower = trimmed.toLowerCase();
 			const today = new Date();
-			
+
 			// Natural language patterns
 			if (lower === 'today' || lower === 'tod') {
 				return formatDate(today);
@@ -1274,7 +1355,7 @@ export class ElectronQuickCapture {
 				nextMonth.setMonth(nextMonth.getMonth() + 1);
 				return formatDate(nextMonth);
 			}
-			
+
 			// Weekday names
 			const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 			const weekdayIndex = weekdays.indexOf(lower);
@@ -1286,7 +1367,7 @@ export class ElectronQuickCapture {
 				targetDate.setDate(targetDate.getDate() + daysUntil);
 				return formatDate(targetDate);
 			}
-			
+
 			// "next" + weekday
 			const nextWeekdayMatch = lower.match(/^next (\\w+)$/);
 			if (nextWeekdayMatch) {
@@ -1302,7 +1383,7 @@ export class ElectronQuickCapture {
 					return formatDate(targetDate);
 				}
 			}
-			
+
 			// Match patterns like "in X days"
 			const inDaysMatch = lower.match(/^in (\\d+) days?$/);
 			if (inDaysMatch) {
@@ -1311,7 +1392,7 @@ export class ElectronQuickCapture {
 				future.setDate(future.getDate() + days);
 				return formatDate(future);
 			}
-			
+
 			// Match patterns like "X days"
 			const daysMatch = lower.match(/^(\\d+) days?$/);
 			if (daysMatch) {
@@ -1320,7 +1401,7 @@ export class ElectronQuickCapture {
 				future.setDate(future.getDate() + days);
 				return formatDate(future);
 			}
-			
+
 			// Try to parse as a regular date
 			try {
 				const parsed = new Date(trimmed);
@@ -1328,11 +1409,11 @@ export class ElectronQuickCapture {
 					return formatDate(parsed);
 				}
 			} catch {}
-			
+
 			// If not a natural language pattern, return original
 			return trimmed;
 		}
-		
+
 		function formatDate(date) {
 			const year = date.getFullYear();
 			const month = String(date.getMonth() + 1).padStart(2, '0');

@@ -777,6 +777,9 @@ const translations = {
 		"Support expression in format, like using data.percentages to get the percentage of completed tasks. And using math or even repeat functions to get the result.",
 	"Target File:": "Target File:",
 	"Task Properties": "Task Properties",
+	"Include time": "Include time",
+	"Toggle between date-only and date+time input":
+		"Toggle between date-only and date+time input",
 	"Start Date": "Start Date",
 	"Due Date": "Due Date",
 	"Scheduled Date": "Scheduled Date",

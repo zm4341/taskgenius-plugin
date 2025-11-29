@@ -8,7 +8,7 @@ import { CanvasData, CanvasTextData } from "../types/canvas";
 import type TaskProgressBarPlugin from "../index";
 import { Events, emit } from "../dataflow/events/Events";
 import { CanvasParser } from "../dataflow/core/CanvasParser";
-import { formatDateSmart } from "@/utils/date/date-utils";
+import { formatDate as formatDateSmart } from "@/utils/date/date-utils";
 
 /**
  * Result of a Canvas task update operation

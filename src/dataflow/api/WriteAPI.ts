@@ -25,7 +25,7 @@ import { CanvasTaskUpdater } from "@/parsers/canvas-task-updater";
 import { rrulestr } from "rrule";
 import { EMOJI_TAG_REGEX, TOKEN_CONTEXT_REGEX } from "@/common/regex-define";
 import { BulkOperationResult } from "@/types/selection";
-import { formatDateSmart } from "@/utils/date/date-utils";
+import { formatDate as formatDateSmart } from "@/utils/date/date-utils";
 
 /**
  * Arguments for creating a task
@@ -956,8 +956,9 @@ export class WriteAPI {
 						if (metadata.dueDate !== undefined) {
 							const dueDateKey = getFrontmatterKey("dueDate");
 							if (metadata.dueDate) {
-								const formatted =
-									formatFrontmatterDate(metadata.dueDate);
+								const formatted = formatFrontmatterDate(
+									metadata.dueDate,
+								);
 								if (formatted) {
 									(fm as any)[dueDateKey] = formatted;
 								}
@@ -969,8 +970,9 @@ export class WriteAPI {
 						if (metadata.startDate !== undefined) {
 							const startDateKey = getFrontmatterKey("startDate");
 							if (metadata.startDate) {
-								const formatted =
-									formatFrontmatterDate(metadata.startDate);
+								const formatted = formatFrontmatterDate(
+									metadata.startDate,
+								);
 								if (formatted) {
 									(fm as any)[startDateKey] = formatted;
 								}

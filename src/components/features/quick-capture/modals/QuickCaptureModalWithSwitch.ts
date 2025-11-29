@@ -33,6 +33,7 @@ import {
 	TaskMetadata,
 } from "./BaseQuickCaptureModal";
 import { FileNameInput } from "../components/FileNameInput";
+import { formatDate as formatDateSmart } from "@/utils/date/date-utils";
 
 const LAST_USED_MODE_KEY = "task-genius.lastUsedQuickCaptureMode";
 
@@ -52,6 +53,7 @@ export class QuickCaptureModal extends BaseQuickCaptureModal {
 	private startDateInput?: HTMLInputElement;
 	private dueDateInput?: HTMLInputElement;
 	private scheduledDateInput?: HTMLInputElement;
+	private includeTime: boolean = true;
 
 	// File name input for file creation mode
 	private fileNameInput: FileNameInput | null = null;
@@ -385,9 +387,25 @@ export class QuickCaptureModal extends BaseQuickCaptureModal {
 	 * Create date inputs
 	 */
 	private createDateInputs(container: HTMLElement): void {
+		const getInputType = () =>
+			this.includeTime ? "datetime-local" : "date";
+		const getPlaceholder = () =>
+			this.includeTime ? "YYYY-MM-DD HH:mm" : "YYYY-MM-DD";
+
+		// Toggle for including time in date inputs
+		new Setting(container)
+			.setName(t("Include time"))
+			.setDesc(t("Toggle between date-only and date+time input"))
+			.addToggle((toggle) => {
+				toggle.setValue(this.includeTime).onChange((value) => {
+					this.includeTime = value;
+					this.updateDateInputsMode();
+				});
+			});
+
 		// Start Date
 		new Setting(container).setName(t("Start Date")).addText((text) => {
-			text.setPlaceholder("YYYY-MM-DD HH:mm")
+			text.setPlaceholder(getPlaceholder())
 				.setValue(
 					this.taskMetadata.startDate
 						? this.formatDateInputValue(this.taskMetadata.startDate)
@@ -405,13 +423,13 @@ export class QuickCaptureModal extends BaseQuickCaptureModal {
 					}
 					this.updatePreview();
 				});
-			text.inputEl.type = "datetime-local";
+			text.inputEl.type = getInputType();
 			this.startDateInput = text.inputEl;
 		});
 
 		// Due Date
 		new Setting(container).setName(t("Due Date")).addText((text) => {
-			text.setPlaceholder("YYYY-MM-DD HH:mm")
+			text.setPlaceholder(getPlaceholder())
 				.setValue(
 					this.taskMetadata.dueDate
 						? this.formatDateInputValue(this.taskMetadata.dueDate)
@@ -429,13 +447,13 @@ export class QuickCaptureModal extends BaseQuickCaptureModal {
 					}
 					this.updatePreview();
 				});
-			text.inputEl.type = "datetime-local";
+			text.inputEl.type = getInputType();
 			this.dueDateInput = text.inputEl;
 		});
 
 		// Scheduled Date
 		new Setting(container).setName(t("Scheduled Date")).addText((text) => {
-			text.setPlaceholder("YYYY-MM-DD HH:mm")
+			text.setPlaceholder(getPlaceholder())
 				.setValue(
 					this.taskMetadata.scheduledDate
 						? this.formatDateInputValue(
@@ -455,7 +473,7 @@ export class QuickCaptureModal extends BaseQuickCaptureModal {
 					}
 					this.updatePreview();
 				});
-			text.inputEl.type = "datetime-local";
+			text.inputEl.type = getInputType();
 			this.scheduledDateInput = text.inputEl;
 		});
 	}
@@ -901,6 +919,29 @@ export class QuickCaptureModal extends BaseQuickCaptureModal {
 		this.taskMetadata.manuallySet[field] = true;
 	}
 
+	/**
+	 * Update all date input elements when the includeTime mode changes
+	 */
+	private updateDateInputsMode(): void {
+		const inputType = this.includeTime ? "datetime-local" : "date";
+		const placeholder = this.includeTime
+			? "YYYY-MM-DD HH:mm"
+			: "YYYY-MM-DD";
+
+		const updateInput = (input?: HTMLInputElement, value?: Date) => {
+			if (!input) return;
+			input.type = inputType;
+			input.placeholder = placeholder;
+			input.value = this.formatDateInputValue(value);
+		};
+
+		updateInput(this.startDateInput, this.taskMetadata.startDate);
+		updateInput(this.dueDateInput, this.taskMetadata.dueDate);
+		updateInput(this.scheduledDateInput, this.taskMetadata.scheduledDate);
+
+		this.updatePreview();
+	}
+
 	private setDateInputValue(
 		input: HTMLInputElement | undefined,
 		value?: Date,
@@ -911,7 +952,19 @@ export class QuickCaptureModal extends BaseQuickCaptureModal {
 
 	private formatDateInputValue(value?: Date): string {
 		if (!value) return "";
-		return moment(value).format("YYYY-MM-DD[T]HH:mm");
+		return moment(value).format(
+			this.includeTime ? "YYYY-MM-DD[T]HH:mm" : "YYYY-MM-DD",
+		);
+	}
+
+	/**
+	 * Override formatDate to respect includeTime setting for task metadata output
+	 */
+	protected formatDate(date: Date): string {
+		return formatDateSmart(date, {
+			forceFormat: this.includeTime ? undefined : "date-only",
+			includeSeconds: false,
+		});
 	}
 
 	/**

@@ -558,6 +558,8 @@ const translations = {
 		"支持在格式中使用表达式，例如使用 data.percentages 获取已完成任务的百分比。使用 Math 或 Repeat 函数来获取结果。",
 	"Target File:": "目标文件：",
 	"Task Properties": "任务属性",
+	"Include time": "包含时间",
+	"Toggle between date-only and date+time input": "切换仅日期或日期+时间输入",
 	"Start Date": "开始日期",
 	"Due Date": "截止日期",
 	"Scheduled Date": "计划日期",

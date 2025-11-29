@@ -29,7 +29,7 @@ export function isDateOnly(timestamp: DateInput): boolean {
  * - 00:00:00.000 -> "YYYY-MM-DD"
  * - Otherwise -> "YYYY-MM-DD HH:mm" (seconds optional)
  */
-export function formatDateSmart(
+export function formatDate(
 	timestamp: DateInput,
 	options?: {
 		forceFormat?: "date-only" | "date-time";
