@@ -1,9 +1,23 @@
+/**
+ * @deprecated This file is deprecated. Use `tg-agenda-view.ts` instead.
+ *
+ * The new TGAgendaView extends @taskgenius/calendar's BaseView for better
+ * integration with the calendar system. This legacy implementation is kept
+ * for backward compatibility but should not be used for new development.
+ *
+ * @see {@link ./tg-agenda-view.ts} for the new implementation
+ */
 import { App, Component, moment } from "obsidian";
-import { CalendarEvent } from '@/components/features/calendar/index';
+import { CalendarEvent } from "@/components/features/calendar/index";
 import { renderCalendarEvent } from "../rendering/event-renderer"; // Use new renderer
 import { CalendarViewComponent, CalendarViewOptions } from "./base-view"; // Import base class
 import TaskProgressBarPlugin from "@/index"; // Import plugin type
 
+/**
+ * @deprecated Use TGAgendaView from `tg-agenda-view.ts` instead.
+ * This class extends the legacy CalendarViewComponent (Obsidian Component).
+ * The new TGAgendaView extends @taskgenius/calendar's BaseView for unified view management.
+ */
 export class AgendaView extends CalendarViewComponent {
 	// Extend base class
 	// private containerEl: HTMLElement; // Inherited
@@ -18,7 +32,7 @@ export class AgendaView extends CalendarViewComponent {
 		containerEl: HTMLElement,
 		currentDate: moment.Moment,
 		events: CalendarEvent[],
-		options: CalendarViewOptions = {} // Use base options, default to empty
+		options: CalendarViewOptions = {}, // Use base options, default to empty
 	) {
 		super(plugin, app, containerEl, events, options); // Call base constructor
 		this.app = app;
@@ -43,11 +57,11 @@ export class AgendaView extends CalendarViewComponent {
 					rangeStart,
 					rangeEnd,
 					undefined,
-					"[]"
+					"[]",
 				);
 			})
 			.sort(
-				(a, b) => moment(a.start).valueOf() - moment(b.start).valueOf()
+				(a, b) => moment(a.start).valueOf() - moment(b.start).valueOf(),
 			); // Ensure sorting by start time
 
 		// 3. Group events by their start day
@@ -67,8 +81,8 @@ export class AgendaView extends CalendarViewComponent {
 		if (Object.keys(eventsByDay).length === 0) {
 			this.containerEl.setText(
 				`No upcoming events from ${rangeStart.format(
-					"MMM D"
-				)} to ${rangeEnd.format("MMM D, YYYY")}.`
+					"MMM D",
+				)} to ${rangeEnd.format("MMM D, YYYY")}.`,
 			);
 			return;
 		}
@@ -83,7 +97,7 @@ export class AgendaView extends CalendarViewComponent {
 
 				// Left column for the date
 				const dateColumn = daySection.createDiv(
-					"agenda-day-date-column"
+					"agenda-day-date-column",
 				);
 				const dayHeader = dateColumn.createDiv("agenda-day-header");
 				dayHeader.textContent = currentDayIter.format("dddd, MMMM D");
@@ -93,7 +107,7 @@ export class AgendaView extends CalendarViewComponent {
 
 				// Right column for the events
 				const eventsColumn = daySection.createDiv(
-					"agenda-day-events-column"
+					"agenda-day-events-column",
 				);
 				const eventsList = eventsColumn.createDiv("agenda-events-list"); // Keep the original list class if needed
 
@@ -124,8 +138,8 @@ export class AgendaView extends CalendarViewComponent {
 
 		console.log(
 			`Rendered Agenda View component from ${rangeStart.format(
-				"YYYY-MM-DD"
-			)} to ${rangeEnd.format("YYYY-MM-DD")}`
+				"YYYY-MM-DD",
+			)} to ${rangeEnd.format("YYYY-MM-DD")}`,
 		);
 	}
 

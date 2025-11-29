@@ -60,6 +60,9 @@ export interface HiddenModulesConfig {
 
 	/** Hidden feature components */
 	features?: FeatureComponentType[];
+
+	/** Hidden custom calendar view IDs */
+	calendarViews?: string[];
 }
 
 /** Sidebar component types that can be hidden (Fluent interface) */
@@ -98,7 +101,7 @@ export interface ModuleDefinition {
 	id: string;
 	name: string;
 	icon: string;
-	type: "view" | "sidebar" | "feature";
+	type: "view" | "sidebar" | "feature" | "calendarView";
 }
 
 export interface WorkspacesConfig {

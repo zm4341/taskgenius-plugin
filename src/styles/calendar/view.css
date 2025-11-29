@@ -19,31 +19,177 @@
 	margin-bottom: 0;
 }
 
-.full-calendar-container .calendar-header button {
-	margin: 0 var(--size-4-1);
-}
-
 .full-calendar-container .calendar-nav,
 .full-calendar-container .calendar-view-switcher {
 	display: flex;
 	gap: var(--size-2-2);
 }
 
+/* ========================================
+   Navigation Control (prev/today/next)
+   ======================================== */
+
+.full-calendar-container .calendar-nav {
+	background-color: var(--background-secondary);
+	border-radius: var(--radius-m);
+	padding: 3px;
+	gap: 2px;
+}
+
+.full-calendar-container .calendar-nav > div {
+	display: flex;
+}
+
 .full-calendar-container .calendar-nav button {
-	border-radius: var(--radius-s);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 6px 10px;
+	min-width: 28px;
+	height: 28px;
+	border: none;
+	background: transparent;
+	border-radius: calc(var(--radius-m) - 2px);
+	cursor: pointer;
+	transition:
+		color 0.15s ease,
+		background-color 0.15s ease;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-medium);
 
-	text-transform: uppercase;
+	box-shadow: none;
 }
 
-.full-calendar-container .calendar-view-switcher button {
-	border-radius: var(--radius-s);
-	text-transform: uppercase;
+.full-calendar-container .calendar-nav button:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
 }
 
-.full-calendar-container .calendar-view-switcher button:not(.is-active),
-.full-calendar-container .calendar-nav button:not(.is-active) {
-	box-shadow: var(--shadow-xs);
-	border: 1px solid var(--background-modifier-border);
+.full-calendar-container .calendar-nav button:active {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.full-calendar-container .calendar-nav .today-button {
+	padding: 6px 12px;
+	font-weight: var(--font-semibold);
+}
+
+/* ========================================
+   Segmented Control View Switcher
+   ======================================== */
+
+.full-calendar-container .calendar-segmented-control {
+	display: flex;
+	align-items: center;
+	position: relative;
+	background-color: var(--background-secondary);
+	border-radius: var(--radius-m);
+	padding: 3px;
+	gap: 2px;
+}
+
+/* Sliding active indicator */
+.full-calendar-container .calendar-segmented-indicator {
+	position: absolute;
+	top: 3px;
+	bottom: 3px;
+	left: 3px;
+	background-color: var(--interactive-accent);
+	border-radius: calc(var(--radius-m) - 2px);
+	transition:
+		transform 0.2s ease,
+		width 0.2s ease;
+	z-index: 0;
+	pointer-events: none;
+}
+
+/* Segment button base styles */
+.full-calendar-container button.calendar-segment-btn {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	padding: 6px 10px;
+	min-width: 32px;
+	height: 28px;
+	border: none;
+	background: transparent;
+	border-radius: calc(var(--radius-m) - 2px);
+	cursor: pointer;
+	transition:
+		color 0.15s ease,
+		background-color 0.15s ease;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-medium);
+	white-space: nowrap;
+
+	box-shadow: none;
+}
+
+.full-calendar-container button.calendar-segment-btn:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.full-calendar-container button.calendar-segment-btn.is-active {
+	color: var(--text-on-accent);
+	background-color: var(--color-accent); /* Indicator provides background */
+}
+
+.full-calendar-container button.calendar-segment-btn.is-active:hover {
+	background-color: var(--color-accent-1);
+}
+
+/* Short label (always visible) */
+.full-calendar-container .calendar-segment-short {
+	font-weight: var(--font-semibold);
+	font-size: var(--font-ui-small);
+	line-height: 1;
+}
+
+/* Full label (hidden by default, shown on wider screens) */
+.full-calendar-container .calendar-segment-full {
+	display: none;
+	font-size: var(--font-ui-smaller);
+	line-height: 1;
+}
+
+/* Custom view icon */
+.full-calendar-container .calendar-segment-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
+}
+
+.full-calendar-container .calendar-segment-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* Separator between built-in and custom views */
+.full-calendar-container .calendar-segment-separator {
+	width: 1px;
+	height: 16px;
+	background-color: var(--background-modifier-border);
+	margin: 0 4px;
+}
+
+/* Custom segment button adjustments */
+.full-calendar-container .calendar-segment-btn.calendar-segment-custom {
+	gap: 2px;
+}
+
+.full-calendar-container
+	.calendar-segment-btn.calendar-segment-custom
+	.calendar-segment-icon {
+	display: flex;
 }
 
 .full-calendar-container .calendar-current-date {
@@ -58,10 +204,22 @@
 	white-space: nowrap;
 }
 
-.full-calendar-container .calendar-view-switcher button.is-active {
-	background-color: var(--interactive-accent);
-	color: var(--text-on-accent);
-	border-color: var(--interactive-accent-hover);
+/* Show full labels on wider screens */
+@container (min-width: 700px) {
+	.full-calendar-container .calendar-segment-full {
+		display: inline;
+	}
+
+	.full-calendar-container .calendar-segment-btn {
+		padding: 6px 12px;
+	}
+
+	/* Show short label for custom views on wider screens too */
+	.full-calendar-container
+		.calendar-segment-btn.calendar-segment-custom
+		.calendar-segment-short {
+		display: inline;
+	}
 }
 
 .full-calendar-container .calendar-view-container {
@@ -638,7 +796,7 @@
 }
 
 .full-calendar-container input.task-list-item-checkbox {
-	scale: 0.9;
+	vertical-align: middle;
 }
 
 .full-calendar-container .calendar-view-switcher-selector {
@@ -687,8 +845,9 @@
 	transition: background-color 0.2s ease;
 }
 
+/* Hide segmented control and show dropdown on narrow screens */
 @container (max-width: 600px) {
-	.full-calendar-container .calendar-view-switcher button {
+	.full-calendar-container .calendar-segmented-control {
 		display: none;
 	}
 
@@ -702,5 +861,21 @@
 
 	.full-calendar-container .calendar-view-switcher-selector {
 		display: block;
+	}
+}
+
+/* Medium width: show only short labels */
+@container (min-width: 601px) and (max-width: 699px) {
+	.full-calendar-container .calendar-segment-full {
+		display: none;
+	}
+
+	.full-calendar-container .calendar-segment-short {
+		display: inline;
+	}
+
+	.full-calendar-container .calendar-segment-btn {
+		padding: 6px 8px;
+		min-width: 28px;
 	}
 }

@@ -1,0 +1,3 @@
+[submodule "packages/calendar"]
+	path = packages/calendar
+	url = https://github.com/taskgenius/calendar.git

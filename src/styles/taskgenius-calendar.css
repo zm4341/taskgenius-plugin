@@ -125,7 +125,7 @@
 
 .tg-month-row {
 	position: relative;
-	height: 120px;
+	/*height: 120px;*/
 	border-bottom: 1px solid var(--background-modifier-border);
 }
 

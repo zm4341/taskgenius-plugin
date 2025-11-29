@@ -35,6 +35,7 @@ import {
 	renderIndexSettingsTab,
 	IcsSettingsComponent,
 	renderDesktopIntegrationSettingsTab,
+	renderCalendarViewSettingsTab,
 } from "./components/features/settings";
 import { renderFileFilterSettingsTab } from "./components/features/settings/tabs/FileFilterSettingsTab";
 import { renderTimeParsingSettingsTab } from "./components/features/settings/tabs/TimeParsingSettingsTab";
@@ -181,6 +182,12 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 
 		// Integration & Advanced
 		{
+			id: "calendar-views",
+			name: t("Calendar Views"),
+			icon: "calendar-range",
+			category: "integration",
+		},
+		{
 			id: "ics-integration",
 			name: t("Calendar Sync"),
 			icon: "calendar-plus",
@@ -238,7 +245,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 				if (plugin.dataflowOrchestrator) {
 					// Call async updateSettings and await to ensure incremental reindex completes
 					await plugin.dataflowOrchestrator.updateSettings(
-						plugin.settings
+						plugin.settings,
 					);
 				}
 
@@ -249,7 +256,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 				await plugin.triggerViewUpdate();
 			},
 			100,
-			true
+			true,
 		);
 
 		this.debouncedApplyNotifications = debounce(
@@ -260,7 +267,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 				// Minimal view updates are unnecessary here
 			},
 			100,
-			true
+			true,
 		);
 	}
 
@@ -280,7 +287,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 		}
 		this.searchComponent = new SettingsSearchComponent(
 			this,
-			this.containerEl
+			this.containerEl,
 		);
 	}
 
@@ -377,7 +384,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 					tab.name +
 						(tab.id === "about"
 							? " v" + this.plugin.manifest.version
-							: "")
+							: ""),
 				);
 
 				// Add click handler
@@ -410,7 +417,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 
 		// Show active section, hide others
 		const sections = this.containerEl.querySelectorAll(
-			".settings-tab-section"
+			".settings-tab-section",
 		);
 		sections.forEach((section) => {
 			if (section.getAttribute("data-tab-id") === tabId) {
@@ -424,10 +431,10 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 
 		// Handle tab container and header visibility based on selected tab
 		const tabsContainer = this.containerEl.querySelector(
-			".settings-tabs-categorized-container"
+			".settings-tabs-categorized-container",
 		);
 		const settingsHeader = this.containerEl.querySelector(
-			".task-genius-settings-header"
+			".task-genius-settings-header",
 		);
 
 		if (tabId === "general") {
@@ -452,7 +459,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 		if (tabId === "workspaces") {
 			// Make sure the workspace section is visible even though the tab is hidden
 			const workspaceSection = this.containerEl.querySelector(
-				'[data-tab-id="workspaces"]'
+				'[data-tab-id="workspaces"]',
 			);
 			if (workspaceSection) {
 				(workspaceSection as unknown as HTMLElement).style.display =
@@ -473,7 +480,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 	public navigateToTab(
 		tabId: string,
 		section?: string,
-		search?: string
+		search?: string,
 	): void {
 		// Set the current tab
 		this.currentTab = tabId;
@@ -514,7 +521,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 		// Special handling for MCP sections
 		if (sectionId === "cursor" && this.currentTab === "mcp-integration") {
 			const cursorSection = this.containerEl.querySelector(
-				".mcp-client-section"
+				".mcp-client-section",
 			);
 			if (cursorSection) {
 				const header =
@@ -534,7 +541,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 	private createTabSection(tabId: string): HTMLElement {
 		// Get the sections container
 		const sectionsContainer = this.containerEl.querySelector(
-			".settings-tab-sections"
+			".settings-tab-sections",
 		);
 		if (!sectionsContainer) return this.containerEl;
 
@@ -567,7 +574,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 					new IframeModal(
 						this.app,
 						url,
-						`How to use — ${tabInfo?.name ?? tabId}`
+						`How to use — ${tabInfo?.name ?? tabId}`,
 					).open();
 				} catch (e) {
 					window.open(url);
@@ -689,13 +696,17 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 		const habitSection = this.createTabSection("habit");
 		this.displayHabitSettings(habitSection);
 
+		// Calendar Views Tab
+		const calendarViewsSection = this.createTabSection("calendar-views");
+		this.displayCalendarViewsSettings(calendarViewsSection);
+
 		// ICS Integration Tab
 		const icsSection = this.createTabSection("ics-integration");
 		this.displayIcsSettings(icsSection);
 
 		// Notifications Tab
 		const notificationsSection = this.createTabSection(
-			"desktop-integration"
+			"desktop-integration",
 		);
 		this.displayDesktopIntegrationSettings(notificationsSection);
 
@@ -767,6 +778,8 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 				return `${base}/reward`;
 			case "habit":
 				return `${base}/habit`;
+			case "calendar-views":
+				return `${base}/task-view/calendar`;
 			case "ics-integration":
 				return `${base}/ics-support`;
 			case "mcp-integration":
@@ -852,6 +865,10 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 		renderProjectSettingsTab(this, containerEl);
 	}
 
+	private displayCalendarViewsSettings(containerEl: HTMLElement): void {
+		renderCalendarViewSettingsTab(this, containerEl);
+	}
+
 	private displayIcsSettings(containerEl: HTMLElement): void {
 		const icsSettingsComponent = new IcsSettingsComponent(
 			this.plugin,
@@ -859,7 +876,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 			() => {
 				this.currentTab = "general";
 				this.display();
-			}
+			},
 		);
 		icsSettingsComponent.display();
 	}
@@ -870,7 +887,7 @@ export class TaskProgressBarSettingTab extends PluginSettingTab {
 
 	private displayMcpSettings(containerEl: HTMLElement): void {
 		renderMcpIntegrationSettingsTab(this, containerEl, this.plugin, () =>
-			this.applySettingsUpdate()
+			this.applySettingsUpdate(),
 		);
 	}
 

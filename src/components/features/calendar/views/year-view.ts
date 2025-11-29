@@ -1,5 +1,14 @@
+/**
+ * @deprecated This file is deprecated. Use `tg-year-view.ts` instead.
+ *
+ * The new TGYearView extends @taskgenius/calendar's BaseView for better
+ * integration with the calendar system. This legacy implementation is kept
+ * for backward compatibility but should not be used for new development.
+ *
+ * @see {@link ./tg-year-view.ts} for the new implementation
+ */
 import { App, Component, debounce, moment } from "obsidian";
-import { CalendarEvent } from '@/components/features/calendar/index';
+import { CalendarEvent } from "@/components/features/calendar/index";
 import {
 	CalendarSpecificConfig,
 	getViewSettingOrDefault,
@@ -8,7 +17,9 @@ import TaskProgressBarPlugin from "@/index"; // Import plugin type for settings 
 import { CalendarViewComponent, CalendarViewOptions } from "./base-view"; // Import base class
 
 /**
- * Renders the year view grid as a component.
+ * @deprecated Use TGYearView from `tg-year-view.ts` instead.
+ * This class extends the legacy CalendarViewComponent (Obsidian Component).
+ * The new TGYearView extends @taskgenius/calendar's BaseView for unified view management.
  */
 export class YearView extends CalendarViewComponent {
 	// Extend base class
@@ -18,8 +29,7 @@ export class YearView extends CalendarViewComponent {
 	private app: App; // Keep app reference
 	private plugin: TaskProgressBarPlugin; // Keep plugin reference
 	// Removed specific click/hover properties, use this.options
-		private overrideConfig?: Partial<CalendarSpecificConfig>;
-
+	private overrideConfig?: Partial<CalendarSpecificConfig>;
 
 	constructor(
 		app: App,
@@ -28,7 +38,7 @@ export class YearView extends CalendarViewComponent {
 		currentDate: moment.Moment,
 		events: CalendarEvent[],
 		options: CalendarViewOptions, // Use base options type
-		overrideConfig?: Partial<CalendarSpecificConfig>
+		overrideConfig?: Partial<CalendarSpecificConfig>,
 	) {
 		super(plugin, app, containerEl, events, options); // Call base constructor
 		this.app = app;
@@ -43,7 +53,7 @@ export class YearView extends CalendarViewComponent {
 		this.containerEl.addClass("view-year");
 
 		console.log(
-			`YearView: Rendering year ${year}. Total events received: ${this.events.length}`
+			`YearView: Rendering year ${year}. Total events received: ${this.events.length}`,
 		); // Log total events
 
 		// Create a grid container for the 12 months (e.g., 4x3)
@@ -65,13 +75,20 @@ export class YearView extends CalendarViewComponent {
 		console.log(
 			`YearView: Filtered ${
 				yearEvents.length
-			} events for year ${year} in ${endTimeFilter - startTimeFilter}ms`
+			} events for year ${year} in ${endTimeFilter - startTimeFilter}ms`,
 		); // Log filtering time
 
 		// Get view settings (prefer override when provided)
 		const viewConfig = getViewSettingOrDefault(this.plugin, "calendar"); // Adjust if needed
-		const firstDayOfWeekSetting = (this.overrideConfig?.firstDayOfWeek ?? (viewConfig.specificConfig as CalendarSpecificConfig).firstDayOfWeek);
-		const hideWeekends = (this.overrideConfig?.hideWeekends ?? (viewConfig.specificConfig as CalendarSpecificConfig)?.hideWeekends) ?? false;
+		const firstDayOfWeekSetting =
+			this.overrideConfig?.firstDayOfWeek ??
+			(viewConfig.specificConfig as CalendarSpecificConfig)
+				.firstDayOfWeek;
+		const hideWeekends =
+			this.overrideConfig?.hideWeekends ??
+			(viewConfig.specificConfig as CalendarSpecificConfig)
+				?.hideWeekends ??
+			false;
 
 		// Add hide-weekends class if weekend hiding is enabled
 		if (hideWeekends) {
@@ -115,7 +132,7 @@ export class YearView extends CalendarViewComponent {
 			const monthBody = monthContainer.createDiv("mini-month-body");
 			const daysWithEvents = this.calculateDaysWithEvents(
 				monthMoment,
-				yearEvents // Pass already filtered year events
+				yearEvents, // Pass already filtered year events
 			);
 
 			this.renderMiniMonthGrid(
@@ -123,7 +140,7 @@ export class YearView extends CalendarViewComponent {
 				monthMoment,
 				daysWithEvents,
 				effectiveFirstDay,
-				hideWeekends
+				hideWeekends,
 			);
 		}
 
@@ -131,14 +148,14 @@ export class YearView extends CalendarViewComponent {
 		console.log(
 			`YearView: Finished rendering year ${year} in ${
 				totalRenderEndTime - totalRenderStartTime
-			}ms. (First day: ${effectiveFirstDay})`
+			}ms. (First day: ${effectiveFirstDay})`,
 		);
 	}
 
 	// Helper function to calculate which days in a month have events
 	private calculateDaysWithEvents(
 		monthMoment: moment.Moment,
-		relevantEvents: CalendarEvent[] // Use the pre-filtered events
+		relevantEvents: CalendarEvent[], // Use the pre-filtered events
 	): Set<number> {
 		const days = new Set<number>();
 		const monthStart = monthMoment.clone().startOf("month");
@@ -182,7 +199,7 @@ export class YearView extends CalendarViewComponent {
 		monthMoment: moment.Moment,
 		daysWithEvents: Set<number>,
 		effectiveFirstDay: number, // Pass the effective first day
-		hideWeekends: boolean // Pass the weekend hiding setting
+		hideWeekends: boolean, // Pass the weekend hiding setting
 	) {
 		container.empty(); // Clear placeholder
 		container.addClass("mini-month-grid");
@@ -198,10 +215,10 @@ export class YearView extends CalendarViewComponent {
 		// Filter out weekends if hideWeekends is enabled
 		const filteredWeekdays = hideWeekends
 			? rotatedWeekdays.filter((_, index) => {
-				// Calculate the actual day of week for this header position
-				const dayOfWeek = (effectiveFirstDay + index) % 7;
-				return dayOfWeek !== 0 && dayOfWeek !== 6; // Exclude Sunday (0) and Saturday (6)
-			})
+					// Calculate the actual day of week for this header position
+					const dayOfWeek = (effectiveFirstDay + index) % 7;
+					return dayOfWeek !== 0 && dayOfWeek !== 6; // Exclude Sunday (0) and Saturday (6)
+				})
 			: rotatedWeekdays;
 
 		filteredWeekdays.forEach((day) => {
@@ -219,7 +236,8 @@ export class YearView extends CalendarViewComponent {
 			// When weekends are hidden, adjust grid to start and end on work days
 			// Find the first work day of the week containing the start of month
 			gridStart = monthStart.clone();
-			const daysToSubtractStart = (monthStart.weekday() - effectiveFirstDay + 7) % 7;
+			const daysToSubtractStart =
+				(monthStart.weekday() - effectiveFirstDay + 7) % 7;
 			gridStart.subtract(daysToSubtractStart, "days");
 
 			// Ensure gridStart is not a weekend
@@ -229,7 +247,8 @@ export class YearView extends CalendarViewComponent {
 
 			// Find the last work day of the week containing the end of month
 			gridEnd = monthEnd.clone();
-			const daysToAddEnd = (effectiveFirstDay + 4 - monthEnd.weekday() + 7) % 7; // 4 = Friday in work week
+			const daysToAddEnd =
+				(effectiveFirstDay + 4 - monthEnd.weekday() + 7) % 7; // 4 = Friday in work week
 			gridEnd.add(daysToAddEnd, "days");
 
 			// Ensure gridEnd is not a weekend
@@ -238,16 +257,21 @@ export class YearView extends CalendarViewComponent {
 			}
 		} else {
 			// Original logic for when weekends are shown
-			const daysToSubtractStart = (monthStart.weekday() - effectiveFirstDay + 7) % 7;
-			gridStart = monthStart.clone().subtract(daysToSubtractStart, "days");
+			const daysToSubtractStart =
+				(monthStart.weekday() - effectiveFirstDay + 7) % 7;
+			gridStart = monthStart
+				.clone()
+				.subtract(daysToSubtractStart, "days");
 
-			const daysToAddEnd = (effectiveFirstDay + 6 - monthEnd.weekday() + 7) % 7;
+			const daysToAddEnd =
+				(effectiveFirstDay + 6 - monthEnd.weekday() + 7) % 7;
 			gridEnd = monthEnd.clone().add(daysToAddEnd, "days");
 		}
 
 		let currentDayIter = gridStart.clone();
 		while (currentDayIter.isSameOrBefore(gridEnd, "day")) {
-			const isWeekend = currentDayIter.day() === 0 || currentDayIter.day() === 6; // Sunday or Saturday
+			const isWeekend =
+				currentDayIter.day() === 0 || currentDayIter.day() === 6; // Sunday or Saturday
 
 			// Skip weekend days if hideWeekends is enabled
 			if (hideWeekends && isWeekend) {

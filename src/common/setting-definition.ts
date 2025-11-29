@@ -125,6 +125,89 @@ export interface CalendarSpecificConfig {
 	workingHoursEnd?: number; // End hour (0-23), default: 18
 }
 
+/**
+ * Day filter configuration for custom calendar views
+ * Supports preset filters and custom day selection
+ */
+export interface DayFilterConfig {
+	/** Filter type: none, preset, or custom */
+	type: "none" | "hideWeekends" | "hideWeekdays" | "customDays";
+	/** Custom hidden days (0=Sunday, 1=Monday, ..., 6=Saturday) */
+	hiddenDays?: number[];
+}
+
+/**
+ * Time filter configuration for week/day views
+ * Controls which time slots are displayed
+ */
+export interface TimeFilterConfig {
+	/** Whether time filtering is enabled */
+	enabled: boolean;
+	/** Filter type: working hours preset or custom range */
+	type: "workingHours" | "custom";
+	/** Start hour (0-23), default: 9 */
+	startHour: number;
+	/** End hour (0-23), default: 18 */
+	endHour: number;
+}
+
+/**
+ * Custom calendar view configuration
+ * Allows users to create customized calendar views based on Month/Week/Day
+ */
+export interface CustomCalendarViewConfig {
+	/** Unique identifier for this custom view */
+	id: string;
+	/** Display name shown in UI */
+	name: string;
+	/** Icon identifier (Lucide icon name) */
+	icon: string;
+	/** Base view type to inherit from */
+	baseViewType: "month" | "week" | "day" | "agenda" | "year";
+	/** Whether this view is enabled and visible */
+	enabled: boolean;
+	/** Display order in the view switcher */
+	order: number;
+
+	/** Calendar-specific configuration */
+	calendarConfig: CustomCalendarConfig;
+
+	/** Creation timestamp */
+	createdAt: number;
+	/** Last update timestamp */
+	updatedAt: number;
+}
+
+/**
+ * Calendar configuration options for custom views
+ * Maps to @taskgenius/calendar CalendarConfig options
+ */
+export interface CustomCalendarConfig {
+	// Basic configuration
+	/** First day of week: 0=Sunday, 1=Monday, ..., 6=Saturday */
+	firstDayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+	/** Show week numbers in month view */
+	showWeekNumbers?: boolean;
+	/** Show event count badges on date cells */
+	showEventCounts?: boolean;
+	/** Maximum events to show per row before "+N more" indicator (month view) */
+	maxEventsPerRow?: number;
+
+	/** Day filter configuration */
+	dayFilter?: DayFilterConfig;
+
+	/** Time filter configuration (week/day views only) */
+	timeFilter?: TimeFilterConfig;
+
+	/** Custom date format configuration */
+	dateFormats?: {
+		/** Month header format (e.g., "yyyy M") */
+		monthHeader?: string;
+		/** Day header format (e.g., "yyyy M d") */
+		dayHeader?: string;
+	};
+}
+
 export interface GanttSpecificConfig {
 	viewType: "gantt"; // Discriminator
 	showTaskLabels: boolean;
@@ -900,6 +983,9 @@ export interface TaskProgressBarSettings {
 
 	// Workspace Settings
 	workspaces?: WorkspacesConfig;
+
+	// Custom Calendar Views Settings
+	customCalendarViews?: CustomCalendarViewConfig[];
 }
 
 /** Define the default settings */
@@ -1811,6 +1897,9 @@ export const DEFAULT_SETTINGS: TaskProgressBarSettings = {
 		},
 		useWorkspaceSideLeaves: false,
 	},
+
+	// Custom Calendar Views Defaults
+	customCalendarViews: [],
 };
 
 // Helper function to get view settings safely

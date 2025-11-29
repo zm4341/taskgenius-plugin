@@ -58,8 +58,13 @@ export class CalendarEventComponent extends Component {
 		this.app = params.app;
 
 		// Create the main element
+		// Include tg-event-block for @taskgenius/calendar InteractionController compatibility
 		this.eventEl = createEl("div", {
-			cls: ["calendar-event", `calendar-event-${this.viewType}`],
+			cls: [
+				"calendar-event",
+				`calendar-event-${this.viewType}`,
+				"tg-event-block",
+			],
 		});
 
 		if (this.event.metadata.project) {
@@ -79,6 +84,8 @@ export class CalendarEventComponent extends Component {
 			this.eventEl.dataset.filePath = this.event.filePath;
 		}
 		this.eventEl.dataset.eventId = this.event.id;
+		// data-eid is used by @taskgenius/calendar InteractionController for event lookup
+		this.eventEl.dataset.eid = this.event.id;
 	}
 
 	override onload(): void {

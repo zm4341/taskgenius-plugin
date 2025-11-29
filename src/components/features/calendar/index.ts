@@ -28,12 +28,16 @@ import {
 	workingHours,
 	onlyDays,
 	hideDays,
+	ViewRegistry,
 } from "@taskgenius/calendar";
 import type {
 	CalendarConfig,
 	CalendarEvent as TGCalendarEvent,
 	DayFilterContext,
 	TimeSlotConfig,
+	ViewClass,
+	ExtendedCalendarConfig,
+	EventRenderContext,
 } from "@taskgenius/calendar";
 import * as dateFns from "date-fns";
 import { addDays, startOfDay, differenceInDays, isBefore } from "date-fns";
@@ -52,15 +56,24 @@ import "@/styles/calendar/event.css";
 import "@/styles/calendar/badge.css";
 import { t } from "@/translations/helper";
 
-// Import original view implementations for agenda/year
+// Import original view implementations for agenda/year (legacy, kept for reference)
 import { AgendaView } from "./views/agenda-view";
 import { YearView } from "./views/year-view";
+
+// Import new TG-based view implementations
+import { TGAgendaView } from "./views/tg-agenda-view";
+import { TGYearView } from "./views/tg-year-view";
 import TaskProgressBarPlugin from "@/index";
 import { QuickCaptureModal } from "@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch";
-import { CalendarSpecificConfig } from "@/common/setting-definition";
+import {
+	CalendarSpecificConfig,
+	CustomCalendarViewConfig,
+} from "@/common/setting-definition";
+import { createTaskCheckbox } from "@/components/features/task/view/details";
 
-// View modes
-type CalendarViewMode = "year" | "month" | "week" | "day" | "agenda";
+// View modes - now includes custom view IDs
+type BuiltinCalendarViewMode = "year" | "month" | "week" | "day" | "agenda";
+type CalendarViewMode = BuiltinCalendarViewMode | string;
 
 // Legacy CalendarEvent interface (extends Task)
 export interface CalendarEvent extends Task {
@@ -100,7 +113,7 @@ class NormalizedDateFnsAdapter implements DateAdapter<Date> {
 	format(date: Date, formatStr: string) {
 		return this.fns.format(
 			date,
-			this.normalizeFormat(formatStr) ?? formatStr
+			this.normalizeFormat(formatStr) ?? formatStr,
 		);
 	}
 
@@ -216,7 +229,7 @@ class NormalizedDateFnsAdapter implements DateAdapter<Date> {
 		if (!unit) return this.fns.isBefore(date1, date2);
 		return this.fns.isBefore(
 			this.startOf(date1, unit),
-			this.startOf(date2, unit)
+			this.startOf(date2, unit),
 		);
 	}
 
@@ -224,7 +237,7 @@ class NormalizedDateFnsAdapter implements DateAdapter<Date> {
 		if (!unit) return this.fns.isAfter(date1, date2);
 		return this.fns.isAfter(
 			this.startOf(date1, unit),
-			this.startOf(date2, unit)
+			this.startOf(date2, unit),
 		);
 	}
 
@@ -232,7 +245,7 @@ class NormalizedDateFnsAdapter implements DateAdapter<Date> {
 		if (!unit) return this.fns.isEqual(date1, date2);
 		return this.fns.isEqual(
 			this.startOf(date1, unit),
-			this.startOf(date2, unit)
+			this.startOf(date2, unit),
 		);
 	}
 }
@@ -253,10 +266,13 @@ export class CalendarComponent extends Component {
 	private app: App;
 	private plugin: TaskProgressBarPlugin;
 
-	// @taskgenius/calendar instance (for month/week/day)
+	// @taskgenius/calendar instance (for all views including agenda/year)
 	private tgCalendar: Calendar | null = null;
 
-	// Original view components (for agenda/year)
+	// View registry for custom views (agenda, year, and user-defined)
+	private viewRegistry: ViewRegistry = new ViewRegistry();
+
+	// Original view components (legacy, kept for backward compatibility)
 	private agendaView: AgendaView | null = null;
 	private yearView: YearView | null = null;
 
@@ -276,7 +292,7 @@ export class CalendarComponent extends Component {
 			onTaskCompleted?: (task: Task) => void;
 			onEventContextMenu?: (ev: MouseEvent, event: CalendarEvent) => void;
 		} = {},
-		private viewId: string = "calendar"
+		private viewId: string = "calendar",
 	) {
 		super();
 		this.app = app;
@@ -286,21 +302,72 @@ export class CalendarComponent extends Component {
 
 		this.headerEl = this.containerEl.createDiv("calendar-header");
 		this.viewContainerEl = this.containerEl.createDiv(
-			"calendar-view-container"
+			"calendar-view-container",
 		);
 
 		// Load saved view mode
 		const savedView = this.app.loadLocalStorage(
-			"task-genius:calendar-view"
+			"task-genius:calendar-view",
 		);
 		if (savedView) {
 			this.currentViewMode = savedView as CalendarViewMode;
 		}
+
+		// Initialize view registry with custom views (agenda, year)
+		this.initializeViewRegistry();
+	}
+
+	/**
+	 * Initialize the view registry with custom views (Agenda, Year)
+	 * These views extend @taskgenius/calendar's BaseView for integration
+	 */
+	private initializeViewRegistry(): void {
+		// Register TGAgendaView
+		this.viewRegistry.register(TGAgendaView as unknown as ViewClass);
+
+		// Register TGYearView
+		this.viewRegistry.register(TGYearView as unknown as ViewClass);
 	}
 
 	override onload() {
 		super.onload();
 		this.processTasks();
+		this.render();
+
+		// Listen for calendar views configuration changes
+		this.registerEvent(
+			this.app.workspace.on(
+				// @ts-ignore - custom event
+				"task-genius:calendar-views-changed",
+				() => {
+					this.handleCalendarViewsChanged();
+				},
+			),
+		);
+	}
+
+	/**
+	 * Handle calendar views configuration changes (add/remove/edit/reorder)
+	 */
+	private handleCalendarViewsChanged() {
+		// If currently viewing a custom view that's no longer valid, switch to month
+		if (this.isCustomView(this.currentViewMode)) {
+			const customConfig = this.getCustomViewConfig(this.currentViewMode);
+			const hiddenCalendarViews =
+				this.plugin.workspaceManager?.getActiveWorkspace()?.settings
+					?.hiddenModules?.calendarViews || [];
+
+			if (
+				!customConfig ||
+				!customConfig.enabled ||
+				hiddenCalendarViews.includes(this.currentViewMode)
+			) {
+				this.currentViewMode = "month";
+				this.saveCurrentViewMode();
+			}
+		}
+
+		// Re-render to update the view switcher and current view
 		this.render();
 	}
 
@@ -340,9 +407,19 @@ export class CalendarComponent extends Component {
 	public setView(viewMode: CalendarViewMode) {
 		if (this.currentViewMode !== viewMode) {
 			this.currentViewMode = viewMode;
-			this.app.saveLocalStorage("task-genius:calendar-view", viewMode);
+			this.saveCurrentViewMode();
 			this.render();
 		}
+	}
+
+	/**
+	 * Save the current view mode to localStorage
+	 */
+	private saveCurrentViewMode() {
+		this.app.saveLocalStorage(
+			"task-genius:calendar-view",
+			this.currentViewMode,
+		);
 	}
 
 	public navigate(direction: "prev" | "next") {
@@ -455,51 +532,188 @@ export class CalendarComponent extends Component {
 		const dateDisplay = this.headerEl.createSpan("calendar-current-date");
 		dateDisplay.textContent = this.getCurrentDateDisplay();
 
-		// View switcher
+		// View switcher - segmented control style
 		const viewGroup = this.headerEl.createDiv("calendar-view-switcher");
-		const modes: CalendarViewMode[] = [
-			"year",
-			"month",
-			"week",
-			"day",
-			"agenda",
+
+		// Built-in modes with short labels (first letter or abbreviated)
+		const builtinModes: {
+			id: BuiltinCalendarViewMode;
+			label: string;
+			shortLabel: string;
+			title: string;
+		}[] = [
+			{ id: "year", label: t("Year"), shortLabel: "Y", title: t("Year") },
+			{
+				id: "month",
+				label: t("Month"),
+				shortLabel: "M",
+				title: t("Month"),
+			},
+			{ id: "week", label: t("Week"), shortLabel: "W", title: t("Week") },
+			{ id: "day", label: t("Day"), shortLabel: "D", title: t("Day") },
+			{
+				id: "agenda",
+				label: t("Agenda"),
+				shortLabel: "A",
+				title: t("Agenda"),
+			},
 		];
 
-		modes.forEach((mode) => {
-			const btn = viewGroup.createEl("button", {
-				text: {
-					year: t("Year"),
-					month: t("Month"),
-					week: t("Week"),
-					day: t("Day"),
-					agenda: t("Agenda"),
-				}[mode],
+		// Get enabled custom views
+		const customViews = this.getEnabledCustomViews();
+
+		// Segmented control container (for wide screens)
+		const segmentedControl = viewGroup.createDiv(
+			"calendar-segmented-control",
+		);
+
+		// Track the active button for initial indicator positioning
+		let activeButton: HTMLElement | null = null;
+
+		// Render built-in view buttons
+		builtinModes.forEach((mode, index) => {
+			const btn = segmentedControl.createEl("button", {
+				cls: "calendar-segment-btn",
+				attr: { "aria-label": mode.title, "data-view": mode.id },
 			});
 
-			if (mode === this.currentViewMode) {
+			// Short label (single letter)
+			btn.createSpan({
+				cls: "calendar-segment-short",
+				text: mode.shortLabel,
+			});
+
+			// Full label (for hover/wider screens)
+			btn.createSpan({
+				cls: "calendar-segment-full",
+				text: mode.label,
+			});
+
+			if (mode.id === this.currentViewMode) {
 				btn.addClass("is-active");
+				activeButton = btn;
 			}
 
-			btn.onclick = () => this.setView(mode);
+			btn.onclick = () => {
+				this.setView(mode.id);
+			};
 		});
 
-		// Dropdown selector
+		// Render custom view buttons (if any)
+		if (customViews.length > 0) {
+			segmentedControl.createDiv("calendar-segment-separator");
+
+			customViews.forEach((customView) => {
+				const btn = segmentedControl.createEl("button", {
+					cls: "calendar-segment-btn calendar-segment-custom",
+					attr: {
+						"data-view": customView.id,
+						"aria-label": customView.name,
+					},
+				});
+
+				// Icon for custom view
+				const iconEl = btn.createSpan({
+					cls: "calendar-segment-icon",
+				});
+				import("obsidian").then(({ setIcon }) => {
+					setIcon(iconEl, customView.icon);
+				});
+
+				// Short label (first letter of name)
+				btn.createSpan({
+					cls: "calendar-segment-short",
+					text: customView.name.charAt(0).toUpperCase(),
+				});
+
+				if (customView.id === this.currentViewMode) {
+					btn.addClass("is-active");
+					activeButton = btn;
+				}
+
+				btn.onclick = () => {
+					this.setView(customView.id);
+				};
+			});
+		}
+
+		// Dropdown selector (for narrow screens)
 		viewGroup.createEl(
 			"div",
 			{ cls: "calendar-view-switcher-selector" },
 			(el) => {
-				new DropdownComponent(el)
-					.addOption("year", t("Year"))
-					.addOption("month", t("Month"))
-					.addOption("week", t("Week"))
-					.addOption("day", t("Day"))
-					.addOption("agenda", t("Agenda"))
+				const dropdown = new DropdownComponent(el);
+
+				// Add built-in options
+				builtinModes.forEach((mode) => {
+					dropdown.addOption(mode.id, mode.label);
+				});
+
+				// Add custom view options
+				if (customViews.length > 0) {
+					customViews.forEach((customView) => {
+						dropdown.addOption(
+							customView.id,
+							`⬧ ${customView.name}`,
+						);
+					});
+				}
+
+				dropdown
 					.onChange((value) =>
-						this.setView(value as CalendarViewMode)
+						this.setView(value as CalendarViewMode),
 					)
 					.setValue(this.currentViewMode);
-			}
+			},
 		);
+	}
+
+	/**
+	 * Update the position of the active indicator in the segmented control
+	 */
+	private updateActiveIndicator(
+		container: HTMLElement,
+		indicator: HTMLElement,
+		activeBtn: HTMLElement,
+	) {
+		const containerRect = container.getBoundingClientRect();
+		const btnRect = activeBtn.getBoundingClientRect();
+
+		indicator.style.width = `${btnRect.width}px`;
+		indicator.style.transform = `translateX(${btnRect.left - containerRect.left}px)`;
+	}
+
+	/**
+	 * Get all enabled custom calendar views (respecting workspace visibility)
+	 */
+	private getEnabledCustomViews(): CustomCalendarViewConfig[] {
+		const customViews = this.plugin.settings.customCalendarViews || [];
+
+		// Get hidden calendar views from active workspace
+		const hiddenCalendarViews =
+			this.plugin.workspaceManager?.getActiveWorkspace()?.settings
+				?.hiddenModules?.calendarViews || [];
+
+		return customViews
+			.filter((v) => v.enabled && !hiddenCalendarViews.includes(v.id))
+			.sort((a, b) => a.order - b.order);
+	}
+
+	/**
+	 * Get a custom view configuration by ID
+	 */
+	private getCustomViewConfig(
+		viewId: string,
+	): CustomCalendarViewConfig | null {
+		const customViews = this.plugin.settings.customCalendarViews || [];
+		return customViews.find((v) => v.id === viewId) || null;
+	}
+
+	/**
+	 * Check if a view mode is a custom view
+	 */
+	private isCustomView(viewMode: CalendarViewMode): boolean {
+		return !["year", "month", "week", "day", "agenda"].includes(viewMode);
 	}
 
 	private renderCurrentView() {
@@ -525,34 +739,254 @@ export class CalendarComponent extends Component {
 			"view-month",
 			"view-week",
 			"view-day",
-			"view-agenda"
+			"view-agenda",
 		);
 		this.viewContainerEl.addClass(`view-${this.currentViewMode}`);
 
-		// Render view
+		// Render view - all views now go through unified TGCalendar
 		switch (this.currentViewMode) {
 			case "month":
 			case "week":
 			case "day":
+			case "agenda":
+			case "year":
 				this.renderTGCalendarView();
 				break;
-			case "agenda":
-				this.renderAgendaView();
-				break;
-			case "year":
-				this.renderYearView();
+			default:
+				// Check if it's a custom view
+				if (this.isCustomView(this.currentViewMode)) {
+					this.renderCustomCalendarView(this.currentViewMode);
+				}
 				break;
 		}
 	}
 
+	/**
+	 * Render a custom calendar view based on its configuration
+	 */
+	private renderCustomCalendarView(viewId: string) {
+		const customConfig = this.getCustomViewConfig(viewId);
+		if (!customConfig) {
+			// Fallback to month view if custom view not found
+			this.currentViewMode = "month";
+			this.saveCurrentViewMode();
+			this.renderTGCalendarView();
+			return;
+		}
+
+		// Check if the view is enabled and not hidden in workspace
+		if (!customConfig.enabled) {
+			// View is disabled, fallback to month view
+			this.currentViewMode = "month";
+			this.saveCurrentViewMode();
+			this.renderTGCalendarView();
+			return;
+		}
+
+		// Check workspace hidden modules
+		const hiddenCalendarViews =
+			this.plugin.workspaceManager?.getActiveWorkspace()?.settings
+				?.hiddenModules?.calendarViews || [];
+		if (hiddenCalendarViews.includes(viewId)) {
+			// View is hidden in this workspace, fallback to month view
+			this.currentViewMode = "month";
+			this.saveCurrentViewMode();
+			this.renderTGCalendarView();
+			return;
+		}
+
+		// Check if it's based on agenda or year view
+		const isAgendaOrYearBased =
+			customConfig.baseViewType === "agenda" ||
+			customConfig.baseViewType === "year";
+
+		// Build the calendar config from custom view settings
+		const calendarConfig = this.buildCustomViewCalendarConfig(customConfig);
+
+		this.tgCalendar = new Calendar(this.viewContainerEl, calendarConfig);
+
+		// For agenda/year based views, switch to that view after creation
+		if (isAgendaOrYearBased) {
+			this.tgCalendar.setView(customConfig.baseViewType);
+
+			// Set plugin context and options on the active view
+			const customView = this.tgCalendar.getActiveView();
+			if (customView) {
+				if ("setPluginContext" in customView) {
+					(customView as any).setPluginContext(this.plugin, this.app);
+				}
+				if ("setOptions" in customView) {
+					const cc = customConfig.calendarConfig;
+					if (customConfig.baseViewType === "agenda") {
+						(customView as any).setOptions({
+							daysToShow: (cc as any).daysToShow ?? 7,
+							showEmptyDays: (cc as any).showEmptyDays ?? false,
+							onEventClick: this.onEventClick,
+							onEventHover: this.onEventHover,
+							onEventContextMenu: this.onEventContextMenu,
+							onEventComplete: this.onEventComplete,
+						});
+					}
+					if (customConfig.baseViewType === "year") {
+						(customView as any).setOptions({
+							firstDayOfWeek: cc.firstDayOfWeek,
+							hideWeekends: cc.dayFilter?.type === "hideWeekends",
+							onDayClick: this.onDayClick,
+							onDayHover: this.onDayHover,
+							onMonthClick: this.onMonthClick,
+							onMonthHover: this.onMonthHover,
+						});
+					}
+				}
+			}
+
+			// Trigger re-render to apply the options
+			this.tgCalendar.refresh();
+		}
+
+		// Sync current date
+		this.tgCalendar.goToDate(this.currentDate.toDate());
+	}
+
+	/**
+	 * Build CalendarConfig from a CustomCalendarViewConfig
+	 */
+	private buildCustomViewCalendarConfig(
+		customConfig: CustomCalendarViewConfig,
+	): CalendarConfig {
+		const cc = customConfig.calendarConfig;
+
+		// Build dayFilter based on config
+		// The filter functions return DayFilterResult which is accepted by the view config
+		let dayFilter: ReturnType<typeof hideWeekends> | undefined;
+		if (cc.dayFilter) {
+			switch (cc.dayFilter.type) {
+				case "hideWeekends":
+					dayFilter = hideWeekends();
+					break;
+				case "hideWeekdays":
+					// hideWeekdays = only show weekends (hide Mon-Fri)
+					dayFilter = hideDays([1, 2, 3, 4, 5]);
+					break;
+				case "customDays":
+					if (
+						cc.dayFilter.hiddenDays &&
+						cc.dayFilter.hiddenDays.length > 0
+					) {
+						dayFilter = hideDays(cc.dayFilter.hiddenDays);
+					}
+					break;
+			}
+		}
+
+		// Build timeFilter based on config (only for week/day views)
+		// The filter functions return TimeFilterResult which is accepted by the view config
+		let timeFilter: ReturnType<typeof workingHours> | undefined;
+		if (
+			cc.timeFilter?.enabled &&
+			(customConfig.baseViewType === "week" ||
+				customConfig.baseViewType === "day")
+		) {
+			if (cc.timeFilter.type === "workingHours") {
+				timeFilter = workingHours(9, 18);
+			} else {
+				timeFilter = workingHours(
+					cc.timeFilter.startHour,
+					cc.timeFilter.endHour,
+				);
+			}
+		}
+
+		// For agenda/year views, use month as the initial view type
+		// (the actual view switch happens in renderCustomCalendarView)
+		const isAgendaOrYear =
+			customConfig.baseViewType === "agenda" ||
+			customConfig.baseViewType === "year";
+		const viewType = isAgendaOrYear
+			? "month"
+			: (customConfig.baseViewType as "month" | "week" | "day");
+
+		const calendarConfig: ExtendedCalendarConfig = {
+			view: {
+				type: viewType,
+				showWeekNumbers: cc.showWeekNumbers ?? false,
+				showDateHeader: true,
+				firstDayOfWeek: this.getEffectiveFirstDayOfWeek(customConfig),
+				dayFilter,
+				timeFilter,
+			},
+			// Use custom view registry for agenda/year views
+			viewRegistry: isAgendaOrYear ? this.viewRegistry : undefined,
+			dateAdapter: new NormalizedDateFnsAdapter(dateFns),
+			events: this.convertTasksToTGEvents(),
+			showEventCounts: cc.showEventCounts ?? true,
+			dateFormats: {
+				date: "yyyy-MM-dd",
+				dateTime: "yyyy-MM-dd HH:mm",
+				time: "HH:mm",
+				monthHeader: cc.dateFormats?.monthHeader ?? "yyyy M",
+				dayHeader: cc.dateFormats?.dayHeader ?? "yyyy M d",
+			},
+			draggable: {
+				enabled: true,
+				snapMinutes: 1440,
+				ghostOpacity: 0.5,
+			},
+			theme: {
+				primaryColor: "var(--interactive-accent)",
+				cellHeight: 60,
+				fontSize: {
+					header: "var(--font-ui-small)",
+					event: "var(--font-ui-smaller)",
+				},
+			},
+			// Event interactions
+			onEventClick: (event: any) => this.handleTGEventClick(event),
+			onEventContextMenu: (event: any, x: number, y: number) =>
+				this.handleTGEventContextMenu(event, x, y),
+			onEventDrop: (event: any, newStart: any, newEnd: any) =>
+				this.handleTGEventDrop(event, newStart, newEnd),
+			onEventResize: (event: any, newStart: any, newEnd: any) =>
+				this.handleTGEventResize(event, newStart, newEnd),
+			onDateClick: (date: Date) => this.handleDateClick(date),
+			onDateDoubleClick: (date: Date) => this.handleDateDoubleClick(date),
+			onDateContextMenu: (date: Date, x: number, y: number) =>
+				this.handleDateContextMenu(date, x, y),
+			onTimeSlotClick: (dateTime: Date) =>
+				this.handleTimeSlotClick(dateTime),
+			onTimeSlotDoubleClick: (dateTime: Date) =>
+				this.handleTimeSlotDoubleClick(dateTime),
+			onRenderDateCell: (ctx: any) => this.handleTGRenderDateCell(ctx),
+			// Custom event rendering - adds checkbox for task completion
+			onRenderEvent: (ctx: EventRenderContext) =>
+				this.handleTGRenderEvent(ctx),
+		};
+
+		// Add maxEventsPerRow for month view
+		if (customConfig.baseViewType === "month" && cc.maxEventsPerRow) {
+			(calendarConfig as any).maxEventsPerRow = cc.maxEventsPerRow;
+		}
+
+		return calendarConfig;
+	}
+
 	private renderTGCalendarView() {
 		const config = this.getEffectiveCalendarConfig();
-		const calendarConfig: CalendarConfig = {
+
+		// Determine view type - for agenda/year, use month as base but switch to custom view
+		const isCustomTGView =
+			this.currentViewMode === "agenda" ||
+			this.currentViewMode === "year";
+		const baseViewType = isCustomTGView
+			? "month"
+			: (this.currentViewMode as "month" | "week" | "day");
+
+		const calendarConfig: ExtendedCalendarConfig = {
 			view: {
-				type: this.currentViewMode as "month" | "week" | "day",
+				type: baseViewType,
 				showWeekNumbers: false,
 				showDateHeader: true,
-				firstDayOfWeek: (config.firstDayOfWeek ?? 0) as 0 | 1 | 6,
+				firstDayOfWeek: this.getEffectiveFirstDayOfWeek(),
 				// Use new dayFilter API (v0.6.0+) - must be inside view config
 				dayFilter: config.hideWeekends ? hideWeekends() : undefined,
 				// Add timeFilter for working hours (week/day view only)
@@ -562,8 +996,8 @@ export class CalendarComponent extends Component {
 						this.currentViewMode === "day")
 						? workingHours(
 								config.workingHoursStart ?? 9,
-								config.workingHoursEnd ?? 18
-						  )
+								config.workingHoursEnd ?? 18,
+							)
 						: undefined,
 			},
 			dateAdapter: new NormalizedDateFnsAdapter(dateFns),
@@ -573,8 +1007,8 @@ export class CalendarComponent extends Component {
 				date: "yyyy-MM-dd",
 				dateTime: "yyyy-MM-dd HH:mm",
 				time: "HH:mm",
-				monthHeader: "yyyy'年' M'月'",
-				dayHeader: "yyyy'年'M'月'd'日'",
+				monthHeader: "yyyy M",
+				dayHeader: "yyyy M d",
 			},
 			draggable: {
 				enabled: true,
@@ -589,8 +1023,12 @@ export class CalendarComponent extends Component {
 					event: "var(--font-ui-smaller)",
 				},
 			},
+			// Use custom view registry for agenda/year views
+			viewRegistry: this.viewRegistry,
 			// Event interactions - use arrow functions for safe binding
 			onEventClick: (event: any) => this.handleTGEventClick(event),
+			onEventContextMenu: (event: any, x: number, y: number) =>
+				this.handleTGEventContextMenu(event, x, y),
 			onEventDrop: (event: any, newStart: any, newEnd: any) =>
 				this.handleTGEventDrop(event, newStart, newEnd),
 			onEventResize: (event: any, newStart: any, newEnd: any) =>
@@ -607,9 +1045,59 @@ export class CalendarComponent extends Component {
 				this.handleTimeSlotDoubleClick(dateTime),
 			// Custom cell rendering
 			onRenderDateCell: (ctx: any) => this.handleTGRenderDateCell(ctx),
+			// Custom event rendering - adds checkbox for task completion
+			onRenderEvent: (ctx: EventRenderContext) =>
+				this.handleTGRenderEvent(ctx),
 		};
 
 		this.tgCalendar = new Calendar(this.viewContainerEl, calendarConfig);
+
+		// For custom TG views (agenda/year), switch to that view after creation
+		if (isCustomTGView) {
+			// Set plugin context for custom views
+			const activeView = this.tgCalendar.getActiveView();
+			if (activeView) {
+				// The view will be switched, so we need to set context after switching
+			}
+
+			this.tgCalendar.setView(this.currentViewMode);
+
+			// Now set plugin context on the active view
+			const customView = this.tgCalendar.getActiveView();
+			if (customView) {
+				if ("setPluginContext" in customView) {
+					(customView as any).setPluginContext(this.plugin, this.app);
+				}
+				if ("setOptions" in customView) {
+					// Set options for agenda view
+					if (this.currentViewMode === "agenda") {
+						(customView as any).setOptions({
+							onEventClick: this.onEventClick,
+							onEventHover: this.onEventHover,
+							onEventContextMenu: this.onEventContextMenu,
+							onEventComplete: this.onEventComplete,
+						});
+					}
+					// Set options for year view
+					if (this.currentViewMode === "year") {
+						(customView as any).setOptions({
+							firstDayOfWeek: config.firstDayOfWeek,
+							hideWeekends: config.hideWeekends,
+							onDayClick: this.onDayClick,
+							onDayHover: this.onDayHover,
+							onMonthClick: this.onMonthClick,
+							onMonthHover: this.onMonthHover,
+						});
+						if ("setOverrideConfig" in customView) {
+							(customView as any).setOverrideConfig(config);
+						}
+					}
+				}
+			}
+
+			// Trigger re-render to apply the options
+			this.tgCalendar.refresh();
+		}
 
 		// Sync current date
 		this.tgCalendar.goToDate(this.currentDate.toDate());
@@ -627,7 +1115,7 @@ export class CalendarComponent extends Component {
 				onEventHover: this.onEventHover,
 				onEventContextMenu: this.onEventContextMenu,
 				onEventComplete: this.onEventComplete,
-			}
+			},
 		);
 		this.addChild(this.agendaView);
 		this.agendaView.updateEvents(this.events);
@@ -649,7 +1137,7 @@ export class CalendarComponent extends Component {
 				onMonthClick: this.onMonthClick,
 				onMonthHover: this.onMonthHover,
 			},
-			config
+			config,
 		);
 		this.addChild(this.yearView);
 		this.yearView.updateEvents(this.events);
@@ -666,10 +1154,106 @@ export class CalendarComponent extends Component {
 		}
 	}
 
+	/**
+	 * Handle custom event rendering - adds checkbox for task completion
+	 * Uses the onRenderEvent hook from @taskgenius/calendar v0.6.0+
+	 * Based on CalendarEventComponent implementation in event-renderer.ts
+	 */
+	private handleTGRenderEvent(ctx: EventRenderContext) {
+		console.log(
+			"[Calendar] handleTGRenderEvent called",
+			ctx.event.id,
+			ctx.viewType,
+		);
+
+		// First render the default content
+		ctx.defaultRender();
+
+		const { event, el } = ctx;
+
+		// Skip if checkbox already added
+		if (el.querySelector(".task-list-item-checkbox")) {
+			return;
+		}
+
+		// Find the corresponding task
+		const task = getTaskFromEvent(event as any);
+		if (!task) return;
+
+		// Create checkbox using the shared utility function
+		// This ensures consistent styling with other calendar views
+		const checkbox = createTaskCheckbox(task.status || " ", task, el);
+
+		// Move checkbox to the beginning of the event element
+		if (el.firstChild && el.firstChild !== checkbox) {
+			el.insertBefore(checkbox, el.firstChild);
+		}
+
+		// Handle checkbox click - same pattern as CalendarEventComponent
+		this.registerDomEvent(checkbox, "click", async (ev) => {
+			ev.stopPropagation();
+
+			// Toggle task status
+			const newStatus = task.completed ? " " : "x";
+
+			if (this.plugin.writeAPI) {
+				const result = await this.plugin.writeAPI.updateTaskStatus({
+					taskId: task.id,
+					status: newStatus,
+					completed: !task.completed,
+				});
+
+				if (result.success) {
+					// Update UI immediately
+					checkbox.checked = !task.completed;
+					checkbox.dataset.task = newStatus;
+
+					// Trigger task-completed event if needed
+					if (!task.completed) {
+						this.app.workspace.trigger(
+							"task-genius:task-completed",
+							task,
+						);
+					}
+
+					// Refresh calendar
+					setTimeout(() => {
+						this.processTasks();
+						this.renderCurrentView();
+					}, 100);
+				}
+			}
+		});
+	}
+
+	/**
+	 * Handle event context menu from @taskgenius/calendar InteractionController
+	 * Bridges the library's (event, x, y) signature to our (MouseEvent, CalendarEvent) signature
+	 */
+	private handleTGEventContextMenu(
+		event: AdapterCalendarEvent,
+		x: number,
+		y: number,
+	) {
+		// Create a synthetic MouseEvent-like object with the coordinates
+		const syntheticEvent = {
+			clientX: x,
+			clientY: y,
+			preventDefault: () => {},
+			stopPropagation: () => {},
+		} as MouseEvent;
+
+		console.log("Event context menu clicked");
+
+		// Convert to CalendarEvent and call our handler
+		const calendarEvent = event as unknown as CalendarEvent;
+		this.onEventContextMenu(syntheticEvent, calendarEvent);
+	}
+
 	private async handleTGEventDrop(
 		event: AdapterCalendarEvent,
 		newStart: Date | string,
-		newEnd: Date | string
+		newEnd: Date | string,
 	) {
 		const task = getTaskFromEvent(event as any);
 		if (!task) {
@@ -682,8 +1266,8 @@ export class CalendarComponent extends Component {
 		if (isIcsTask) {
 			new Notice(
 				t(
-					"Cannot move external calendar events. Please update them in the original calendar."
-				)
+					"Cannot move external calendar events. Please update them in the original calendar.",
+				),
 			);
 			// Refresh to reset the visual position
 			setTimeout(() => {
@@ -729,11 +1313,11 @@ export class CalendarComponent extends Component {
 
 				const startDiff = differenceInDays(
 					normalizedNewStart,
-					normalizedOldStart
+					normalizedOldStart,
 				);
 				const endDiff = differenceInDays(
 					normalizedNewEnd,
-					normalizedOldEnd
+					normalizedOldEnd,
 				);
 
 				if (startDiff === 0 && endDiff === 0) return;
@@ -746,7 +1330,7 @@ export class CalendarComponent extends Component {
 					if (task.metadata.dueDate) {
 						updates.metadata.dueDate = addDays(
 							startOfDay(new Date(task.metadata.dueDate)),
-							startDiff
+							startDiff,
 						).getTime();
 						updatedFields.push("due date");
 					}
@@ -754,7 +1338,7 @@ export class CalendarComponent extends Component {
 					if (task.metadata.scheduledDate) {
 						updates.metadata.scheduledDate = addDays(
 							startOfDay(new Date(task.metadata.scheduledDate)),
-							startDiff
+							startDiff,
 						).getTime();
 						updatedFields.push("scheduled date");
 					}
@@ -762,7 +1346,7 @@ export class CalendarComponent extends Component {
 					if (task.metadata.startDate) {
 						updates.metadata.startDate = addDays(
 							startOfDay(new Date(task.metadata.startDate)),
-							startDiff
+							startDiff,
 						).getTime();
 						updatedFields.push("start date");
 					}
@@ -862,6 +1446,10 @@ export class CalendarComponent extends Component {
 				return;
 			}
 
+			// Apply optimistic update to local state immediately
+			// This prevents the "snap back" effect during async update
+			this.applyOptimisticEventUpdate(event.id, newStartDate, newEndDate);
+
 			const result = await this.plugin.writeAPI.updateTask({
 				taskId: task.id,
 				updates,
@@ -869,31 +1457,31 @@ export class CalendarComponent extends Component {
 
 			if (result.success) {
 				new Notice(t("Task date updated successfully"));
-
-				// Refresh the calendar view to show the updated task
-				// The dataflow system will automatically update the task index
-				// We just need to wait a bit and then refresh the view
-				setTimeout(() => {
-					this.processTasks();
-					this.renderCurrentView();
-				}, 100);
+				// No immediate refresh needed - the optimistic update already shows the correct position
+				// The dataflow system will eventually sync the task index
 			} else {
 				console.error(
 					"Calendar: Failed to update task after drag:",
-					result.error
+					result.error,
 				);
 				new Notice(t("Failed to update task"));
+				// Rollback optimistic update on failure
+				this.processTasks();
+				this.renderCurrentView();
 			}
 		} catch (error) {
 			console.error("Calendar: Error updating task after drag:", error);
 			new Notice(t("Failed to update task"));
+			// Rollback optimistic update on error
+			this.processTasks();
+			this.renderCurrentView();
 		}
 	}
 
 	private async handleTGEventResize(
 		event: AdapterCalendarEvent,
 		newStart: Date | string,
-		newEnd: Date | string
+		newEnd: Date | string,
 	) {
 		const task = getTaskFromEvent(event as any);
 		if (!task) {
@@ -904,7 +1492,7 @@ export class CalendarComponent extends Component {
 		const isIcsTask = (task as any).source?.type === "ics";
 		if (isIcsTask) {
 			new Notice(
-				"In current version, cannot resize external calendar events"
+				"In current version, cannot resize external calendar events",
 			);
 			setTimeout(() => {
 				this.processTasks();
@@ -947,7 +1535,7 @@ export class CalendarComponent extends Component {
 		const setField = (
 			key: "startDate" | "dueDate",
 			value: number,
-			label: string
+			label: string,
 		) => {
 			if (updates.metadata[key] === undefined) {
 				updates.metadata[key] = value;
@@ -978,6 +1566,14 @@ export class CalendarComponent extends Component {
 			return;
 		}
 
+		// Apply optimistic update to local state immediately
+		// This prevents the "snap back" effect during async update
+		this.applyOptimisticEventUpdate(
+			event.id,
+			normalizedNewStart,
+			normalizedNewEnd,
+		);
+
 		const result = await this.plugin.writeAPI.updateTask({
 			taskId: task.id,
 			updates,
@@ -985,13 +1581,41 @@ export class CalendarComponent extends Component {
 
 		if (result.success) {
 			new Notice(t("Task time updated: ") + updatedFields.join(", "));
-			setTimeout(() => {
-				this.processTasks();
-				this.renderCurrentView();
-			}, 100);
+			// No immediate refresh needed - the optimistic update already shows the correct position
 		} else {
 			console.error("Calendar: Failed to resize task:", result.error);
 			new Notice(t("Failed to update task"));
+			// Rollback optimistic update on failure
+			this.processTasks();
+			this.renderCurrentView();
+		}
+	}
+
+	/**
+	 * Apply optimistic update to local events array and TGCalendar
+	 * This prevents the "snap back" visual glitch during async task updates
+	 */
+	private applyOptimisticEventUpdate(
+		eventId: string,
+		newStart: Date,
+		newEnd: Date,
+	): void {
+		// Update local events array
+		const eventIndex = this.events.findIndex((e) => e.id === eventId);
+		if (eventIndex !== -1) {
+			this.events[eventIndex] = {
+				...this.events[eventIndex],
+				start: newStart,
+				end: newEnd,
+			};
+		}
+
+		// Update TGCalendar's internal event state if available
+		if (this.tgCalendar) {
+			this.tgCalendar.updateEvent(eventId, {
+				start: newStart.toISOString(),
+				end: newEnd.toISOString(),
+			});
 		}
 	}
 
@@ -1007,7 +1631,7 @@ export class CalendarComponent extends Component {
 			const dateHeader = cellEl.querySelector(".tg-date-header");
 			if (dateHeader) {
 				const badgesContainer = dateHeader.createDiv(
-					"calendar-badges-container"
+					"calendar-badges-container",
 				);
 				badgeEvents.forEach((badgeEvent) => {
 					const badgeEl = badgesContainer.createEl("div", {
@@ -1083,7 +1707,7 @@ export class CalendarComponent extends Component {
 							if (!task.completed) {
 								this.app.workspace.trigger(
 									"task-genius:task-completed",
-									task
+									task,
 								);
 							}
 
@@ -1129,7 +1753,7 @@ export class CalendarComponent extends Component {
 			this.app,
 			this.plugin,
 			{ dueDate: date },
-			true
+			true,
 		).open();
 	}
 
@@ -1157,7 +1781,7 @@ export class CalendarComponent extends Component {
 			this.app,
 			this.plugin,
 			{ dueDate: dateTime },
-			true
+			true,
 		).open();
 	}
 
@@ -1176,7 +1800,7 @@ export class CalendarComponent extends Component {
 	private onDayClick = (
 		ev: MouseEvent,
 		day: number,
-		options: { behavior: "open-quick-capture" | "open-task-view" }
+		options: { behavior: "open-quick-capture" | "open-task-view" },
 	) => {
 		const dayDate = new Date(day);
 		if (this.currentViewMode === "year") {
@@ -1188,7 +1812,7 @@ export class CalendarComponent extends Component {
 				this.app,
 				this.plugin,
 				{ dueDate: dayDate },
-				true
+				true,
 			).open();
 		}
 	};
@@ -1259,7 +1883,7 @@ export class CalendarComponent extends Component {
 					task.metadata.startDate !== task.metadata.dueDate
 				) {
 					const taskStart = startOfDay(
-						new Date(task.metadata.startDate)
+						new Date(task.metadata.startDate),
 					);
 					const taskDue = startOfDay(new Date(task.metadata.dueDate));
 					if (isBefore(taskStart, taskDue)) {
@@ -1291,7 +1915,7 @@ export class CalendarComponent extends Component {
 
 	private convertTasksToTGEvents(): AdapterCalendarEvent[] {
 		const tasksWithDates = this.tasks.filter((task) =>
-			hasDateInformation(task)
+			hasDateInformation(task),
 		);
 		return tasksToCalendarEvents(tasksWithDates);
 	}
@@ -1302,19 +1926,19 @@ export class CalendarComponent extends Component {
 		return this.tasks.filter((task) => {
 			if (task.metadata.dueDate) {
 				const dueDate = this.normalizeDateToDay(
-					new Date(task.metadata.dueDate)
+					new Date(task.metadata.dueDate),
 				);
 				if (dueDate.getTime() === targetTime) return true;
 			}
 			if (task.metadata.scheduledDate) {
 				const scheduledDate = this.normalizeDateToDay(
-					new Date(task.metadata.scheduledDate)
+					new Date(task.metadata.scheduledDate),
 				);
 				if (scheduledDate.getTime() === targetTime) return true;
 			}
 			if (task.metadata.startDate) {
 				const startDate = this.normalizeDateToDay(
-					new Date(task.metadata.startDate)
+					new Date(task.metadata.startDate),
 				);
 				if (startDate.getTime() === targetTime) return true;
 			}
@@ -1327,6 +1951,22 @@ export class CalendarComponent extends Component {
 	// ============================================
 
 	private getViewUnit(): moment.unitOfTime.DurationConstructor {
+		// Check for custom view first
+		if (this.isCustomView(this.currentViewMode)) {
+			const customConfig = this.getCustomViewConfig(this.currentViewMode);
+			if (customConfig) {
+				// Use the base view type's unit
+				switch (customConfig.baseViewType) {
+					case "month":
+						return "month";
+					case "week":
+						return "week";
+					case "day":
+						return "day";
+				}
+			}
+		}
+
 		switch (this.currentViewMode) {
 			case "year":
 				return "year";
@@ -1343,27 +1983,135 @@ export class CalendarComponent extends Component {
 		}
 	}
 
+	/**
+	 * Get the effective first day of week, respecting:
+	 * 1. Custom view config (if specified)
+	 * 2. Base calendar config (if specified)
+	 * 3. System/locale default from moment
+	 *
+	 * @param customViewConfig Optional custom view config to check first
+	 * @returns 0-6 (Sunday to Saturday)
+	 */
+	private getEffectiveFirstDayOfWeek(
+		customViewConfig?: CustomCalendarViewConfig | null,
+	): 0 | 1 | 2 | 3 | 4 | 5 | 6 {
+		// Check custom view config first
+		if (customViewConfig?.calendarConfig?.firstDayOfWeek !== undefined) {
+			return customViewConfig.calendarConfig.firstDayOfWeek;
+		}
+
+		// Check base calendar config
+		const baseConfig = this.getEffectiveCalendarConfig();
+		if (baseConfig.firstDayOfWeek !== undefined) {
+			// Ensure it's a valid value (0-6)
+			const baseFdow = baseConfig.firstDayOfWeek;
+			if (baseFdow >= 0 && baseFdow <= 6) {
+				return baseFdow as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+			}
+		}
+
+		// Fall back to system/locale default from moment
+		const localeFirstDay = moment.localeData().firstDayOfWeek();
+		// moment returns 0-6
+		if (localeFirstDay >= 0 && localeFirstDay <= 6) {
+			return localeFirstDay as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+		}
+		// Fallback to Sunday if somehow invalid
+		return 0;
+	}
+
+	/**
+	 * Get the start of week for a given date, respecting the configured first day of week
+	 */
+	private getStartOfWeekWithConfig(
+		date: moment.Moment,
+		customViewConfig?: CustomCalendarViewConfig | null,
+	): moment.Moment {
+		const firstDayOfWeek =
+			this.getEffectiveFirstDayOfWeek(customViewConfig);
+		const cloned = date.clone();
+		const currentDay = cloned.day();
+		const diff = (currentDay - firstDayOfWeek + 7) % 7;
+		return cloned.subtract(diff, "days").startOf("day");
+	}
+
+	/**
+	 * Get the end of week for a given date, respecting the configured first day of week
+	 */
+	private getEndOfWeekWithConfig(
+		date: moment.Moment,
+		customViewConfig?: CustomCalendarViewConfig | null,
+	): moment.Moment {
+		const startOfWeek = this.getStartOfWeekWithConfig(
+			date,
+			customViewConfig,
+		);
+		return startOfWeek.clone().add(6, "days").endOf("day");
+	}
+
 	private getCurrentDateDisplay(): string {
+		// Check for custom view first
+		if (this.isCustomView(this.currentViewMode)) {
+			const customConfig = this.getCustomViewConfig(this.currentViewMode);
+			if (customConfig) {
+				// Use the base view type's format, with custom view name prefix
+				const prefix = ``;
+				switch (customConfig.baseViewType) {
+					case "month":
+						return prefix + this.currentDate.format("MMMM/YYYY");
+					case "week": {
+						// Use config-aware week start/end
+						const startOfWeek = this.getStartOfWeekWithConfig(
+							this.currentDate,
+							customConfig,
+						);
+						const endOfWeek = this.getEndOfWeekWithConfig(
+							this.currentDate,
+							customConfig,
+						);
+						if (startOfWeek.month() !== endOfWeek.month()) {
+							return (
+								prefix +
+								`${startOfWeek.format("MMM D")} - ${endOfWeek.format("MMM D, YYYY")}`
+							);
+						}
+						return (
+							prefix +
+							`${startOfWeek.format("MMM D")} - ${endOfWeek.format("D, YYYY")}`
+						);
+					}
+					case "day":
+						return (
+							prefix +
+							this.currentDate.format("dddd, MMMM D, YYYY")
+						);
+				}
+			}
+		}
+
 		switch (this.currentViewMode) {
 			case "year":
 				return this.currentDate.format("YYYY");
 			case "month":
 				return this.currentDate.format("MMMM/YYYY");
 			case "week": {
-				const startOfWeek = this.currentDate.clone().startOf("week");
-				const endOfWeek = this.currentDate.clone().endOf("week");
+				// Use config-aware week start/end
+				const startOfWeek = this.getStartOfWeekWithConfig(
+					this.currentDate,
+				);
+				const endOfWeek = this.getEndOfWeekWithConfig(this.currentDate);
 				if (startOfWeek.month() !== endOfWeek.month()) {
 					if (startOfWeek.year() !== endOfWeek.year()) {
 						return `${startOfWeek.format(
-							"MMM D, YYYY"
+							"MMM D, YYYY",
 						)} - ${endOfWeek.format("MMM D, YYYY")}`;
 					}
 					return `${startOfWeek.format("MMM D")} - ${endOfWeek.format(
-						"MMM D, YYYY"
+						"MMM D, YYYY",
 					)}`;
 				}
 				return `${startOfWeek.format("MMM D")} - ${endOfWeek.format(
-					"D, YYYY"
+					"D, YYYY",
 				)}`;
 			}
 			case "day":
@@ -1371,7 +2119,7 @@ export class CalendarComponent extends Component {
 			case "agenda": {
 				const endOfAgenda = this.currentDate.clone().add(6, "days");
 				return `${this.currentDate.format(
-					"MMM D"
+					"MMM D",
 				)} - ${endOfAgenda.format("MMM D, YYYY")}`;
 			}
 			default:
@@ -1381,7 +2129,7 @@ export class CalendarComponent extends Component {
 
 	private getEffectiveCalendarConfig(): Partial<CalendarSpecificConfig> {
 		const baseCfg = this.plugin.settings.viewConfiguration.find(
-			(v) => v.id === this.viewId
+			(v) => v.id === this.viewId,
 		)?.specificConfig as Partial<CalendarSpecificConfig> | undefined;
 
 		return { ...(baseCfg ?? {}), ...(this.configOverride ?? {}) };

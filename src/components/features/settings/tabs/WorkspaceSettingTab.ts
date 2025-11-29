@@ -249,6 +249,7 @@ function showDeleteWorkspaceDialog(
 function getAvailableModules(plugin: TaskProgressBarPlugin): {
 	views: ModuleDefinition[];
 	sidebarComponents: ModuleDefinition[];
+	calendarViews: ModuleDefinition[];
 } {
 	// Get view modules from plugin settings
 	const views: ModuleDefinition[] = plugin.settings.viewConfiguration.map(
@@ -259,6 +260,16 @@ function getAvailableModules(plugin: TaskProgressBarPlugin): {
 			type: "view" as const,
 		}),
 	);
+
+	// Get custom calendar views
+	const calendarViews: ModuleDefinition[] = (
+		plugin.settings.customCalendarViews || []
+	).map((calView) => ({
+		id: calView.id,
+		name: calView.name,
+		icon: calView.icon,
+		type: "calendarView" as const,
+	}));
 
 	// Define sidebar component modules (Fluent interface only)
 	const sidebarComponents: ModuleDefinition[] = [
@@ -276,7 +287,7 @@ function getAvailableModules(plugin: TaskProgressBarPlugin): {
 		},
 	];
 
-	return { views, sidebarComponents };
+	return { views, sidebarComponents, calendarViews };
 }
 
 /**
@@ -323,7 +334,7 @@ function renderHiddenModulesConfig(
 		groupIcon: string,
 		moduleList: ModuleDefinition[],
 		initialHiddenList: string[],
-		moduleType: "views" | "sidebarComponents",
+		moduleType: "views" | "sidebarComponents" | "calendarViews",
 	) => {
 		let hiddenList = [...initialHiddenList];
 
@@ -412,6 +423,12 @@ function renderHiddenModulesConfig(
 								workspace.id,
 							);
 							break;
+						case "calendarViews":
+							await plugin.workspaceManager?.setHiddenCalendarViews(
+								[...newHiddenList],
+								workspace.id,
+							);
+							break;
 					}
 
 					const refreshed = plugin.workspaceManager?.getWorkspace(
@@ -423,6 +440,7 @@ function renderHiddenModulesConfig(
 						hiddenModules = {
 							views: [],
 							sidebarComponents: [],
+							calendarViews: [],
 						};
 					}
 
@@ -433,6 +451,9 @@ function renderHiddenModulesConfig(
 							break;
 						case "sidebarComponents":
 							hiddenList = hiddenModules.sidebarComponents || [];
+							break;
+						case "calendarViews":
+							hiddenList = hiddenModules.calendarViews || [];
 							break;
 					}
 
@@ -491,6 +512,17 @@ function renderHiddenModulesConfig(
 		hiddenModules.sidebarComponents || [],
 		"sidebarComponents",
 	);
+
+	// Only render calendar views group if there are custom calendar views
+	if (modules.calendarViews.length > 0) {
+		renderModuleGroup(
+			t("Custom Calendar Views"),
+			"calendar",
+			modules.calendarViews,
+			hiddenModules.calendarViews || [],
+			"calendarViews",
+		);
+	}
 }
 
 /**

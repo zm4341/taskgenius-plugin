@@ -467,7 +467,7 @@ export class WorkspaceManager {
 		if (this.isSaving) {
 			console.warn(
 				"[TG-WORKSPACE] Recursive saveOverrides detected, skipping to prevent loop",
-				{ workspaceId }
+				{ workspaceId },
 			);
 			return;
 		}
@@ -783,6 +783,7 @@ export class WorkspaceManager {
 				views: [],
 				sidebarComponents: [],
 				features: [],
+				calendarViews: [],
 			};
 		}
 		if (!workspace.settings.hiddenModules.views) {
@@ -796,6 +797,9 @@ export class WorkspaceManager {
 		} else if (workspace.settings.hiddenModules.features.length > 0) {
 			// Features can no longer be hidden; normalize to empty
 			workspace.settings.hiddenModules.features = [];
+		}
+		if (!workspace.settings.hiddenModules.calendarViews) {
+			workspace.settings.hiddenModules.calendarViews = [];
 		}
 		return workspace.settings
 			.hiddenModules as Required<HiddenModulesConfig>;
@@ -991,6 +995,32 @@ export class WorkspaceManager {
 		// Ensure complete initialization and get the initialized object
 		const hiddenModules = this.ensureHiddenModulesInitialized(workspace);
 		hiddenModules.sidebarComponents = normalizedIds;
+
+		workspace.updatedAt = Date.now();
+		this.clearCache();
+		await this.plugin.saveSettings();
+
+		emitWorkspaceOverridesSaved(this.app, workspace.id, ["hiddenModules"]);
+	}
+
+	/**
+	 * Set hidden custom calendar views for a workspace
+	 * @param calendarViewIds - Array of custom calendar view IDs to hide
+	 * @param workspaceId - Optional workspace ID, defaults to active workspace
+	 */
+	public async setHiddenCalendarViews(
+		calendarViewIds: string[],
+		workspaceId?: string,
+	): Promise<void> {
+		const workspace = workspaceId
+			? this.getWorkspace(workspaceId)
+			: this.getActiveWorkspace();
+
+		if (!workspace) return;
+
+		// Ensure complete initialization and get the initialized object
+		const hiddenModules = this.ensureHiddenModulesInitialized(workspace);
+		hiddenModules.calendarViews = [...calendarViewIds];
 
 		workspace.updatedAt = Date.now();
 		this.clearCache();

@@ -1,7 +1,27 @@
+/**
+ * @deprecated This file is deprecated. Use @taskgenius/calendar's BaseView instead.
+ *
+ * For new calendar views, extend BaseView from @taskgenius/calendar:
+ *
+ * ```typescript
+ * import { BaseView, type ViewMeta } from "@taskgenius/calendar";
+ *
+ * class MyView extends BaseView {
+ *   static meta: ViewMeta = { type: "my-view", label: "My View", order: 50 };
+ *   render(container: HTMLElement, events: CalendarEvent[]): void { ... }
+ * }
+ * ```
+ *
+ * @see {@link ./tg-agenda-view.ts} for an example of the new pattern
+ * @see {@link ./tg-year-view.ts} for another example
+ */
 import { App, Component } from "obsidian";
-import { CalendarEvent } from '@/components/features/calendar/index';
+import { CalendarEvent } from "@/components/features/calendar/index";
 import TaskProgressBarPlugin from "@/index";
 
+/**
+ * @deprecated Use @taskgenius/calendar's BaseView instead.
+ */
 interface EventMap {
 	onEventClick: (ev: MouseEvent, event: CalendarEvent) => void;
 	onEventHover: (ev: MouseEvent, event: CalendarEvent) => void;
@@ -10,7 +30,7 @@ interface EventMap {
 		day: number,
 		options: {
 			behavior: "open-quick-capture" | "open-task-view";
-		}
+		},
 	) => void;
 	onDayHover: (ev: MouseEvent, day: number) => void;
 	onMonthClick: (ev: MouseEvent, month: number) => void;
@@ -21,12 +41,20 @@ interface EventMap {
 	onEventComplete: (ev: MouseEvent, event: CalendarEvent) => void;
 }
 
+/**
+ * @deprecated Use @taskgenius/calendar's BaseView options instead.
+ */
 // Combine event handlers into a single options object, making them optional
 export interface CalendarViewOptions extends Partial<EventMap> {
 	// Add other common view options here if needed
 	getBadgeEventsForDate?: (date: Date) => CalendarEvent[];
 }
 
+/**
+ * @deprecated Use @taskgenius/calendar's BaseView instead.
+ * This class extends Obsidian's Component for lifecycle management.
+ * The new BaseView from @taskgenius/calendar provides unified view management.
+ */
 export abstract class CalendarViewComponent extends Component {
 	protected containerEl: HTMLElement;
 	protected events: CalendarEvent[];
@@ -37,7 +65,7 @@ export abstract class CalendarViewComponent extends Component {
 		app: App,
 		containerEl: HTMLElement,
 		events: CalendarEvent[],
-		options: CalendarViewOptions = {} // Provide default empty options
+		options: CalendarViewOptions = {}, // Provide default empty options
 	) {
 		super(); // Call the base class constructor
 		this.containerEl = containerEl;
