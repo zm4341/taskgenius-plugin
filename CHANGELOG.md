@@ -3,6 +3,35 @@
 All notable changes to this project will be documented in this file.
 
 
+## [9.12.0](https://github.com/Quorafind/Obsidian-Task-Genius/compare/9.11.0...9.12.0) (2025-11-29)
+
+### Features
+
+* **quick-capture:** add date-only input mode toggle ([25fe82d](https://github.com/Quorafind/Obsidian-Task-Genius/commit/25fe82d))
+* **release:** include commit body in changelog output ([b1e3c22](https://github.com/Quorafind/Obsidian-Task-Genius/commit/b1e3c22))
+* **quick-capture:** add datetime-local support for task dates ([359ea6d](https://github.com/Quorafind/Obsidian-Task-Genius/commit/359ea6d))
+* **calendar:** add custom calendar views with configurable options ([e8c1dd1](https://github.com/Quorafind/Obsidian-Task-Genius/commit/e8c1dd1))
+* **date:** add time component support for task dates ([568dcbe](https://github.com/Quorafind/Obsidian-Task-Genius/commit/568dcbe))
+  - Extend regex patterns to support HH:mm time format in date fields
+
+### Bug Fixes
+
+* **calendar:** preserve allDay property and fix context menu task lookup ([e89e3e5](https://github.com/Quorafind/Obsidian-Task-Genius/commit/e89e3e5))
+* **calendar:** integrate @taskgenius/calendar and fix date handling ([8ffd5ce](https://github.com/Quorafind/Obsidian-Task-Genius/commit/8ffd5ce))
+  - Refactor calendar component to use @taskgenius/calendar for month/week/day views
+
+### Refactors
+
+* **api:** use formatDateSmart for frontmatter date fields ([47a6565](https://github.com/Quorafind/Obsidian-Task-Genius/commit/47a6565))
+* **calendar:** update calendar component integration and styles ([6987fdd](https://github.com/Quorafind/Obsidian-Task-Genius/commit/6987fdd))
+  - Add TaskCalendarAdapter for task-to-calendar event conversion
+
+### Styles
+
+* **calendar:** improve theming and add allday section styles ([428d3af](https://github.com/Quorafind/Obsidian-Task-Genius/commit/428d3af))
+* apply code formatting and trailing comma fixes ([5b6e488](https://github.com/Quorafind/Obsidian-Task-Genius/commit/5b6e488))
+  - Standardize trailing comma style across codebase
+
 ## [9.11.0](https://github.com/Quorafind/Obsidian-Task-Genius/compare/9.10.3...9.11.0) (2025-11-19)
 
 ### Features
