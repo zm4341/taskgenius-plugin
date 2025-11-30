@@ -38,7 +38,7 @@ export function formatDate(date: Date): string {
  */
 export function parseLocalDate(
 	dateString: string,
-	customFormats?: string[]
+	customFormats?: string[],
 ): number | undefined {
 	if (!dateString) return undefined;
 
@@ -50,8 +50,26 @@ export function parseLocalDate(
 		return undefined;
 	}
 
+	// Check if the date string contains time information
+	const hasTimeInfo = /\d{1,2}:\d{2}/.test(dateString);
+
 	// Define default format patterns to try with date-fns
-	const defaultFormats = [
+	// Date-time formats (with time) should be tried first when time info is present
+	const dateTimeFormats = [
+		"yyyy-MM-dd HH:mm", // ISO format with time
+		"yyyy-MM-dd H:mm", // ISO format with single-digit hour
+		"yyyy/MM/dd HH:mm", // YYYY/MM/DD with time
+		"yyyy/MM/dd H:mm",
+		"dd-MM-yyyy HH:mm", // DD-MM-YYYY with time
+		"dd/MM/yyyy HH:mm", // DD/MM/YYYY with time
+		"MM-dd-yyyy HH:mm", // MM-DD-YYYY with time
+		"MM/dd/yyyy HH:mm", // MM/DD/YYYY with time
+		"yyyy.MM.dd HH:mm", // YYYY.MM.DD with time
+		"yyyyMMddHHmmss",
+		"yyyyMMdd_HHmmss",
+	];
+
+	const dateOnlyFormats = [
 		"yyyy-MM-dd", // ISO format
 		"yyyy/MM/dd", // YYYY/MM/DD
 		"dd-MM-yyyy", // DD-MM-YYYY
@@ -65,9 +83,12 @@ export function parseLocalDate(
 		"MMM dd, yyyy", // MMM DD, YYYY with leading zero
 		"d MMM yyyy", // DD MMM YYYY (e.g., 15 Jan 2025)
 		"dd MMM yyyy", // DD MMM YYYY with leading zero
-		"yyyyMMddHHmmss",
-		"yyyyMMdd_HHmmss",
 	];
+
+	// Try date-time formats first if time info is present, otherwise try date-only formats
+	const defaultFormats = hasTimeInfo
+		? [...dateTimeFormats, ...dateOnlyFormats]
+		: [...dateOnlyFormats, ...dateTimeFormats];
 
 	// Combine custom formats with default formats
 	const allFormats = customFormats
@@ -83,9 +104,15 @@ export function parseLocalDate(
 
 			// Check if the parsed date is valid
 			if (isValid(parsedDate)) {
-				// Set to start of day to match original behavior
-				const normalizedDate = startOfDay(parsedDate);
-				return normalizedDate.getTime();
+				// Only normalize to start of day if the original string had no time info
+				// and the format pattern also has no time component
+				const formatHasTime = /[Hh]:mm/.test(formatString);
+				if (!hasTimeInfo && !formatHasTime) {
+					const normalizedDate = startOfDay(parsedDate);
+					return normalizedDate.getTime();
+				}
+				// Preserve the time information
+				return parsedDate.getTime();
 			}
 		} catch (e) {
 			// Silently continue to next format
@@ -97,8 +124,12 @@ export function parseLocalDate(
 	try {
 		const isoDate = parseISO(dateString);
 		if (isValid(isoDate)) {
-			const normalizedDate = startOfDay(isoDate);
-			return normalizedDate.getTime();
+			// Only normalize to start of day if the original string had no time info
+			if (!hasTimeInfo) {
+				const normalizedDate = startOfDay(isoDate);
+				return normalizedDate.getTime();
+			}
+			return isoDate.getTime();
 		}
 	} catch (e) {
 		// Silently continue
@@ -144,7 +175,7 @@ export function getLocalDateString(date: Date): string {
  */
 export function getRelativeTimeString(
 	date: Date | number,
-	lang = navigator.language
+	lang = navigator.language,
 ): string {
 	// 允许传入日期对象或时间戳
 	const timeMs = typeof date === "number" ? date : date.getTime();
@@ -159,7 +190,7 @@ export function getRelativeTimeString(
 
 	// 计算日期差（以天为单位）
 	const deltaDays = Math.round(
-		(targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+		(targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
 	);
 
 	// 创建相对时间格式化器

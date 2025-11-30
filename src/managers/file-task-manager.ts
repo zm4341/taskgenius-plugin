@@ -82,7 +82,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	constructor(
 		private app: App,
 		private fileSourceConfig?: FileSourceConfiguration,
-		timeParsingService?: TimeParsingService
+		timeParsingService?: TimeParsingService,
 	) {
 		this.timeParsingService = timeParsingService;
 	}
@@ -92,7 +92,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	 */
 	entryToFileTask(
 		entry: BasesEntry,
-		mapping: FileTaskPropertyMapping = DEFAULT_FILE_TASK_MAPPING
+		mapping: FileTaskPropertyMapping = DEFAULT_FILE_TASK_MAPPING,
 	): FileTask {
 		const properties = entry.properties || {};
 
@@ -104,7 +104,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 			// Log 10% of entries to avoid spam
 			console.log(
 				`[FileTaskManager] Available properties for ${entry.file.name}:`,
-				Object.keys(properties)
+				Object.keys(properties),
 			);
 		}
 
@@ -132,29 +132,29 @@ export class FileTaskManagerImpl implements FileTaskManager {
 		// Extract dates
 		const createdDate = this.getDatePropertyValue(
 			entry,
-			mapping.createdDateProperty
+			mapping.createdDateProperty,
 		);
 		const startDate = this.getDatePropertyValue(
 			entry,
-			mapping.startDateProperty
+			mapping.startDateProperty,
 		);
 		const scheduledDate = this.getDatePropertyValue(
 			entry,
-			mapping.scheduledDateProperty
+			mapping.scheduledDateProperty,
 		);
 		const dueDate = this.getDatePropertyValue(
 			entry,
-			mapping.dueDateProperty
+			mapping.dueDateProperty,
 		);
 		const completedDate = this.getDatePropertyValue(
 			entry,
-			mapping.completedDateProperty
+			mapping.completedDateProperty,
 		);
 
 		// Extract other properties
 		const recurrence = this.getPropertyValue(
 			entry,
-			mapping.recurrenceProperty
+			mapping.recurrenceProperty,
 		);
 		const tags =
 			this.getArrayPropertyValue(entry, mapping.tagsProperty) || [];
@@ -162,15 +162,15 @@ export class FileTaskManagerImpl implements FileTaskManager {
 		const context = this.getPropertyValue(entry, mapping.contextProperty);
 		const priority = this.getNumberPropertyValue(
 			entry,
-			mapping.priorityProperty
+			mapping.priorityProperty,
 		);
 		const estimatedTime = this.getNumberPropertyValue(
 			entry,
-			mapping.estimatedTimeProperty
+			mapping.estimatedTimeProperty,
 		);
 		const actualTime = this.getNumberPropertyValue(
 			entry,
-			mapping.actualTimeProperty
+			mapping.actualTimeProperty,
 		);
 
 		// Extract time components from content using enhanced time parsing
@@ -178,8 +178,8 @@ export class FileTaskManagerImpl implements FileTaskManager {
 
 		// Combine dates with time components to create enhanced datetime objects
 		const enhancedDates = this.combineTimestampsWithTimeComponents(
-			{startDate, dueDate, scheduledDate, completedDate},
-			enhancedMetadata.timeComponents
+			{ startDate, dueDate, scheduledDate, completedDate },
+			enhancedMetadata.timeComponents,
 		);
 
 		const fileTask: FileTask = {
@@ -193,21 +193,21 @@ export class FileTaskManagerImpl implements FileTaskManager {
 				children: [], // File tasks don't have children by default
 
 				// Optional properties
-				...(createdDate && {createdDate}),
-				...(startDate && {startDate}),
-				...(scheduledDate && {scheduledDate}),
-				...(dueDate && {dueDate}),
-				...(completedDate && {completedDate}),
-				...(recurrence && {recurrence}),
-				...(project && {project}),
-				...(context && {context}),
-				...(priority && {priority}),
-				...(estimatedTime && {estimatedTime}),
-				...(actualTime && {actualTime}),
+				...(createdDate && { createdDate }),
+				...(startDate && { startDate }),
+				...(scheduledDate && { scheduledDate }),
+				...(dueDate && { dueDate }),
+				...(completedDate && { completedDate }),
+				...(recurrence && { recurrence }),
+				...(project && { project }),
+				...(context && { context }),
+				...(priority && { priority }),
+				...(estimatedTime && { estimatedTime }),
+				...(actualTime && { actualTime }),
 
 				// Enhanced time components
 				...enhancedMetadata,
-				...(enhancedDates && {enhancedDates}),
+				...(enhancedDates && { enhancedDates }),
 			},
 			sourceEntry: entry,
 			isFileTask: true,
@@ -222,7 +222,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	fileTaskToPropertyUpdates(
 		task: FileTask,
 		mapping: FileTaskPropertyMapping = DEFAULT_FILE_TASK_MAPPING,
-		excludeContent: boolean = false
+		excludeContent: boolean = false,
 	): Record<string, any> {
 		const updates: Record<string, any> = {};
 
@@ -230,9 +230,10 @@ export class FileTaskManagerImpl implements FileTaskManager {
 		// Skip content if it was already handled separately (e.g., in handleContentUpdate)
 		if (!excludeContent) {
 			const config = this.fileSourceConfig?.fileTaskProperties;
-			if (config?.contentSource && config.contentSource !== 'filename') {
+			if (config?.contentSource && config.contentSource !== "filename") {
 				// Only update content property if it's not handled by file renaming
-				const shouldUpdateProperty = this.shouldUpdateContentProperty(config);
+				const shouldUpdateProperty =
+					this.shouldUpdateContentProperty(config);
 				if (shouldUpdateProperty) {
 					updates[mapping.contentProperty] = task.content;
 				}
@@ -249,7 +250,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 			mapping.createdDateProperty
 		) {
 			updates[mapping.createdDateProperty] = this.formatDateForProperty(
-				task.metadata.createdDate
+				task.metadata.createdDate,
 			);
 		}
 		if (
@@ -257,7 +258,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 			mapping.startDateProperty
 		) {
 			updates[mapping.startDateProperty] = this.formatDateForProperty(
-				task.metadata.startDate
+				task.metadata.startDate,
 			);
 		}
 		if (
@@ -265,12 +266,12 @@ export class FileTaskManagerImpl implements FileTaskManager {
 			mapping.scheduledDateProperty
 		) {
 			updates[mapping.scheduledDateProperty] = this.formatDateForProperty(
-				task.metadata.scheduledDate
+				task.metadata.scheduledDate,
 			);
 		}
 		if (task.metadata.dueDate !== undefined && mapping.dueDateProperty) {
 			updates[mapping.dueDateProperty] = this.formatDateForProperty(
-				task.metadata.dueDate
+				task.metadata.dueDate,
 			);
 		}
 		if (
@@ -278,7 +279,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 			mapping.completedDateProperty
 		) {
 			updates[mapping.completedDateProperty] = this.formatDateForProperty(
-				task.metadata.completedDate
+				task.metadata.completedDate,
 			);
 		}
 		if (
@@ -321,10 +322,10 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	 */
 	async updateFileTask(
 		task: FileTask,
-		updates: Partial<FileTask>
+		updates: Partial<FileTask>,
 	): Promise<void> {
 		// Merge updates into the task
-		const updatedTask = {...task, ...updates};
+		const updatedTask = { ...task, ...updates };
 		let contentHandledSeparately = false;
 
 		// Handle content changes - re-extract time components if content changed
@@ -333,7 +334,9 @@ export class FileTaskManagerImpl implements FileTaskManager {
 			contentHandledSeparately = true;
 
 			// Re-extract time components from updated content
-			const enhancedMetadata = this.extractTimeComponents(updates.content);
+			const enhancedMetadata = this.extractTimeComponents(
+				updates.content,
+			);
 
 			// Update the task's metadata with new time components
 			if (enhancedMetadata.timeComponents) {
@@ -350,7 +353,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 						scheduledDate: updatedTask.metadata.scheduledDate,
 						completedDate: updatedTask.metadata.completedDate,
 					},
-					enhancedMetadata.timeComponents
+					enhancedMetadata.timeComponents,
 				);
 
 				if (enhancedDates) {
@@ -366,22 +369,26 @@ export class FileTaskManagerImpl implements FileTaskManager {
 		const propertyUpdates = this.fileTaskToPropertyUpdates(
 			updatedTask,
 			DEFAULT_FILE_TASK_MAPPING,
-			contentHandledSeparately
+			contentHandledSeparately,
 		);
 
 		console.log(
 			`[FileTaskManager] Updating file task ${task.content} with properties:`,
-			propertyUpdates
+			propertyUpdates,
 		);
 
 		// Update properties through the source entry
 		for (const [key, value] of Object.entries(propertyUpdates)) {
 			try {
 				// Note: updateProperty might be async, so we await it
-				if (typeof task.sourceEntry.updateProperty === 'function') {
-					await Promise.resolve(task.sourceEntry.updateProperty(key, value));
+				if (typeof task.sourceEntry.updateProperty === "function") {
+					await Promise.resolve(
+						task.sourceEntry.updateProperty(key, value),
+					);
 				} else {
-					console.error(`updateProperty method not available on source entry for key: ${key}`);
+					console.error(
+						`updateProperty method not available on source entry for key: ${key}`,
+					);
 				}
 			} catch (error) {
 				console.error(`Failed to update property ${key}:`, error);
@@ -394,16 +401,16 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	 */
 	private shouldUpdateContentProperty(config: any): boolean {
 		switch (config.contentSource) {
-			case 'title':
+			case "title":
 				// Only update property if preferFrontmatterTitle is enabled
 				return config.preferFrontmatterTitle === true;
-			case 'h1':
+			case "h1":
 				// H1 updates are handled by file content modification, not property updates
 				return false;
-			case 'custom':
+			case "custom":
 				// Custom fields are always updated via properties
 				return true;
-			case 'filename':
+			case "filename":
 			default:
 				// Filename updates are handled by file renaming
 				return false;
@@ -415,17 +422,19 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	 */
 	private async handleContentUpdate(
 		task: FileTask,
-		newContent: string
+		newContent: string,
 	): Promise<void> {
 		const config = this.fileSourceConfig?.fileTaskProperties;
 
 		if (!config) {
-			console.warn('[FileTaskManager] No file source config available, skipping content update');
+			console.warn(
+				"[FileTaskManager] No file source config available, skipping content update",
+			);
 			return;
 		}
 
 		switch (config.contentSource) {
-			case 'title':
+			case "title":
 				if (config.preferFrontmatterTitle) {
 					await this.updateFrontmatterTitle(task, newContent);
 				} else {
@@ -433,21 +442,27 @@ export class FileTaskManagerImpl implements FileTaskManager {
 				}
 				break;
 
-			case 'h1':
+			case "h1":
 				// For H1 content source, we need to update the first heading in the file
 				await this.updateH1Heading(task, newContent);
 				break;
 
-			case 'custom':
+			case "custom":
 				// For custom content source, update the custom field in frontmatter
 				if (config.customContentField) {
-					await this.updateCustomContentField(task, newContent, config.customContentField);
+					await this.updateCustomContentField(
+						task,
+						newContent,
+						config.customContentField,
+					);
 				} else {
-					console.warn('[FileTaskManager] Custom content source specified but no customContentField configured');
+					console.warn(
+						"[FileTaskManager] Custom content source specified but no customContentField configured",
+					);
 				}
 				break;
 
-			case 'filename':
+			case "filename":
 			default:
 				// For filename content source, rename the file
 				await this.updateFileName(task, newContent);
@@ -460,21 +475,28 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	 */
 	private async updateFrontmatterTitle(
 		task: FileTask,
-		newTitle: string
+		newTitle: string,
 	): Promise<void> {
 		try {
 			// Update the title property in frontmatter through the source entry
 			// Note: updateProperty might be async, so we await it
-			if (typeof task.sourceEntry.updateProperty === 'function') {
-				await Promise.resolve(task.sourceEntry.updateProperty('title', newTitle));
+			if (typeof task.sourceEntry.updateProperty === "function") {
+				await Promise.resolve(
+					task.sourceEntry.updateProperty("title", newTitle),
+				);
 				console.log(
-					`[FileTaskManager] Updated frontmatter title for ${task.filePath} to: ${newTitle}`
+					`[FileTaskManager] Updated frontmatter title for ${task.filePath} to: ${newTitle}`,
 				);
 			} else {
-				throw new Error('updateProperty method not available on source entry');
+				throw new Error(
+					"updateProperty method not available on source entry",
+				);
 			}
 		} catch (error) {
-			console.error(`[FileTaskManager] Failed to update frontmatter title:`, error);
+			console.error(
+				`[FileTaskManager] Failed to update frontmatter title:`,
+				error,
+			);
 			// Fallback to file renaming if frontmatter update fails
 			await this.updateFileName(task, newTitle);
 		}
@@ -485,22 +507,24 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	 */
 	private async updateH1Heading(
 		task: FileTask,
-		newHeading: string
+		newHeading: string,
 	): Promise<void> {
 		try {
 			const file = this.app.vault.getFileByPath(task.filePath);
 			if (!file) {
-				console.error(`[FileTaskManager] File not found: ${task.filePath}`);
+				console.error(
+					`[FileTaskManager] File not found: ${task.filePath}`,
+				);
 				return;
 			}
 
 			const content = await this.app.vault.read(file);
-			const lines = content.split('\n');
+			const lines = content.split("\n");
 
 			// Find the first H1 heading
 			let h1LineIndex = -1;
 			for (let i = 0; i < lines.length; i++) {
-				if (lines[i].startsWith('# ')) {
+				if (lines[i].startsWith("# ")) {
 					h1LineIndex = i;
 					break;
 				}
@@ -512,25 +536,30 @@ export class FileTaskManagerImpl implements FileTaskManager {
 			} else {
 				// Add new H1 at the beginning (after frontmatter if present)
 				let insertIndex = 0;
-				if (content.startsWith('---')) {
+				if (content.startsWith("---")) {
 					// Skip frontmatter
-					const frontmatterEnd = content.indexOf('\n---\n', 3);
+					const frontmatterEnd = content.indexOf("\n---\n", 3);
 					if (frontmatterEnd >= 0) {
-						const frontmatterLines = content.substring(0, frontmatterEnd + 5).split('\n').length - 1;
+						const frontmatterLines =
+							content.substring(0, frontmatterEnd + 5).split("\n")
+								.length - 1;
 						insertIndex = frontmatterLines;
 					}
 				}
-				lines.splice(insertIndex, 0, `# ${newHeading}`, '');
+				lines.splice(insertIndex, 0, `# ${newHeading}`, "");
 			}
 
-			const newContent = lines.join('\n');
+			const newContent = lines.join("\n");
 			await this.app.vault.modify(file, newContent);
 
 			console.log(
-				`[FileTaskManager] Updated H1 heading for ${task.filePath} to: ${newHeading}`
+				`[FileTaskManager] Updated H1 heading for ${task.filePath} to: ${newHeading}`,
 			);
 		} catch (error) {
-			console.error(`[FileTaskManager] Failed to update H1 heading:`, error);
+			console.error(
+				`[FileTaskManager] Failed to update H1 heading:`,
+				error,
+			);
 		}
 	}
 
@@ -540,21 +569,28 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	private async updateCustomContentField(
 		task: FileTask,
 		newContent: string,
-		fieldName: string
+		fieldName: string,
 	): Promise<void> {
 		try {
 			// Update the custom field in frontmatter through the source entry
 			// Note: updateProperty might be async, so we await it
-			if (typeof task.sourceEntry.updateProperty === 'function') {
-				await Promise.resolve(task.sourceEntry.updateProperty(fieldName, newContent));
+			if (typeof task.sourceEntry.updateProperty === "function") {
+				await Promise.resolve(
+					task.sourceEntry.updateProperty(fieldName, newContent),
+				);
 				console.log(
-					`[FileTaskManager] Updated custom field '${fieldName}' for ${task.filePath} to: ${newContent}`
+					`[FileTaskManager] Updated custom field '${fieldName}' for ${task.filePath} to: ${newContent}`,
 				);
 			} else {
-				throw new Error('updateProperty method not available on source entry');
+				throw new Error(
+					"updateProperty method not available on source entry",
+				);
 			}
 		} catch (error) {
-			console.error(`[FileTaskManager] Failed to update custom field '${fieldName}':`, error);
+			console.error(
+				`[FileTaskManager] Failed to update custom field '${fieldName}':`,
+				error,
+			);
 		}
 	}
 
@@ -563,7 +599,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	 */
 	private async updateFileName(
 		task: FileTask,
-		newContent: string
+		newContent: string,
 	): Promise<void> {
 		try {
 			const file = this.app.vault.getFileByPath(task.filePath);
@@ -575,7 +611,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 						? currentPath.substring(0, lastSlashIndex)
 						: "";
 				const extension = currentPath.substring(
-					currentPath.lastIndexOf(".")
+					currentPath.lastIndexOf("."),
 				);
 
 				// Ensure newContent doesn't already have the extension
@@ -583,7 +619,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 				if (cleanContent.endsWith(extension)) {
 					cleanContent = cleanContent.substring(
 						0,
-						cleanContent.length - extension.length
+						cleanContent.length - extension.length,
 					);
 				}
 
@@ -597,7 +633,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 					// Update the task's filePath to reflect the new path
 					task.filePath = newPath;
 					console.log(
-						`[FileTaskManager] Renamed file from ${currentPath} to ${newPath}`
+						`[FileTaskManager] Renamed file from ${currentPath} to ${newPath}`,
 					);
 				}
 			}
@@ -611,7 +647,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	 */
 	getFileTasksFromEntries(
 		entries: BasesEntry[],
-		mapping: FileTaskPropertyMapping = DEFAULT_FILE_TASK_MAPPING
+		mapping: FileTaskPropertyMapping = DEFAULT_FILE_TASK_MAPPING,
 	): FileTask[] {
 		// Filter out non-markdown files with robust extension detection
 		const markdownEntries = entries.filter((entry) => {
@@ -642,11 +678,11 @@ export class FileTaskManagerImpl implements FileTaskManager {
 		});
 
 		console.log(
-			`[FileTaskManager] Filtered ${entries.length} entries to ${markdownEntries.length} markdown files`
+			`[FileTaskManager] Filtered ${entries.length} entries to ${markdownEntries.length} markdown files`,
 		);
 
 		return markdownEntries.map((entry) =>
-			this.entryToFileTask(entry, mapping)
+			this.entryToFileTask(entry, mapping),
 		);
 	}
 
@@ -665,7 +701,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 
 	private getPropertyValue(
 		entry: BasesEntry,
-		propertyName?: string
+		propertyName?: string,
 	): string | undefined {
 		if (!propertyName) return undefined;
 		// 1) Try Bases API
@@ -675,8 +711,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 				name: propertyName,
 			});
 			if (value !== null && value !== undefined) return String(value);
-		} catch {
-		}
+		} catch {}
 		// 2) Fallback: direct properties/frontmatter/note.data
 		try {
 			const anyEntry: any = entry as any;
@@ -698,14 +733,13 @@ export class FileTaskManagerImpl implements FileTaskManager {
 			) {
 				return String(anyEntry.note.data[propertyName]);
 			}
-		} catch {
-		}
+		} catch {}
 		return undefined;
 	}
 
 	private getBooleanPropertyValue(
 		entry: BasesEntry,
-		propertyName?: string
+		propertyName?: string,
 	): boolean | undefined {
 		if (!propertyName) return undefined;
 		try {
@@ -726,7 +760,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 
 	private getNumberPropertyValue(
 		entry: BasesEntry,
-		propertyName?: string
+		propertyName?: string,
 	): number | undefined {
 		if (!propertyName) return undefined;
 		try {
@@ -743,7 +777,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 
 	private getDatePropertyValue(
 		entry: BasesEntry,
-		propertyName?: string
+		propertyName?: string,
 	): number | undefined {
 		if (!propertyName) return undefined;
 		try {
@@ -813,7 +847,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 
 	private getArrayPropertyValue(
 		entry: BasesEntry,
-		propertyName?: string
+		propertyName?: string,
 	): string[] | undefined {
 		if (!propertyName) return undefined;
 		try {
@@ -872,23 +906,32 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	/**
 	 * Extract time components from task content using enhanced time parsing
 	 */
-	private extractTimeComponents(content: string): Partial<EnhancedStandardTaskMetadata> {
+	private extractTimeComponents(
+		content: string,
+	): Partial<EnhancedStandardTaskMetadata> {
 		if (!this.timeParsingService) {
 			return {};
 		}
 
 		try {
 			// Parse time components from content
-			const {timeComponents, errors, warnings} = this.timeParsingService.parseTimeComponents(content);
+			const { timeComponents, errors, warnings } =
+				this.timeParsingService.parseTimeComponents(content);
 
 			// Log warnings if any
 			if (warnings.length > 0) {
-				console.warn(`[FileTaskManager] Time parsing warnings for "${content}":`, warnings);
+				console.warn(
+					`[FileTaskManager] Time parsing warnings for "${content}":`,
+					warnings,
+				);
 			}
 
 			// Log errors if any (but don't fail)
 			if (errors.length > 0) {
-				console.warn(`[FileTaskManager] Time parsing errors for "${content}":`, errors);
+				console.warn(
+					`[FileTaskManager] Time parsing errors for "${content}":`,
+					errors,
+				);
 			}
 
 			// Return enhanced metadata with time components
@@ -900,7 +943,10 @@ export class FileTaskManagerImpl implements FileTaskManager {
 
 			return enhancedMetadata;
 		} catch (error) {
-			console.error(`[FileTaskManager] Failed to extract time components from "${content}":`, error);
+			console.error(
+				`[FileTaskManager] Failed to extract time components from "${content}":`,
+				error,
+			);
 			return {};
 		}
 	}
@@ -915,7 +961,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 			scheduledDate?: number;
 			completedDate?: number;
 		},
-		timeComponents: EnhancedStandardTaskMetadata["timeComponents"]
+		timeComponents: EnhancedStandardTaskMetadata["timeComponents"],
 	): EnhancedStandardTaskMetadata["enhancedDates"] {
 		if (!timeComponents) {
 			return undefined;
@@ -924,7 +970,10 @@ export class FileTaskManagerImpl implements FileTaskManager {
 		const enhancedDates: EnhancedStandardTaskMetadata["enhancedDates"] = {};
 
 		// Helper function to combine date and time component
-		const combineDateTime = (dateTimestamp: number | undefined, timeComponent: TimeComponent | undefined): Date | undefined => {
+		const combineDateTime = (
+			dateTimestamp: number | undefined,
+			timeComponent: TimeComponent | undefined,
+		): Date | undefined => {
 			if (!dateTimestamp || !timeComponent) {
 				return undefined;
 			}
@@ -936,7 +985,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 				date.getDate(),
 				timeComponent.hour,
 				timeComponent.minute,
-				timeComponent.second || 0
+				timeComponent.second || 0,
 			);
 
 			return combinedDate;
@@ -944,46 +993,80 @@ export class FileTaskManagerImpl implements FileTaskManager {
 
 		// Combine start date with start time
 		if (dates.startDate && timeComponents.startTime) {
-			enhancedDates.startDateTime = combineDateTime(dates.startDate, timeComponents.startTime);
+			enhancedDates.startDateTime = combineDateTime(
+				dates.startDate,
+				timeComponents.startTime,
+			);
+		}
+
+		// Fallback: If start date exists but no start time, and we have a due time (default context)
+		// but no due date, assume the time belongs to the start date.
+		// This handles cases like "🛫 2025-11-29 18:00" where the time defaults to "due" context
+		// but should actually be associated with the start date.
+		if (
+			dates.startDate &&
+			!timeComponents.startTime &&
+			!dates.dueDate &&
+			timeComponents.dueTime
+		) {
+			enhancedDates.startDateTime = combineDateTime(
+				dates.startDate,
+				timeComponents.dueTime,
+			);
 		}
 
 		// Fallback for start datetime when explicit start date is missing
-		if (
-			!enhancedDates.startDateTime &&
-			timeComponents.startTime
-		) {
+		if (!enhancedDates.startDateTime && timeComponents.startTime) {
 			const fallbackDate =
-				dates.dueDate ??
-				dates.scheduledDate ??
-				dates.completedDate;
+				dates.dueDate ?? dates.scheduledDate ?? dates.completedDate;
 			if (fallbackDate) {
 				enhancedDates.startDateTime = combineDateTime(
 					fallbackDate,
-					timeComponents.startTime
+					timeComponents.startTime,
 				);
 			}
 		}
 
 		// Combine due date with due time
 		if (dates.dueDate && timeComponents.dueTime) {
-			enhancedDates.dueDateTime = combineDateTime(dates.dueDate, timeComponents.dueTime);
+			enhancedDates.dueDateTime = combineDateTime(
+				dates.dueDate,
+				timeComponents.dueTime,
+			);
 		}
 
 		// Combine scheduled date with scheduled time
 		if (dates.scheduledDate && timeComponents.scheduledTime) {
-			enhancedDates.scheduledDateTime = combineDateTime(dates.scheduledDate, timeComponents.scheduledTime);
+			enhancedDates.scheduledDateTime = combineDateTime(
+				dates.scheduledDate,
+				timeComponents.scheduledTime,
+			);
 		}
 
 		// If we have a due date but the time component is scheduledTime (common with "at" keyword),
 		// create dueDateTime using scheduledTime
-		if (dates.dueDate && !timeComponents.dueTime && timeComponents.scheduledTime) {
-			enhancedDates.dueDateTime = combineDateTime(dates.dueDate, timeComponents.scheduledTime);
+		if (
+			dates.dueDate &&
+			!timeComponents.dueTime &&
+			timeComponents.scheduledTime
+		) {
+			enhancedDates.dueDateTime = combineDateTime(
+				dates.dueDate,
+				timeComponents.scheduledTime,
+			);
 		}
 
 		// If we have a scheduled date but the time component is dueTime,
 		// create scheduledDateTime using dueTime
-		if (dates.scheduledDate && !timeComponents.scheduledTime && timeComponents.dueTime) {
-			enhancedDates.scheduledDateTime = combineDateTime(dates.scheduledDate, timeComponents.dueTime);
+		if (
+			dates.scheduledDate &&
+			!timeComponents.scheduledTime &&
+			timeComponents.dueTime
+		) {
+			enhancedDates.scheduledDateTime = combineDateTime(
+				dates.scheduledDate,
+				timeComponents.dueTime,
+			);
 		}
 
 		// Handle end time - if we have start date and end time, create end datetime
@@ -994,11 +1077,16 @@ export class FileTaskManagerImpl implements FileTaskManager {
 				dates.scheduledDate ??
 				dates.completedDate;
 			if (endBaseDate) {
-				enhancedDates.endDateTime = combineDateTime(endBaseDate, timeComponents.endTime);
+				enhancedDates.endDateTime = combineDateTime(
+					endBaseDate,
+					timeComponents.endTime,
+				);
 			}
 		}
 
-		return Object.keys(enhancedDates).length > 0 ? enhancedDates : undefined;
+		return Object.keys(enhancedDates).length > 0
+			? enhancedDates
+			: undefined;
 	}
 
 	/**
@@ -1006,7 +1094,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 	 */
 	public validatePropertyMapping(
 		entries: BasesEntry[],
-		mapping: FileTaskPropertyMapping = DEFAULT_FILE_TASK_MAPPING
+		mapping: FileTaskPropertyMapping = DEFAULT_FILE_TASK_MAPPING,
 	): void {
 		if (entries.length === 0) return;
 
@@ -1033,7 +1121,7 @@ export class FileTaskManagerImpl implements FileTaskManager {
 		Object.entries(mapping).forEach(([key, propName]) => {
 			if (propName && !propertyUsage[propName]) {
 				console.warn(
-					`[FileTaskManager] Property "${propName}" (${key}) not found in any entries`
+					`[FileTaskManager] Property "${propName}" (${key}) not found in any entries`,
 				);
 			}
 		});

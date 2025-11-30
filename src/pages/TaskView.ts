@@ -109,7 +109,10 @@ export class TaskView extends ItemView {
 		this.applyCurrentFilter();
 	}, 400); // 增加延迟到 400ms 减少频繁更新
 
-	constructor(leaf: WorkspaceLeaf, private plugin: TaskProgressBarPlugin) {
+	constructor(
+		leaf: WorkspaceLeaf,
+		private plugin: TaskProgressBarPlugin,
+	) {
 		super(leaf);
 
 		this.tasks = this.plugin.preloadedTasks || [];
@@ -137,7 +140,7 @@ export class TaskView extends ItemView {
 	getDisplayText(): string {
 		const currentViewConfig = getViewSettingOrDefault(
 			this.plugin,
-			this.currentViewId
+			this.currentViewId,
 		);
 		return currentViewConfig.name;
 	}
@@ -145,7 +148,7 @@ export class TaskView extends ItemView {
 	getIcon(): string {
 		const currentViewConfig = getViewSettingOrDefault(
 			this.plugin,
-			this.currentViewId
+			this.currentViewId,
 		);
 		return currentViewConfig.icon;
 	}
@@ -168,23 +171,22 @@ export class TaskView extends ItemView {
 			isDataflowEnabled(this.plugin) &&
 			this.plugin.dataflowOrchestrator
 		) {
-
 			this.registerEvent(
 				on(this.app, Events.CACHE_READY, async () => {
 					// 冷启动就绪，从快照加载，并更新视图
 					await this.loadTasksFast(false);
-				})
+				}),
 			);
 			this.registerEvent(
-				on(this.app, Events.TASK_CACHE_UPDATED, debouncedViewUpdate)
+				on(this.app, Events.TASK_CACHE_UPDATED, debouncedViewUpdate),
 			);
 		} else {
 			// Legacy: 兼容旧事件
 			this.registerEvent(
 				this.app.workspace.on(
 					"task-genius:task-cache-updated",
-					debouncedViewUpdate
-				)
+					debouncedViewUpdate,
+				),
 			);
 		}
 
@@ -213,8 +215,8 @@ export class TaskView extends ItemView {
 
 					// 使用防抖函数应用过滤器，避免频繁更新
 					this.debouncedApplyFilter();
-				}
-			)
+				},
+			),
 		);
 
 		// 监听视图配置变更事件（仅刷新侧边栏与当前视图可见性）
@@ -227,14 +229,14 @@ export class TaskView extends ItemView {
 						if (
 							this.sidebarComponent &&
 							typeof this.sidebarComponent.renderSidebarItems ===
-							"function"
+								"function"
 						) {
 							this.sidebarComponent.renderSidebarItems();
 						}
 					} catch (e) {
 						console.warn(
 							"Failed to render sidebar items on view-config-changed:",
-							e
+							e,
 						);
 					}
 
@@ -249,12 +251,12 @@ export class TaskView extends ItemView {
 					// 若当前视图被设为不可见，则切换到第一个可见视图（不强制刷新内容）
 					const currentCfg =
 						this.plugin.settings.viewConfiguration.find(
-							(v) => v.id === this.currentViewId
+							(v) => v.id === this.currentViewId,
 						);
 					if (!currentCfg?.visible) {
 						const firstVisible =
 							this.plugin.settings.viewConfiguration.find(
-								(v) => v.visible
+								(v) => v.visible,
 							)?.id as ViewMode | undefined;
 						if (
 							firstVisible &&
@@ -262,23 +264,23 @@ export class TaskView extends ItemView {
 						) {
 							this.currentViewId = firstVisible;
 							this.sidebarComponent?.setViewMode(
-								this.currentViewId
+								this.currentViewId,
 							);
 							// Ensure main content switches to the new visible view
 							this.switchView(
 								this.currentViewId,
 								undefined,
-								true
+								true,
 							);
 						}
 					}
-				}
-			)
+				},
+			),
 		);
 
 		// 2. 加载缓存的实时过滤状态
 		const savedFilterState = this.app.loadLocalStorage(
-			"task-genius-view-filter"
+			"task-genius-view-filter",
 		) as RootFilterState;
 		console.log("savedFilterState", savedFilterState);
 
@@ -301,14 +303,14 @@ export class TaskView extends ItemView {
 
 		// 4. 获取初始视图ID
 		const savedViewId = this.app.loadLocalStorage(
-			"task-genius:view-mode"
+			"task-genius:view-mode",
 		) as ViewMode;
 		const initialViewId = this.plugin.settings.viewConfiguration.find(
-			(v) => v.id === savedViewId && v.visible
+			(v) => v.id === savedViewId && v.visible,
 		)
 			? savedViewId
 			: this.plugin.settings.viewConfiguration.find((v) => v.visible)
-			?.id || "inbox";
+					?.id || "inbox";
 
 		this.currentViewId = initialViewId;
 		this.sidebarComponent.setViewMode(this.currentViewId);
@@ -322,7 +324,7 @@ export class TaskView extends ItemView {
 		} else {
 			// If no tasks loaded yet, wait for background sync before rendering
 			console.log(
-				"No cached tasks found, waiting for background sync..."
+				"No cached tasks found, waiting for background sync...",
 			);
 			await this.loadTasksWithSyncInBackground();
 			this.switchView(this.currentViewId);
@@ -345,7 +347,7 @@ export class TaskView extends ItemView {
 
 		(this.leaf.tabHeaderEl as HTMLElement).toggleClass(
 			"task-genius-tab-header",
-			true
+			true,
 		);
 
 		this.tabActionButton = (
@@ -364,11 +366,11 @@ export class TaskView extends ItemView {
 							this.plugin.app,
 							this.plugin,
 							{},
-							true
+							true,
 						);
 						modal.open();
 					});
-			}
+			},
 		);
 
 		this.register(() => {
@@ -389,7 +391,7 @@ export class TaskView extends ItemView {
 
 					const existingLeaves =
 						this.plugin.app.workspace.getLeavesOfType(
-							TASK_VIEW_TYPE
+							TASK_VIEW_TYPE,
 						);
 					if (existingLeaves.length > 0) {
 						// Focus the existing view
@@ -401,7 +403,7 @@ export class TaskView extends ItemView {
 						this.plugin.activateTaskView().then(() => {
 							const newView =
 								this.plugin.app.workspace.getActiveViewOfType(
-									TaskView
+									TaskView,
 								);
 							if (newView) {
 								newView.switchView(view.id);
@@ -437,7 +439,7 @@ export class TaskView extends ItemView {
 	private initializeComponents() {
 		this.sidebarComponent = new SidebarComponent(
 			this.rootContainerEl,
-			this.plugin
+			this.plugin,
 		);
 		this.addChild(this.sidebarComponent);
 		this.sidebarComponent.load();
@@ -460,14 +462,14 @@ export class TaskView extends ItemView {
 					console.log(
 						"TaskView onTaskUpdate",
 						originalTask.content,
-						updatedTask.content
+						updatedTask.content,
 					);
 					await this.handleTaskUpdate(originalTask, updatedTask);
 				},
 				onTaskContextMenu: (event: MouseEvent, task: Task) => {
 					this.handleTaskContextMenu(event, task);
 				},
-			}
+			},
 		);
 		this.addChild(this.contentComponent);
 		this.contentComponent.load();
@@ -487,14 +489,14 @@ export class TaskView extends ItemView {
 					console.log(
 						"TaskView onTaskUpdate",
 						originalTask.content,
-						updatedTask.content
+						updatedTask.content,
 					);
 					await this.handleTaskUpdate(originalTask, updatedTask);
 				},
 				onTaskContextMenu: (event: MouseEvent, task: Task) => {
 					this.handleTaskContextMenu(event, task);
 				},
-			}
+			},
 		);
 		this.addChild(this.forecastComponent);
 		this.forecastComponent.load();
@@ -517,7 +519,7 @@ export class TaskView extends ItemView {
 				onTaskContextMenu: (event: MouseEvent, task: Task) => {
 					this.handleTaskContextMenu(event, task);
 				},
-			}
+			},
 		);
 		this.addChild(this.tagsComponent);
 		this.tagsComponent.load();
@@ -540,7 +542,7 @@ export class TaskView extends ItemView {
 				onTaskContextMenu: (event: MouseEvent, task: Task) => {
 					this.handleTaskContextMenu(event, task);
 				},
-			}
+			},
 		);
 		this.addChild(this.projectsComponent);
 		this.projectsComponent.load();
@@ -563,7 +565,7 @@ export class TaskView extends ItemView {
 				onTaskContextMenu: (event: MouseEvent, task: Task) => {
 					this.handleTaskContextMenu(event, task);
 				},
-			}
+			},
 		);
 		this.addChild(this.reviewComponent);
 		this.reviewComponent.load();
@@ -582,9 +584,19 @@ export class TaskView extends ItemView {
 					this.toggleTaskCompletion(task);
 				},
 				onEventContextMenu: (ev: MouseEvent, event: CalendarEvent) => {
-					this.handleTaskContextMenu(ev, event);
+					// Extract original task from metadata to ensure all fields (like filePath) are present
+					const realTask = (event as any)?.metadata
+						?.originalTask as Task;
+					if (realTask) {
+						this.handleTaskContextMenu(ev, realTask);
+					} else {
+						this.handleTaskContextMenu(
+							ev,
+							event as unknown as Task,
+						);
+					}
 				},
-			}
+			},
 		);
 		this.addChild(this.calendarComponent);
 		this.calendarComponent.load();
@@ -602,7 +614,7 @@ export class TaskView extends ItemView {
 				onTaskSelected: this.handleTaskSelection.bind(this),
 				onTaskCompleted: this.toggleTaskCompletion.bind(this),
 				onTaskContextMenu: this.handleTaskContextMenu.bind(this),
-			}
+			},
 		);
 		this.addChild(this.kanbanComponent);
 		this.kanbanComponent.containerEl.hide();
@@ -614,7 +626,7 @@ export class TaskView extends ItemView {
 				onTaskSelected: this.handleTaskSelection.bind(this),
 				onTaskCompleted: this.toggleTaskCompletion.bind(this),
 				onTaskContextMenu: this.handleTaskContextMenu.bind(this),
-			}
+			},
 		);
 		this.addChild(this.ganttComponent);
 		this.ganttComponent.containerEl.hide();
@@ -626,7 +638,7 @@ export class TaskView extends ItemView {
 		this.detailsComponent = new TaskDetailsComponent(
 			this.rootContainerEl,
 			this.app,
-			this.plugin
+			this.plugin,
 		);
 		this.addChild(this.detailsComponent);
 		this.detailsComponent.load();
@@ -645,7 +657,7 @@ export class TaskView extends ItemView {
 					this.handleKanbanTaskStatusUpdate.bind(this),
 				onEventContextMenu: this.handleTaskContextMenu.bind(this),
 				onTaskUpdate: this.handleTaskUpdate.bind(this),
-			}
+			},
 		);
 
 		this.addChild(this.viewComponentManager);
@@ -662,7 +674,7 @@ export class TaskView extends ItemView {
 
 		if (!toggleContainer) {
 			console.error(
-				"Could not find .view-header-nav-buttons to add sidebar toggle."
+				"Could not find .view-header-nav-buttons to add sidebar toggle.",
 			);
 			return;
 		}
@@ -681,7 +693,7 @@ export class TaskView extends ItemView {
 
 	private createTaskMark() {
 		// Check if task-mark feature is hidden in current workspace
-		if (this.plugin.workspaceManager?.isFeatureHidden('task-mark')) {
+		if (this.plugin.workspaceManager?.isFeatureHidden("task-mark")) {
 			return;
 		}
 
@@ -690,40 +702,43 @@ export class TaskView extends ItemView {
 				interpolation: {
 					num: this.tasks.length,
 				},
-			})
+			}),
 		);
 	}
 
 	private createActionButtons() {
 		// Check if details-panel feature is hidden
-		if (!this.plugin.workspaceManager?.isFeatureHidden('details-panel')) {
+		if (!this.plugin.workspaceManager?.isFeatureHidden("details-panel")) {
 			this.detailsToggleBtn = this.addAction(
 				"panel-right-dashed",
 				t("Details"),
 				() => {
 					this.toggleDetailsVisibility(!this.isDetailsVisible);
-				}
+				},
 			);
 
 			this.detailsToggleBtn.toggleClass("panel-toggle-btn", true);
-			this.detailsToggleBtn.toggleClass("is-active", this.isDetailsVisible);
+			this.detailsToggleBtn.toggleClass(
+				"is-active",
+				this.isDetailsVisible,
+			);
 		}
 
 		// Check if quick-capture feature is hidden
-		if (!this.plugin.workspaceManager?.isFeatureHidden('quick-capture')) {
+		if (!this.plugin.workspaceManager?.isFeatureHidden("quick-capture")) {
 			this.addAction("notebook-pen", t("Capture"), () => {
 				const modal = new QuickCaptureModal(
 					this.plugin.app,
 					this.plugin,
 					{},
-					true
+					true,
 				);
 				modal.open();
 			});
 		}
 
 		// Check if filter feature is hidden
-		if (this.plugin.workspaceManager?.isFeatureHidden('filter')) {
+		if (this.plugin.workspaceManager?.isFeatureHidden("filter")) {
 			// Skip filter button creation
 			this.updateActionButtons();
 			return;
@@ -734,7 +749,7 @@ export class TaskView extends ItemView {
 				const popover = new ViewTaskFilterPopover(
 					this.plugin.app,
 					undefined,
-					this.plugin
+					this.plugin,
 				);
 
 				// 设置关闭回调 - 现在主要用于处理取消操作
@@ -754,18 +769,18 @@ export class TaskView extends ItemView {
 							const filterState = this
 								.liveFilterState as RootFilterState;
 							popover.taskFilterComponent.loadFilterState(
-								filterState
+								filterState,
 							);
 						}
 					}, 100);
 				});
 
-				popover.showAtPosition({x: e.clientX, y: e.clientY});
+				popover.showAtPosition({ x: e.clientX, y: e.clientY });
 			} else {
 				const modal = new ViewTaskFilterModal(
 					this.plugin.app,
 					this.leaf.id,
-					this.plugin
+					this.plugin,
 				);
 
 				// 设置关闭回调 - 现在主要用于处理取消操作
@@ -797,7 +812,7 @@ export class TaskView extends ItemView {
 		console.log(
 			"应用当前过滤状态:",
 			this.liveFilterState ? "有实时筛选器" : "无实时筛选器",
-			this.currentFilterState ? "有过滤器" : "无过滤器"
+			this.currentFilterState ? "有过滤器" : "无过滤器",
 		);
 		// 通过triggerViewUpdate重新加载任务
 		this.triggerViewUpdate();
@@ -838,7 +853,7 @@ export class TaskView extends ItemView {
 							undefined,
 							(config) => {
 								this.applySavedFilter(config);
-							}
+							},
 						);
 						modal.open();
 					});
@@ -880,7 +895,7 @@ export class TaskView extends ItemView {
 					new ConfirmModal(this.plugin, {
 						title: t("Reindex"),
 						message: t(
-							"Are you sure you want to force reindex all tasks?"
+							"Are you sure you want to force reindex all tasks?",
 						),
 						confirmText: t("Reindex"),
 						cancelText: t("Cancel"),
@@ -891,13 +906,13 @@ export class TaskView extends ItemView {
 									await this.plugin.dataflowOrchestrator.rebuild();
 								} else {
 									throw new Error(
-										"Dataflow orchestrator not available"
+										"Dataflow orchestrator not available",
 									);
 								}
 							} catch (error) {
 								console.error(
 									"Failed to force reindex tasks:",
-									error
+									error,
 								);
 								new Notice(t("Failed to force reindex tasks"));
 							}
@@ -913,7 +928,7 @@ export class TaskView extends ItemView {
 		this.isSidebarCollapsed = !this.isSidebarCollapsed;
 		this.rootContainerEl.toggleClass(
 			"sidebar-collapsed",
-			this.isSidebarCollapsed
+			this.isSidebarCollapsed,
 		);
 
 		this.sidebarComponent.setCollapsed(this.isSidebarCollapsed);
@@ -929,7 +944,7 @@ export class TaskView extends ItemView {
 			this.detailsToggleBtn.toggleClass("is-active", visible);
 			this.detailsToggleBtn.setAttribute(
 				"aria-label",
-				visible ? t("Hide Details") : t("Show Details")
+				visible ? t("Hide Details") : t("Show Details"),
 			);
 		}
 
@@ -946,12 +961,12 @@ export class TaskView extends ItemView {
 		this.detailsComponent.onTaskEdit = (task: Task) => this.editTask(task);
 		this.detailsComponent.onTaskUpdate = async (
 			originalTask: Task,
-			updatedTask: Task
+			updatedTask: Task,
 		) => {
 			console.log(
 				"triggered by detailsComponent",
 				originalTask,
-				updatedTask
+				updatedTask,
 			);
 			await this.updateTask(originalTask, updatedTask);
 		};
@@ -971,7 +986,7 @@ export class TaskView extends ItemView {
 	private switchView(
 		viewId: ViewMode,
 		project?: string | null,
-		forceRefresh: boolean = false
+		forceRefresh: boolean = false,
 	) {
 		// Exit selection mode when switching views
 		if (this.selectionManager.isSelectionMode) {
@@ -985,7 +1000,7 @@ export class TaskView extends ItemView {
 			"Project:",
 			project,
 			"ForceRefresh:",
-			forceRefresh
+			forceRefresh,
 		);
 
 		// Update sidebar to reflect current view
@@ -1026,7 +1041,7 @@ export class TaskView extends ItemView {
 					this.app,
 					this.plugin,
 					twoColumnConfig,
-					viewId
+					viewId,
 				);
 				this.addChild(twoColumnComponent);
 
@@ -1088,7 +1103,7 @@ export class TaskView extends ItemView {
 		if (targetComponent) {
 			console.log(
 				`Activating component for view ${viewId}`,
-				targetComponent.constructor.name
+				targetComponent.constructor.name,
 			);
 			targetComponent.containerEl.show();
 			if (typeof targetComponent.setTasks === "function") {
@@ -1112,13 +1127,13 @@ export class TaskView extends ItemView {
 					this.tasks,
 					viewId,
 					this.plugin,
-					filterOptions
+					filterOptions,
 				);
 
 				// Filter out badge tasks for forecast view - they should only appear in event view
 				if (viewId === "forecast") {
 					filteredTasks = filteredTasks.filter(
-						(task) => !(task as any).badge
+						(task) => !(task as any).badge,
 					);
 				}
 
@@ -1126,12 +1141,12 @@ export class TaskView extends ItemView {
 					"[TaskView] Calling setTasks with",
 					filteredTasks.length,
 					"filtered tasks, forceRefresh:",
-					forceRefresh
+					forceRefresh,
 				);
 				targetComponent.setTasks(
 					filteredTasks,
 					this.tasks,
-					forceRefresh
+					forceRefresh,
 				);
 			}
 
@@ -1151,13 +1166,13 @@ export class TaskView extends ItemView {
 				}
 
 				targetComponent.updateTasks(
-					filterTasks(this.tasks, viewId, this.plugin, filterOptions)
+					filterTasks(this.tasks, viewId, this.plugin, filterOptions),
 				);
 			}
 
 			if (typeof targetComponent.setViewMode === "function") {
 				console.log(
-					`Setting view mode for ${viewId} to ${modeForComponent} with project ${project}`
+					`Setting view mode for ${viewId} to ${modeForComponent} with project ${project}`,
 				);
 				targetComponent.setViewMode(modeForComponent, project);
 			}
@@ -1184,13 +1199,13 @@ export class TaskView extends ItemView {
 						this.tasks,
 						component.getViewId(),
 						this.plugin,
-						filterOptions
+						filterOptions,
 					);
 
 					// Filter out badge tasks for forecast view - they should only appear in event view
 					if (component.getViewId() === "forecast") {
 						filteredTasks = filteredTasks.filter(
-							(task) => !(task as any).badge
+							(task) => !(task as any).badge,
 						);
 					}
 
@@ -1215,7 +1230,7 @@ export class TaskView extends ItemView {
 		if (this.currentSelectedTaskId) {
 			// Re-select the current task to maintain details panel visibility
 			const currentTask = this.tasks.find(
-				(t) => t.id === this.currentSelectedTaskId
+				(t) => t.id === this.currentSelectedTaskId,
 			);
 			if (currentTask) {
 				this.detailsComponent.showTaskDetails(currentTask);
@@ -1234,7 +1249,7 @@ export class TaskView extends ItemView {
 
 	private updateHeaderDisplay() {
 		const config = getViewSettingOrDefault(this.plugin, this.currentViewId);
-		this.leaf.setEphemeralState({title: config.name, icon: config.icon});
+		this.leaf.setEphemeralState({ title: config.name, icon: config.icon });
 	}
 
 	private handleTaskContextMenu(event: MouseEvent, task: Task) {
@@ -1277,7 +1292,7 @@ export class TaskView extends ItemView {
 							},
 							(el) => {
 								createTaskCheckbox(mark, task, el);
-							}
+							},
 						);
 						item.titleEl.createEl("span", {
 							cls: "status-option",
@@ -1357,28 +1372,28 @@ export class TaskView extends ItemView {
 
 	private async loadTasks(
 		forceSync: boolean = false,
-		skipViewUpdate: boolean = false
+		skipViewUpdate: boolean = false,
 	) {
 		// Only use dataflow - TaskManager is deprecated
 		if (!this.plugin.dataflowOrchestrator) {
 			console.warn(
-				"[TaskView] Dataflow orchestrator not available, waiting for initialization..."
+				"[TaskView] Dataflow orchestrator not available, waiting for initialization...",
 			);
 			this.tasks = [];
 		} else {
 			try {
 				console.log(
-					"[TaskView] Loading tasks from dataflow orchestrator..."
+					"[TaskView] Loading tasks from dataflow orchestrator...",
 				);
 				const queryAPI = this.plugin.dataflowOrchestrator.getQueryAPI();
 				this.tasks = await queryAPI.getAllTasks();
 				console.log(
-					`[TaskView] Loaded ${this.tasks.length} tasks from dataflow`
+					`[TaskView] Loaded ${this.tasks.length} tasks from dataflow`,
 				);
 			} catch (error) {
 				console.error(
 					"[TaskView] Error loading tasks from dataflow:",
-					error
+					error,
 				);
 				this.tasks = [];
 			}
@@ -1396,24 +1411,24 @@ export class TaskView extends ItemView {
 		// Only use dataflow
 		if (!this.plugin.dataflowOrchestrator) {
 			console.warn(
-				"[TaskView] Dataflow orchestrator not available for fast load"
+				"[TaskView] Dataflow orchestrator not available for fast load",
 			);
 			this.tasks = [];
 		} else {
 			try {
 				console.log(
-					"[TaskView] Loading tasks fast from dataflow orchestrator..."
+					"[TaskView] Loading tasks fast from dataflow orchestrator...",
 				);
 				const queryAPI = this.plugin.dataflowOrchestrator.getQueryAPI();
 				// For fast loading, use regular getAllTasks (it should be cached)
 				this.tasks = await queryAPI.getAllTasks();
 				console.log(
-					`[TaskView] Loaded ${this.tasks.length} tasks (fast from dataflow)`
+					`[TaskView] Loaded ${this.tasks.length} tasks (fast from dataflow)`,
 				);
 			} catch (error) {
 				console.error(
 					"[TaskView] Error loading tasks fast from dataflow:",
-					error
+					error,
 				);
 				this.tasks = [];
 			}
@@ -1439,7 +1454,7 @@ export class TaskView extends ItemView {
 			if (tasks.length !== this.tasks.length || tasks.length === 0) {
 				this.tasks = tasks;
 				console.log(
-					`TaskView updated with ${this.tasks.length} tasks (dataflow sync)`
+					`TaskView updated with ${this.tasks.length} tasks (dataflow sync)`,
 				);
 				// Don't trigger view update here as it will be handled by events
 			}
@@ -1463,11 +1478,11 @@ export class TaskView extends ItemView {
 
 		// 如果当前视图已被设置为隐藏，则切换到第一个可见视图
 		const currentCfg = this.plugin.settings.viewConfiguration.find(
-			(v) => v.id === this.currentViewId
+			(v) => v.id === this.currentViewId,
 		);
 		if (!currentCfg?.visible) {
 			const firstVisible = this.plugin.settings.viewConfiguration.find(
-				(v) => v.visible
+				(v) => v.visible,
 			)?.id as ViewMode | undefined;
 			if (firstVisible && firstVisible !== this.currentViewId) {
 				this.currentViewId = firstVisible;
@@ -1485,7 +1500,7 @@ export class TaskView extends ItemView {
 	private updateActionButtons() {
 		// 移除过滤器重置按钮（如果存在）
 		const resetButton = this.leaf.view.containerEl.querySelector(
-			".view-action.task-filter-reset"
+			".view-action.task-filter-reset",
 		);
 		if (resetButton) {
 			resetButton.remove();
@@ -1508,7 +1523,7 @@ export class TaskView extends ItemView {
 		try {
 			const lower = mark.toLowerCase();
 			const completedCfg = String(
-				this.plugin.settings.taskStatuses?.completed || "x"
+				this.plugin.settings.taskStatuses?.completed || "x",
 			);
 			const completedSet = completedCfg
 				.split("|")
@@ -1530,13 +1545,12 @@ export class TaskView extends ItemView {
 					}
 				}
 			}
-		} catch (_) {
-		}
+		} catch (_) {}
 		return false;
 	}
 
 	private async toggleTaskCompletion(task: Task) {
-		const updatedTask = {...task, completed: !task.completed};
+		const updatedTask = { ...task, completed: !task.completed };
 
 		if (updatedTask.completed) {
 			updatedTask.metadata.completedDate = Date.now();
@@ -1564,7 +1578,7 @@ export class TaskView extends ItemView {
 	 */
 	private extractChangedFields(
 		originalTask: Task,
-		updatedTask: Task
+		updatedTask: Task,
 	): Partial<Task> {
 		const changes: Partial<Task> = {};
 
@@ -1637,14 +1651,14 @@ export class TaskView extends ItemView {
 			originalTask.id,
 			updatedTask.id,
 			updatedTask,
-			originalTask
+			originalTask,
 		);
 
 		try {
 			// Extract only the changed fields
 			const updates = this.extractChangedFields(
 				originalTask,
-				updatedTask
+				updatedTask,
 			);
 			console.log("Extracted changes:", updates);
 
@@ -1663,7 +1677,7 @@ export class TaskView extends ItemView {
 			}
 
 			console.log(
-				`Task ${updatedTask.id} updated successfully via handleTaskUpdate.`
+				`Task ${updatedTask.id} updated successfully via handleTaskUpdate.`,
 			);
 
 			// Update local task list immediately
@@ -1674,7 +1688,7 @@ export class TaskView extends ItemView {
 				this.tasks[index] = updatedTask;
 			} else {
 				console.warn(
-					"Updated task not found in local list, might reload."
+					"Updated task not found in local list, might reload.",
 				);
 			}
 
@@ -1701,7 +1715,7 @@ export class TaskView extends ItemView {
 
 	private async updateTask(
 		originalTask: Task,
-		updatedTask: Task
+		updatedTask: Task,
 	): Promise<Task> {
 		if (!this.plugin.writeAPI) {
 			console.error("WriteAPI not available for updateTask");
@@ -1711,7 +1725,7 @@ export class TaskView extends ItemView {
 			// Extract only the changed fields
 			const updates = this.extractChangedFields(
 				originalTask,
-				updatedTask
+				updatedTask,
 			);
 			console.log("Extracted changes:", updates);
 
@@ -1737,7 +1751,7 @@ export class TaskView extends ItemView {
 				this.tasks[index] = updatedTask;
 			} else {
 				console.warn(
-					"Updated task not found in local list, might reload."
+					"Updated task not found in local list, might reload.",
 				);
 			}
 
@@ -1853,7 +1867,7 @@ export class TaskView extends ItemView {
 					if (deleteChildren && task.metadata?.children) {
 						for (const childId of task.metadata.children) {
 							const childIndex = this.tasks.findIndex(
-								(t) => t.id === childId
+								(t) => t.id === childId,
 							);
 							if (childIndex !== -1) {
 								this.tasks.splice(childIndex, 1);
@@ -1872,8 +1886,8 @@ export class TaskView extends ItemView {
 			} else {
 				new Notice(
 					t("Failed to delete task") +
-					": " +
-					(result.error || "Unknown error")
+						": " +
+						(result.error || "Unknown error"),
 				);
 			}
 		} catch (error) {
@@ -1903,18 +1917,18 @@ export class TaskView extends ItemView {
 			this.sidebarComponent.renderSidebarItems();
 		} else {
 			console.warn(
-				"TaskView: SidebarComponent does not have renderSidebarItems method."
+				"TaskView: SidebarComponent does not have renderSidebarItems method.",
 			);
 		}
 
 		// 检查当前视图的类型是否发生变化（比如从两列切换到单列）
 		const currentViewConfig = this.plugin.settings.viewConfiguration.find(
-			(v) => v.id === this.currentViewId
+			(v) => v.id === this.currentViewId,
 		);
 
 		// 如果当前是两列视图但配置已改为非两列，需要销毁两列组件
 		const currentTwoColumn = this.twoColumnViewComponents.get(
-			this.currentViewId
+			this.currentViewId,
 		);
 		if (
 			currentTwoColumn &&
@@ -1933,10 +1947,10 @@ export class TaskView extends ItemView {
 	// Method to handle status updates originating from Kanban drag-and-drop
 	private handleKanbanTaskStatusUpdate = async (
 		taskId: string,
-		newStatusMark: string
+		newStatusMark: string,
 	) => {
 		console.log(
-			`TaskView handling Kanban status update request for ${taskId} to mark ${newStatusMark}`
+			`TaskView handling Kanban status update request for ${taskId} to mark ${newStatusMark}`,
 		);
 		const taskToUpdate = this.tasks.find((t) => t.id === taskId);
 
@@ -1959,22 +1973,22 @@ export class TaskView extends ItemView {
 						},
 					});
 					console.log(
-						`Task ${taskId} status update processed by TaskView.`
+						`Task ${taskId} status update processed by TaskView.`,
 					);
 				} catch (error) {
 					console.error(
 						`TaskView failed to update task status from Kanban callback for task ${taskId}:`,
-						error
+						error,
 					);
 				}
 			} else {
 				console.log(
-					`Task ${taskId} status (${newStatusMark}) already matches, no update needed.`
+					`Task ${taskId} status (${newStatusMark}) already matches, no update needed.`,
 				);
 			}
 		} else {
 			console.warn(
-				`TaskView could not find task with ID ${taskId} for Kanban status update.`
+				`TaskView could not find task with ID ${taskId} for Kanban status update.`,
 			);
 		}
 	};
@@ -1994,12 +2008,12 @@ export class TaskView extends ItemView {
 		console.log("应用保存的筛选器:", config.name);
 		this.liveFilterState = JSON.parse(JSON.stringify(config.filterState));
 		this.currentFilterState = JSON.parse(
-			JSON.stringify(config.filterState)
+			JSON.stringify(config.filterState),
 		);
 		console.log("applySavedFilter", this.liveFilterState);
 		this.app.saveLocalStorage(
 			"task-genius-view-filter",
-			this.liveFilterState
+			this.liveFilterState,
 		);
 		this.applyCurrentFilter();
 		this.updateActionButtons();

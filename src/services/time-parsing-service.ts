@@ -482,21 +482,27 @@ export class TimeParsingService {
 		expression: string,
 		index: number,
 	): "start" | "due" | "scheduled" {
-		// Get text before the expression (look back up to 20 characters)
-		const beforeText = text
-			.substring(Math.max(0, index - 20), index)
-			.toLowerCase();
+		// Get text before the expression (look back up to 200 characters to reliably capture emoji + date patterns)
+		// 30 chars was insufficient for cases like "Task 🛫 2025-11-29 18:00" where emoji takes 2 chars
+		const beforeTextRaw = text.substring(Math.max(0, index - 200), index);
+		const beforeText = beforeTextRaw.toLowerCase();
 
 		// Get text after the expression (look ahead up to 20 characters)
-		const afterText = text
-			.substring(
-				index + expression.length,
-				Math.min(text.length, index + expression.length + 20),
-			)
-			.toLowerCase();
+		const afterTextRaw = text.substring(
+			index + expression.length,
+			Math.min(text.length, index + expression.length + 20),
+		);
+		const afterText = afterTextRaw.toLowerCase();
 
 		// Combine surrounding context
 		const context = beforeText + " " + afterText;
+
+		// Check for explicit emoji indicators (highest priority)
+		// Use raw text (not lowercased) for emoji detection
+		// These emojis are commonly used in task management to denote date types
+		if (beforeTextRaw.includes("🛫")) return "start";
+		if (beforeTextRaw.includes("📅")) return "due";
+		if (beforeTextRaw.includes("⏳")) return "scheduled";
 
 		// Check for start keywords first (most specific)
 		for (const keyword of this.config.dateKeywords.start) {
@@ -981,21 +987,27 @@ export class TimeParsingService {
 		expression: string,
 		index: number,
 	): "start" | "due" | "scheduled" {
-		// Get text before the expression (look back up to 20 characters)
-		const beforeText = text
-			.substring(Math.max(0, index - 20), index)
-			.toLowerCase();
+		// Get text before the expression (look back up to 200 characters to reliably capture emoji + date patterns)
+		// 30 chars was insufficient for cases like "Task 🛫 2025-11-29 18:00" where emoji takes 2 chars
+		const beforeTextRaw = text.substring(Math.max(0, index - 200), index);
+		const beforeText = beforeTextRaw.toLowerCase();
 
 		// Get text after the expression (look ahead up to 20 characters)
-		const afterText = text
-			.substring(
-				index + expression.length,
-				Math.min(text.length, index + expression.length + 20),
-			)
-			.toLowerCase();
+		const afterTextRaw = text.substring(
+			index + expression.length,
+			Math.min(text.length, index + expression.length + 20),
+		);
+		const afterText = afterTextRaw.toLowerCase();
 
 		// Combine surrounding context
 		const context = beforeText + " " + afterText;
+
+		// Check for explicit emoji indicators (highest priority)
+		// Use raw text (not lowercased) for emoji detection
+		// These emojis are commonly used in task management to denote date types
+		if (beforeTextRaw.includes("🛫")) return "start";
+		if (beforeTextRaw.includes("📅")) return "due";
+		if (beforeTextRaw.includes("⏳")) return "scheduled";
 
 		// Check for start keywords
 		for (const keyword of this.config.dateKeywords.start) {

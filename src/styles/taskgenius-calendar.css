@@ -42,508 +42,632 @@
 	color: var(--text-normal);
 }
 
-/* ============================================
-   Header Styles
-   ============================================ */
+.theme-light .full-calendar-container {
+	.tg-event-base {
+		background-color: var(--background-secondary) !important;
+		border: 1px solid var(--background-modifier-border);
+	}
 
-/* Hide the library's built-in header since we use our own custom calendar-header */
-.tg-header {
-	display: none !important;
+	.tg-view-container {
+		background: var(--background-primary);
+	}
+
+	.tg-month-cell {
+		background: var(--background-primary);
+	}
+
+	.tg-event-base {
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+	}
 }
 
-.tg-title {
-	font-size: 1.25rem;
-	font-weight: bold;
-	color: var(--text-normal);
-}
+.full-calendar-container {
+	.tg-event-base {
+		position: absolute;
+		border-radius: 4px;
+		padding: 2px 6px;
+		font-size: var(--tg-font-event);
+		color: var(--text-on-accnet);
+		background-color: var(--background-secondary-alt) !important;
+		cursor: grab;
+		z-index: 10;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		box-shadow: var(--shadow-s);
+		transition:
+			opacity 0.2s,
+			transform 0.1s;
+	}
 
-/* Navigation buttons */
-.tg-nav {
-	display: flex;
-	gap: 8px;
-}
+	.tg-event-base:active {
+		cursor: grabbing;
+	}
 
-.tg-nav-btn {
-	padding: 4px 12px;
-	font-size: 14px;
-	border-radius: 4px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-secondary);
-	color: var(--text-normal);
-	cursor: pointer;
-	transition: all 0.2s;
-}
+	.tg-event-base:hover {
+		opacity: 0.9;
+		transform: translateY(-1px);
+		box-shadow: var(--shadow-l);
+		color: var(--text-on-accent);
+		background-color: var(--interactive-accent) !important;
+	}
 
-.tg-nav-btn:hover {
-	background: var(--background-modifier-hover);
-	border-color: var(--background-modifier-border-hover);
-}
+	.tg-event-base.tg-is-dragging-source {
+		opacity: 0.3;
+		filter: grayscale(0.3);
+	}
 
-.tg-nav-btn.tg-today {
-	background: var(--interactive-accent);
-	color: var(--text-on-accent);
-	border-color: var(--interactive-accent);
-}
+	/* Month view event bar */
+	.tg-event-bar {
+		height: 26px;
+		line-height: 26px;
+	}
 
-.tg-nav-btn.tg-today:hover {
-	opacity: 0.9;
-}
+	/* Time view event block */
+	.tg-event-block {
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-start;
+		line-height: 1.3;
+		padding-top: 4px;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+	}
 
-/* View switcher */
-.tg-view-switch {
-	display: flex;
-	background: var(--background-secondary);
-	padding: 4px;
-	border-radius: 8px;
-	gap: 4px;
-}
+	.tg-event-block .tg-time-text {
+		font-size: 10px;
+		opacity: 0.9;
+		margin-bottom: 0;
+	}
 
-.tg-view-btn {
-	padding: 4px 12px;
-	font-size: 14px;
-	border-radius: 6px;
-	border: none;
-	background: transparent;
-	cursor: pointer;
-	transition: all 0.2s;
-	color: var(--text-muted);
-}
+	.tg-event-title {
+		font-weight: bold;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
 
-.tg-view-btn:hover {
-	color: var(--text-normal);
-	background: var(--background-modifier-hover);
-}
-
-.tg-view-btn.tg-active {
-	background: var(--background-primary);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-	color: var(--interactive-accent);
-	font-weight: 500;
-}
-
-/* ============================================
-   Month View Styles
-   ============================================ */
-
-.tg-month-row {
-	position: relative;
-	/*height: 120px;*/
-	border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.tg-month-cell {
-	height: 100%;
-	border-right: 1px solid var(--background-modifier-border);
-	position: relative;
-	z-index: 1;
-	background: var(--background-primary);
-}
-
-.tg-month-cell:hover {
-	background: var(--background-primary-alt);
-}
-
-.tg-month-cell:last-child {
-	border-right: none;
-}
-
-/* Month view header */
-.tg-month-header {
-	border-bottom: 1px solid var(--background-modifier-border);
-	background: var(--background-secondary);
-}
-
-.tg-month-header-cell {
-	padding: 8px;
-	text-align: center;
-	font-size: 12px;
-	font-weight: bold;
-	color: var(--text-muted);
-}
-
-/* Date number in month cell */
-.tg-date-number {
-	text-align: right;
-	font-size: 12px;
-	padding: 4px;
-	color: var(--text-normal);
-}
-
-.tg-date-number.tg-current-month {
-	color: var(--text-normal);
-}
-
-.tg-date-number.tg-other-month {
-	color: var(--text-faint);
-}
-
-.tg-date-number.tg-today {
-	color: var(--interactive-accent);
-	font-weight: bold;
-	background: var(--background-modifier-hover);
-	border-radius: 50%;
-	width: 24px;
-	height: 24px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.tg-date-number.past-due {
-	color: var(--text-error);
-}
-
-/* ============================================
-   Time View Styles (Week/Day)
-   ============================================ */
-
-.tg-time-grid-container {
-	display: flex;
-	flex-direction: column;
-	height: 600px;
-	overflow-y: auto;
-	position: relative;
-	scroll-behavior: auto;
-}
-
-.tg-time-header {
-	display: flex;
-	border-bottom: 1px solid var(--background-modifier-border);
-	position: sticky;
-	top: 0;
-	background: var(--background-primary);
-	z-index: 30;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-
-	padding-right: var(--size-4-3);
-}
-
-.tg-time-header-cell {
-	flex: 1;
-	text-align: center;
-	padding: 8px;
-	border-right: 1px solid var(--background-modifier-border);
-	font-size: var(--tg-font-header);
-	color: var(--text-normal);
-}
-
-.tg-time-body {
-	display: flex;
-	position: relative;
-	min-height: calc(var(--tg-cell-height) * 24);
-}
-
-/* Time axis */
-.tg-time-axis {
-	width: 60px;
-	flex-shrink: 0;
-	background: var(--background-secondary);
-	border-right: 1px solid var(--background-modifier-border);
-	position: sticky;
-	left: 0;
-	z-index: 20;
-}
-
-.tg-time-axis-label {
-	height: var(--tg-cell-height);
-	position: absolute;
-	width: 100%;
-	text-align: right;
-	padding-right: 8px;
-	color: var(--text-muted);
-	font-size: 11px;
-	top: -6px;
-	pointer-events: none;
-}
-
-/* Day columns */
-.tg-day-column {
-	flex: 1;
-	position: relative;
-	border-right: 1px solid var(--background-modifier-border);
-	background: repeating-linear-gradient(
-		to bottom,
-		transparent 0,
-		transparent calc(var(--tg-cell-height) - 1px),
-		var(--background-modifier-border) var(--tg-cell-height)
-	);
-}
-
-/* ============================================
-   Event Styles
-   ============================================ */
-
-.tg-event-base {
-	position: absolute;
-	border-radius: 4px;
-	padding: 2px 6px;
-	font-size: var(--tg-font-event);
-	color: var(--text-on-accnet);
-	background-color: var(--background-secondary-alt) !important;
-	cursor: grab;
-	z-index: 10;
-	overflow: hidden;
-	white-space: nowrap;
-	text-overflow: ellipsis;
-	box-shadow: var(--shadow-s);
-	transition:
-		opacity 0.2s,
-		transform 0.1s;
-}
-
-.tg-event-base:active {
-	cursor: grabbing;
-}
-
-.tg-event-base:hover {
-	opacity: 0.9;
-	transform: translateY(-1px);
-	box-shadow: var(--shadow-l);
-	background-color: var(--interactive-accent) !important;
-}
-
-.tg-event-base.tg-is-dragging-source {
-	opacity: 0.3;
-	filter: grayscale(0.3);
-}
-
-/* Month view event bar */
-.tg-event-bar {
-	height: 26px;
-	line-height: 26px;
-}
-
-/* Time view event block */
-.tg-event-block {
-	display: flex;
-	flex-direction: column;
-	justify-content: flex-start;
-	line-height: 1.3;
-	padding-top: 4px;
-	border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.tg-event-block .tg-time-text {
-	font-size: 10px;
-	opacity: 0.9;
-	margin-bottom: 0;
-}
-
-.tg-event-title {
-	font-weight: bold;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-/* ============================================
+	/* ============================================
    Task Count Badge
    ============================================ */
 
-.tg-event-count-badge {
-	display: none;
-}
+	.tg-event-count-badge {
+		display: none;
+	}
 
-.tg-event-count-badge.has-priority {
-	background: var(--color-red);
-}
+	.tg-event-count-badge.has-priority {
+		background: var(--color-red);
+	}
 
-/* ============================================
+	/* ============================================
    Drag & Drop Styles
    ============================================ */
 
-/* Resize handles */
-.tg-resize-handle {
-	position: absolute;
-	z-index: 20;
-	opacity: 0;
-	transition: opacity 0.2s;
-}
+	/* Resize handles */
+	.tg-resize-handle {
+		position: absolute;
+		z-index: 20;
+		opacity: 0;
+		transition: opacity 0.2s;
+	}
 
-.tg-event-base:hover .tg-resize-handle {
-	opacity: 1;
-}
+	.tg-event-base:hover .tg-resize-handle {
+		opacity: 1;
+	}
 
-.tg-resize-handle:hover {
-	background-color: rgba(255, 255, 255, 0.4);
-}
+	.tg-resize-handle:hover {
+		background-color: rgba(255, 255, 255, 0.4);
+	}
 
-/* Horizontal resize handles (month view) */
-.tg-resize-h {
-	top: 0;
-	bottom: 0;
-	width: 12px;
-	cursor: col-resize;
-}
+	/* Horizontal resize handles (month view) */
+	.tg-resize-h {
+		top: 0;
+		bottom: 0;
+		width: 12px;
+		cursor: col-resize;
+	}
 
-.tg-resize-h.tg-left {
-	left: 0;
-}
+	.tg-resize-h.tg-left {
+		left: 0;
+	}
 
-.tg-resize-h.tg-right {
-	right: 0;
-}
+	.tg-resize-h.tg-right {
+		right: 0;
+	}
 
-/* Vertical resize handle (time view) */
-.tg-resize-v {
-	left: 0;
-	right: 0;
-	height: 8px;
-	cursor: row-resize;
-}
+	/* Vertical resize handle (time view) */
+	.tg-resize-v {
+		left: 0;
+		right: 0;
+		height: 8px;
+		cursor: row-resize;
+	}
 
-.tg-resize-v.tg-top {
-	top: 0;
-	bottom: auto;
-}
+	.tg-resize-v.tg-top {
+		top: 0;
+		bottom: auto;
+	}
 
-.tg-resize-v.tg-bottom {
-	bottom: 0;
-	top: auto;
-}
+	.tg-resize-v.tg-bottom {
+		bottom: 0;
+		top: auto;
+	}
 
-/* Ghost element for drag preview */
-.tg-ghost-event {
-	position: absolute;
-	background-color: rgba(var(--tg-primary-rgb), 0.15);
-	border: 2px dashed rgba(var(--tg-primary-rgb), 0.8);
-	border-radius: 4px;
-	z-index: 5;
-	pointer-events: none;
-	box-sizing: border-box;
-}
+	/* Ghost element for drag preview */
+	.tg-ghost-event {
+		position: absolute;
+		background-color: rgba(var(--tg-primary-rgb), 0.15);
+		border: 2px dashed rgba(var(--tg-primary-rgb), 0.8);
+		border-radius: 4px;
+		z-index: 5;
+		pointer-events: none;
+		box-sizing: border-box;
+	}
 
-/* Drag proxy */
-#tg-drag-proxy {
-	position: fixed;
-	pointer-events: none;
-	z-index: 9999;
-	box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-	border-radius: 4px;
-	visibility: hidden;
-	opacity: 0.9;
-	transform-origin: top left;
-}
+	/* Drag proxy */
+	#tg-drag-proxy {
+		position: fixed;
+		pointer-events: none;
+		z-index: 9999;
+		box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+		border-radius: 4px;
+		visibility: hidden;
+		opacity: 0.9;
+		transform-origin: top left;
+	}
 
-/* ============================================
+	/* ============================================
    Grid Layout Helpers
    ============================================ */
 
-.tg-grid-7 {
-	display: grid;
-	grid-template-columns: repeat(7, 1fr);
-	gap: 1px;
+	.tg-grid-7 {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 1px;
+	}
+
+	.tg-time-grid-container::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	.tg-time-grid-container::-webkit-scrollbar-track {
+		background: var(--background-secondary);
+	}
+
+	.tg-time-grid-container::-webkit-scrollbar-thumb {
+		background: var(--background-modifier-border);
+		border-radius: 4px;
+	}
+
+	.tg-time-grid-container::-webkit-scrollbar-thumb:hover {
+		background: var(--background-modifier-border-hover);
+	}
+
+	/* ============================================
+   Accessibility
+   ============================================ */
+
+	.tg-event-base:focus {
+		outline: 2px solid var(--interactive-accent);
+		outline-offset: 2px;
+	}
+
+	.tg-nav-btn:focus,
+	.tg-view-btn:focus {
+		outline: 2px solid var(--interactive-accent);
+		outline-offset: 1px;
+	}
+
+	/* ============================================
+   Animation & Transitions
+   ============================================ */
+
+	.tg-month-cell,
+	.tg-event-base,
+	.tg-nav-btn,
+	.tg-view-btn {
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	/* ============================================
+   Task Checkbox Overlay
+   ============================================ */
+
+	/* Container for checkbox in TGCalendar events */
+	.tg-event .task-checkbox-overlay {
+		position: absolute;
+		left: 2px;
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 15;
+		background: rgba(var(--background-primary-rgb, 255, 255, 255), 0.9);
+		border-radius: 3px;
+		padding: 0 2px;
+		display: flex;
+		align-items: center;
+		opacity: 0;
+		transition: opacity 0.2s;
+	}
+
+	/* Show checkbox on hover */
+	.tg-event:hover .task-checkbox-overlay {
+		opacity: 1;
+	}
+
+	/* Checkbox styling */
+	.task-checkbox-overlay .task-list-item-checkbox {
+		width: 16px;
+		height: 16px;
+		margin: 0;
+		cursor: pointer;
+		z-index: 20;
+	}
+
+	/* Ensure event title doesn't overlap with checkbox */
+	.tg-event:has(.task-checkbox-overlay) .tg-event-title {
+		padding-left: 22px;
+	}
+
+	/* Month view - always show checkbox for better UX */
+	.tg-month-view .tg-event .task-checkbox-overlay {
+		opacity: 1;
+	}
+
+	.tg-allday-events-container {
+		margin-right: var(--size-4-3);
+	}
+
+	.tg-allday-section {
+		display: flex;
+		flex-direction: row;
+		border-bottom: 1px solid var(--background-modifier-border);
+		background-color: var(--background-secondary);
+		min-height: 28px;
+	}
+
+	.tg-allday-spacer {
+		border-color: var(--background-modifier-border);
+	}
+
+	/* Day columns */
+	.tg-day-column {
+		flex: 1;
+		position: relative !important; /* Force relative positioning for range selection preview */
+		border-right: 1px solid var(--background-modifier-border);
+		background: repeating-linear-gradient(
+			to bottom,
+			transparent 0,
+			transparent calc(var(--tg-cell-height) - 1px),
+			var(--background-modifier-border) var(--tg-cell-height)
+		);
+	}
+
+	/* Range selection preview for time view (week/day) */
+	.tg-time-range-preview {
+		position: absolute !important;
+		background-color: rgba(
+			var(--interactive-accent-rgb, 59, 130, 246),
+			0.15
+		);
+		border: 2px dashed
+			rgba(var(--interactive-accent-rgb, 59, 130, 246), 0.8);
+		pointer-events: none;
+		z-index: 15;
+		border-radius: 4px;
+		box-sizing: border-box;
+	}
+
+	/* Range preview class for day columns (multi-day selection) */
+	.tg-day-column.tg-range-preview {
+		background-color: rgba(
+			var(--interactive-accent-rgb, 59, 130, 246),
+			0.08
+		);
+	}
+
+	.tg-day-column.tg-range-preview::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		border-left: 3px solid
+			rgba(var(--interactive-accent-rgb, 59, 130, 246), 0.5);
+		border-right: 3px solid
+			rgba(var(--interactive-accent-rgb, 59, 130, 246), 0.5);
+		pointer-events: none;
+		box-sizing: border-box;
+	}
+
+	/* Month view range preview */
+	.tg-month-cell.tg-range-preview {
+		background-color: rgba(
+			var(--interactive-accent-rgb, 59, 130, 246),
+			0.15
+		) !important;
+	}
+
+	.tg-month-cell.tg-range-preview::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		border: 2px solid rgba(var(--interactive-accent-rgb, 59, 130, 246), 0.5);
+		pointer-events: none;
+		box-sizing: border-box;
+	}
+
+	/* Prevent text selection during range selection */
+	.tg-calendar.tg-selecting {
+		user-select: none;
+		-webkit-user-select: none;
+	}
+
+	.tg-calendar.tg-selecting * {
+		cursor: crosshair !important;
+	}
+
+	/* Hide the library's built-in header since we use our own custom calendar-header */
+	.tg-header {
+		display: none !important;
+	}
+
+	.tg-title {
+		font-size: 1.25rem;
+		font-weight: bold;
+		color: var(--text-normal);
+	}
+
+	/* Navigation buttons */
+	.tg-nav {
+		display: flex;
+		gap: 8px;
+	}
+
+	.tg-nav-btn {
+		padding: 4px 12px;
+		font-size: 14px;
+		border-radius: 4px;
+		border: 1px solid var(--background-modifier-border);
+		background: var(--background-secondary);
+		color: var(--text-normal);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.tg-nav-btn:hover {
+		background: var(--background-modifier-hover);
+		border-color: var(--background-modifier-border-hover);
+	}
+
+	.tg-nav-btn.tg-today {
+		background: var(--interactive-accent);
+		color: var(--text-on-accent);
+		border-color: var(--interactive-accent);
+	}
+
+	.tg-nav-btn.tg-today:hover {
+		opacity: 0.9;
+	}
+
+	/* View switcher */
+	.tg-view-switch {
+		display: flex;
+		background: var(--background-secondary);
+		padding: 4px;
+		border-radius: 8px;
+		gap: 4px;
+	}
+
+	.tg-view-btn {
+		padding: 4px 12px;
+		font-size: 14px;
+		border-radius: 6px;
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		transition: all 0.2s;
+		color: var(--text-muted);
+	}
+
+	.tg-view-btn:hover {
+		color: var(--text-normal);
+		background: var(--background-modifier-hover);
+	}
+
+	.tg-view-btn.tg-active {
+		background: var(--background-primary);
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+		color: var(--interactive-accent);
+		font-weight: 500;
+	}
+
+	/* ============================================
+   Month View Styles
+   ============================================ */
+
+	.tg-month-row {
+		position: relative;
+		/*height: 120px;*/
+		border-bottom: 1px solid var(--background-modifier-border);
+	}
+
+	.tg-month-cell {
+		height: 100%;
+		border-right: 1px solid var(--background-modifier-border);
+		position: relative;
+		z-index: 1;
+		background: var(--background-primary);
+	}
+
+	.tg-month-cell:hover {
+		background: var(--background-primary-alt);
+	}
+
+	.tg-month-cell:last-child {
+		border-right: none;
+	}
+
+	/* Month view header */
+	.tg-month-header {
+		border-bottom: 1px solid var(--background-modifier-border);
+		background: var(--background-secondary);
+	}
+
+	.tg-month-header-cell {
+		padding: 8px;
+		text-align: center;
+		font-size: 12px;
+		font-weight: bold;
+		color: var(--text-muted);
+	}
+
+	/* Date number in month cell */
+	.tg-date-number {
+		text-align: right;
+		font-size: 12px;
+		padding: 4px;
+		color: var(--text-normal);
+	}
+
+	.tg-date-number.tg-current-month {
+		color: var(--text-normal);
+	}
+
+	.tg-date-number.tg-other-month {
+		color: var(--text-faint);
+	}
+
+	.tg-date-number.tg-today {
+		color: var(--interactive-accent);
+		font-weight: bold;
+		background: var(--background-modifier-hover);
+		border-radius: 50%;
+		width: 24px;
+		height: 24px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.tg-date-number.past-due {
+		color: var(--text-error);
+	}
+
+	/* ============================================
+   Time View Styles (Week/Day)
+   ============================================ */
+
+	.tg-time-grid-container {
+		display: flex;
+		flex-direction: column;
+		height: 600px;
+		overflow-y: auto;
+		position: relative;
+		scroll-behavior: auto;
+	}
+
+	.tg-time-header {
+		display: flex;
+		border-bottom: 1px solid var(--background-modifier-border);
+		position: sticky;
+		top: 0;
+		background: var(--background-primary);
+		z-index: 30;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+
+		padding-right: var(--size-4-3);
+	}
+
+	.tg-time-header-cell {
+		flex: 1;
+		text-align: center;
+		padding: 8px;
+		border-right: 1px solid var(--background-modifier-border);
+		font-size: var(--tg-font-header);
+		color: var(--text-normal);
+	}
+
+	.tg-time-body {
+		display: flex;
+		position: relative;
+		min-height: calc(var(--tg-cell-height) * 24);
+	}
+
+	/* Time axis */
+	.tg-time-axis {
+		width: 60px;
+		flex-shrink: 0;
+		background: var(--background-secondary);
+		border-right: 1px solid var(--background-modifier-border);
+		position: sticky;
+		left: 0;
+		z-index: 20;
+	}
+
+	.tg-time-axis-label {
+		height: var(--tg-cell-height);
+		position: absolute;
+		width: 100%;
+		text-align: right;
+		padding-right: 8px;
+		color: var(--text-muted);
+		font-size: 11px;
+		top: -6px;
+		pointer-events: none;
+	}
 }
 
 /* ============================================
    Dark Theme Specific Adjustments
    ============================================ */
 
-.theme-dark .tg-view-container {
-	background: var(--background-primary);
-}
+.theme-dark .full-calendar-container {
+	.tg-view-container {
+		background: var(--background-primary);
+	}
 
-.theme-dark .tg-month-cell {
-	background: var(--background-primary);
-}
+	.tg-month-cell {
+		background: var(--background-primary);
+	}
 
-.theme-dark .tg-month-cell:hover {
-	background: var(--background-primary-alt);
-}
+	.tg-month-cell:hover {
+		background: var(--background-primary-alt);
+	}
 
-.theme-dark .tg-time-header {
-	background: var(--background-primary);
-}
+	.tg-time-header {
+		background: var(--background-primary);
+	}
 
-.theme-dark .tg-event-base {
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
+	.tg-event-base {
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+	}
 
-.theme-dark .tg-ghost-event {
-	background-color: rgba(var(--tg-primary-rgb), 0.2);
-	border-color: rgba(var(--tg-primary-rgb), 0.6);
-}
-
-/* ============================================
-   Light Theme Specific Adjustments
-   ============================================ */
-
-.theme-light .tg-view-container {
-	background: var(--background-primary);
-}
-
-.theme-light .tg-month-cell {
-	background: var(--background-primary);
-}
-
-.theme-light .tg-event-base {
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+	.tg-ghost-event {
+		background-color: rgba(var(--tg-primary-rgb), 0.2);
+		border-color: rgba(var(--tg-primary-rgb), 0.6);
+	}
 }
 
 /* ============================================
    Scrollbar Styling (Obsidian-like)
    ============================================ */
 
-.tg-time-grid-container::-webkit-scrollbar {
-	width: 8px;
-}
-
-.tg-time-grid-container::-webkit-scrollbar-track {
-	background: var(--background-secondary);
-}
-
-.tg-time-grid-container::-webkit-scrollbar-thumb {
-	background: var(--background-modifier-border);
-	border-radius: 4px;
-}
-
-.tg-time-grid-container::-webkit-scrollbar-thumb:hover {
-	background: var(--background-modifier-border-hover);
-}
-
 /* ============================================
    Responsive Adjustments
    ============================================ */
 
 @media (max-width: 768px) {
-	.tg-calendar {
-		--tg-cell-height: 50px;
-		--tg-font-header: 12px;
-		--tg-font-event: 11px;
+	.theme-dark .full-calendar-container {
+		.tg-calendar {
+			--tg-cell-height: 50px;
+			--tg-font-header: 12px;
+			--tg-font-event: 11px;
+		}
+
+		.tg-time-axis {
+			width: 50px;
+		}
+
+		.tg-view-switch {
+			flex-wrap: wrap;
+		}
 	}
-
-	.tg-time-axis {
-		width: 50px;
-	}
-
-	.tg-view-switch {
-		flex-wrap: wrap;
-	}
-}
-
-/* ============================================
-   Accessibility
-   ============================================ */
-
-.tg-event-base:focus {
-	outline: 2px solid var(--interactive-accent);
-	outline-offset: 2px;
-}
-
-.tg-nav-btn:focus,
-.tg-view-btn:focus {
-	outline: 2px solid var(--interactive-accent);
-	outline-offset: 1px;
-}
-
-/* ============================================
-   Animation & Transitions
-   ============================================ */
-
-.tg-month-cell,
-.tg-event-base,
-.tg-nav-btn,
-.tg-view-btn {
-	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Smooth entry animation for events */
@@ -556,68 +680,4 @@
 		opacity: 1;
 		transform: scale(1);
 	}
-}
-
-/*.tg-event-base {
-	animation: tg-event-enter 0.2s ease-out;
-}*/
-
-/* ============================================
-   Task Checkbox Overlay
-   ============================================ */
-
-/* Container for checkbox in TGCalendar events */
-.tg-event .task-checkbox-overlay {
-	position: absolute;
-	left: 2px;
-	top: 50%;
-	transform: translateY(-50%);
-	z-index: 15;
-	background: rgba(var(--background-primary-rgb, 255, 255, 255), 0.9);
-	border-radius: 3px;
-	padding: 0 2px;
-	display: flex;
-	align-items: center;
-	opacity: 0;
-	transition: opacity 0.2s;
-}
-
-/* Show checkbox on hover */
-.tg-event:hover .task-checkbox-overlay {
-	opacity: 1;
-}
-
-/* Checkbox styling */
-.task-checkbox-overlay .task-list-item-checkbox {
-	width: 16px;
-	height: 16px;
-	margin: 0;
-	cursor: pointer;
-	z-index: 20;
-}
-
-/* Ensure event title doesn't overlap with checkbox */
-.tg-event:has(.task-checkbox-overlay) .tg-event-title {
-	padding-left: 22px;
-}
-
-/* Month view - always show checkbox for better UX */
-.tg-month-view .tg-event .task-checkbox-overlay {
-	opacity: 1;
-}
-
-.tg-allday-events-container {
-	margin-right: var(--size-4-3);
-}
-
-.tg-allday-section {
-	display: flex;
-	flex-direction: row;
-	border-bottom: 1px solid var(--background-modifier-border);
-	background-color: var(--background-secondary);
-	min-height: 28px;
-}
-
-.tg-allday-spacer {
-	border-color: var(--background-modifier-border);
 }

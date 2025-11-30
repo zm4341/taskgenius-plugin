@@ -439,7 +439,17 @@ export class TaskSpecificView extends ItemView {
 					this.toggleTaskCompletion(task);
 				},
 				onEventContextMenu: (ev: MouseEvent, event: CalendarEvent) => {
-					this.handleTaskContextMenu(ev, event);
+					// Extract original task from metadata to ensure all fields (like filePath) are present
+					const realTask = (event as any)?.metadata
+						?.originalTask as Task;
+					if (realTask) {
+						this.handleTaskContextMenu(ev, realTask);
+					} else {
+						this.handleTaskContextMenu(
+							ev,
+							event as unknown as Task,
+						);
+					}
 				},
 			},
 		);

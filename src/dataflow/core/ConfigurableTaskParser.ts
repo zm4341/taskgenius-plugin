@@ -674,6 +674,22 @@ export class MarkdownTaskParser {
 			);
 		}
 
+		// Fallback: If start date exists but no start time, and we have a due time (default context)
+		// but no due date, assume the time belongs to the start date.
+		// This handles cases like "🛫 2025-11-29 18:00" where the time defaults to "due" context
+		// but should actually be associated with the start date.
+		if (
+			dates.startDate &&
+			!timeComponents.startTime &&
+			!dates.dueDate &&
+			timeComponents.dueTime
+		) {
+			enhancedDates.startDateTime = combineDateTime(
+				dates.startDate,
+				timeComponents.dueTime,
+			);
+		}
+
 		// Combine due date with due time
 		if (dates.dueDate && timeComponents.dueTime) {
 			enhancedDates.dueDateTime = combineDateTime(

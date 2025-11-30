@@ -57,10 +57,6 @@ import "@/styles/calendar/event.css";
 import "@/styles/calendar/badge.css";
 import { t } from "@/translations/helper";
 
-// Import original view implementations for agenda/year (legacy, kept for reference)
-import { AgendaView } from "./views/agenda-view";
-import { YearView } from "./views/year-view";
-
 // Import new TG-based view implementations
 import { TGAgendaView } from "./views/tg-agenda-view";
 import { TGYearView } from "./views/tg-year-view";
@@ -273,10 +269,6 @@ export class CalendarComponent extends Component {
 	// View registry for custom views (agenda, year, and user-defined)
 	private viewRegistry: ViewRegistry = new ViewRegistry();
 
-	// Original view components (legacy, kept for backward compatibility)
-	private agendaView: AgendaView | null = null;
-	private yearView: YearView | null = null;
-
 	// Badge events cache
 	private badgeEventsCache: Map<string, CalendarEvent[]> = new Map();
 
@@ -381,16 +373,6 @@ export class CalendarComponent extends Component {
 			this.tgCalendar = null;
 		}
 
-		// Clean up original views
-		if (this.agendaView) {
-			this.removeChild(this.agendaView);
-			this.agendaView = null;
-		}
-		if (this.yearView) {
-			this.removeChild(this.yearView);
-			this.yearView = null;
-		}
-
 		this.containerEl.empty();
 	}
 
@@ -460,10 +442,6 @@ export class CalendarComponent extends Component {
 	public setConfigOverride(override: Partial<CalendarSpecificConfig> | null) {
 		this.configOverride = override ?? null;
 		this.render();
-	}
-
-	public get currentViewComponent() {
-		return this.agendaView || this.yearView || null;
 	}
 
 	public getBadgeEventsForDate(date: Date): CalendarEvent[] {
@@ -723,14 +701,6 @@ export class CalendarComponent extends Component {
 			this.tgCalendar.destroy();
 			this.tgCalendar = null;
 		}
-		if (this.agendaView) {
-			this.removeChild(this.agendaView);
-			this.agendaView = null;
-		}
-		if (this.yearView) {
-			this.removeChild(this.yearView);
-			this.yearView = null;
-		}
 
 		// Update view class
 		this.viewContainerEl.removeClass(
@@ -928,7 +898,7 @@ export class CalendarComponent extends Component {
 			},
 			draggable: {
 				enabled: true,
-				snapMinutes: 1440,
+				snapMinutes: 15, // 15-minute snap for range selection support
 				ghostOpacity: 0.5,
 			},
 			theme: {
@@ -955,6 +925,11 @@ export class CalendarComponent extends Component {
 				this.handleTimeSlotClick(dateTime),
 			onTimeSlotDoubleClick: (dateTime: Date) =>
 				this.handleTimeSlotDoubleClick(dateTime),
+			// Range selection (drag to select multiple cells)
+			onDateRangeSelect: (startDate: Date, endDate: Date) =>
+				this.handleDateRangeSelect(startDate, endDate),
+			onTimeRangeSelect: (startDateTime: Date, endDateTime: Date) =>
+				this.handleTimeRangeSelect(startDateTime, endDateTime),
 			onRenderDateCell: (ctx: any) => this.handleTGRenderDateCell(ctx),
 			// Custom event rendering - adds checkbox for task completion
 			onRenderEvent: (ctx: EventRenderContext) =>
@@ -1011,7 +986,7 @@ export class CalendarComponent extends Component {
 			},
 			draggable: {
 				enabled: true,
-				snapMinutes: 1440, // Date-only drag
+				snapMinutes: 15, // 15-minute snap for range selection support
 				ghostOpacity: 0.5,
 			},
 			theme: {
@@ -1042,6 +1017,11 @@ export class CalendarComponent extends Component {
 				this.handleTimeSlotClick(dateTime),
 			onTimeSlotDoubleClick: (dateTime: Date) =>
 				this.handleTimeSlotDoubleClick(dateTime),
+			// Range selection (drag to select multiple cells)
+			onDateRangeSelect: (startDate: Date, endDate: Date) =>
+				this.handleDateRangeSelect(startDate, endDate),
+			onTimeRangeSelect: (startDateTime: Date, endDateTime: Date) =>
+				this.handleTimeRangeSelect(startDateTime, endDateTime),
 			// Custom cell rendering
 			onRenderDateCell: (ctx: any) => this.handleTGRenderDateCell(ctx),
 			// Custom event rendering - adds checkbox for task completion
@@ -1100,46 +1080,6 @@ export class CalendarComponent extends Component {
 
 		// Sync current date
 		this.tgCalendar.goToDate(this.currentDate.toDate());
-	}
-
-	private renderAgendaView() {
-		this.agendaView = new AgendaView(
-			this.app,
-			this.plugin,
-			this.viewContainerEl,
-			this.currentDate,
-			this.events,
-			{
-				onEventClick: this.onEventClick,
-				onEventHover: this.onEventHover,
-				onEventContextMenu: this.onEventContextMenu,
-				onEventComplete: this.onEventComplete,
-			},
-		);
-		this.addChild(this.agendaView);
-		this.agendaView.updateEvents(this.events);
-	}
-
-	private renderYearView() {
-		const config = this.getEffectiveCalendarConfig();
-		this.yearView = new YearView(
-			this.app,
-			this.plugin,
-			this.viewContainerEl,
-			this.currentDate,
-			this.events,
-			{
-				onEventClick: this.onEventClick,
-				onEventHover: this.onEventHover,
-				onDayClick: this.onDayClick,
-				onDayHover: this.onDayHover,
-				onMonthClick: this.onMonthClick,
-				onMonthHover: this.onMonthHover,
-			},
-			config,
-		);
-		this.addChild(this.yearView);
-		this.yearView.updateEvents(this.events);
 	}
 
 	// ============================================
@@ -1786,6 +1726,38 @@ export class CalendarComponent extends Component {
 			this.app,
 			this.plugin,
 			{ dueDate: dateTime },
+			true,
+		).open();
+	}
+
+	/**
+	 * Handle date range selection in month view
+	 * Opens quick capture modal with start and due dates pre-filled
+	 */
+	private handleDateRangeSelect(startDate: Date, endDate: Date) {
+		new QuickCaptureModal(
+			this.app,
+			this.plugin,
+			{
+				startDate: startDate,
+				dueDate: endDate,
+			},
+			true,
+		).open();
+	}
+
+	/**
+	 * Handle time range selection in week/day view
+	 * Opens quick capture modal with start and due dates/times pre-filled
+	 */
+	private handleTimeRangeSelect(startDateTime: Date, endDateTime: Date) {
+		new QuickCaptureModal(
+			this.app,
+			this.plugin,
+			{
+				startDate: startDateTime,
+				dueDate: endDateTime,
+			},
 			true,
 		).open();
 	}

@@ -102,7 +102,78 @@ export function tasksToCalendarEvents(tasks: Task[]): CalendarEvent[] {
  * @returns Object with start and optional end timestamp
  */
 function calculateTaskDateRange(task: Task): TaskDateRange {
-	const { startDate, dueDate, scheduledDate } = task.metadata;
+	const enhancedDates = (task.metadata as any).enhancedDates;
+
+	// Use enhanced dates (with time) if available, otherwise fall back to standard dates
+	const startDate = enhancedDates?.startDateTime
+		? enhancedDates.startDateTime.getTime()
+		: task.metadata.startDate;
+	const dueDate = enhancedDates?.dueDateTime
+		? enhancedDates.dueDateTime.getTime()
+		: task.metadata.dueDate;
+	const scheduledDate = enhancedDates?.scheduledDateTime
+		? enhancedDates.scheduledDateTime.getTime()
+		: task.metadata.scheduledDate;
+
+	// Default duration for timed events without explicit end time
+	const DEFAULT_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+
+	// Special case: explicit start and end time (e.g. from time range parsing like "10:00-12:00")
+	// This handles cases where start and end are explicitly defined in the enhanced metadata
+	if (enhancedDates?.startDateTime && enhancedDates?.endDateTime) {
+		return {
+			start: enhancedDates.startDateTime.getTime(),
+			end: enhancedDates.endDateTime.getTime(),
+		};
+	}
+
+	// Handle single datetime with time info: add default 30-minute duration
+	// This ensures tasks with only start time (e.g., "🛫 2025-11-29 23:35") still show on calendar
+	if (enhancedDates?.startDateTime && !enhancedDates?.endDateTime) {
+		const startTime = enhancedDates.startDateTime.getTime();
+		// If there's a due date, use it as end; otherwise add 30 minutes
+		if (dueDate && dueDate > startTime) {
+			return { start: startTime, end: dueDate };
+		}
+		return { start: startTime, end: startTime + DEFAULT_DURATION_MS };
+	}
+
+	if (enhancedDates?.dueDateTime && !enhancedDates?.startDateTime) {
+		const dueTime = enhancedDates.dueDateTime.getTime();
+		// If there's a start date, use it; otherwise subtract 30 minutes
+		if (startDate && startDate < dueTime) {
+			return { start: startDate, end: dueTime };
+		}
+		return { start: dueTime - DEFAULT_DURATION_MS, end: dueTime };
+	}
+
+	if (
+		enhancedDates?.scheduledDateTime &&
+		!enhancedDates?.startDateTime &&
+		!enhancedDates?.dueDateTime
+	) {
+		const scheduledTime = enhancedDates.scheduledDateTime.getTime();
+		return {
+			start: scheduledTime,
+			end: scheduledTime + DEFAULT_DURATION_MS,
+		};
+	}
+
+	// FALLBACK: Handle cases where date was parsed with time directly into metadata
+	// (without creating enhancedDates). Check if the timestamp has time component.
+	// This happens when emoji parser extracts "🛫 2025-11-29 18:00" directly.
+	if (startDate && !dueDate && !scheduledDate && !isDateOnly(startDate)) {
+		return { start: startDate, end: startDate + DEFAULT_DURATION_MS };
+	}
+	if (dueDate && !startDate && !scheduledDate && !isDateOnly(dueDate)) {
+		return { start: dueDate - DEFAULT_DURATION_MS, end: dueDate };
+	}
+	if (scheduledDate && !startDate && !dueDate && !isDateOnly(scheduledDate)) {
+		return {
+			start: scheduledDate,
+			end: scheduledDate + DEFAULT_DURATION_MS,
+		};
+	}
 
 	// Priority 1: startDate → dueDate (multi-day span)
 	if (startDate && dueDate && startDate !== dueDate && startDate < dueDate) {
@@ -188,6 +259,7 @@ function formatDateForCalendar(timestamp: number, isAllDay: boolean): string {
 	if (isAllDay) {
 		return format(date, "yyyy-MM-dd");
 	}
+	// Use space separator for calendar adapter compatibility (NativeDateAdapter/DateFnsAdapter)
 	return format(date, "yyyy-MM-dd HH:mm");
 }
 

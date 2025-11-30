@@ -5,7 +5,7 @@ import type { EnhancedTimeParsingConfig } from "@/types/time-parsing";
 
 export function renderTimeParsingSettingsTab(
 	pluginSettingTab: TaskProgressBarSettingTab,
-	containerEl: HTMLElement
+	containerEl: HTMLElement,
 ) {
 	containerEl.createEl("h2", { text: t("Time Parsing Settings") });
 
@@ -46,16 +46,17 @@ export function renderTimeParsingSettingsTab(
 		.setName(t("Enable Time Parsing"))
 		.setDesc(
 			t(
-				"Automatically parse natural language time expressions and specific times (12:00, 1:30 PM, 12:00-13:00)"
-			)
+				"Automatically parse natural language time expressions and specific times (12:00, 1:30 PM, 12:00-13:00)",
+			),
 		)
 		.addToggle((toggle) =>
 			toggle
 				.setValue(pluginSettingTab.plugin.settings.timeParsing.enabled)
 				.onChange(async (value) => {
-					pluginSettingTab.plugin.settings.timeParsing.enabled = value;
+					pluginSettingTab.plugin.settings.timeParsing.enabled =
+						value;
 					pluginSettingTab.applySettingsUpdate();
-				})
+				}),
 		);
 
 	// Remove Original Text
@@ -66,27 +67,30 @@ export function renderTimeParsingSettingsTab(
 			toggle
 				.setValue(
 					pluginSettingTab.plugin.settings.timeParsing
-						?.removeOriginalText ?? true
+						?.removeOriginalText ?? true,
 				)
 				.onChange(async (value) => {
 					if (!pluginSettingTab.plugin.settings.timeParsing) return;
 					pluginSettingTab.plugin.settings.timeParsing.removeOriginalText =
 						value;
 					pluginSettingTab.applySettingsUpdate();
-				})
+				}),
 		);
 
 	// Supported Languages
-	containerEl.createEl("h3", { text: t("Supported Languages") });
-	containerEl.createEl("p", {
-		text: t(
-			"Currently supports English and Chinese time expressions. More languages may be added in future updates."
-		),
-		cls: "setting-item-description",
-	});
+	new Setting(containerEl)
+		.setName(t("Supported Languages"))
+		.setDesc(
+			t(
+				"Currently supports English and Chinese time expressions. More languages may be added in future updates.",
+			),
+		)
+		.setHeading();
 
-	// Date Keywords Configuration
-	containerEl.createEl("h3", { text: t("Date Keywords Configuration") });
+	new Setting(containerEl)
+		.setName(t("Date Keywords Configuration"))
+		.setDesc(t("Configure keywords for date parsing"))
+		.setHeading();
 
 	// Start Date Keywords
 	new Setting(containerEl)
@@ -154,8 +158,10 @@ export function renderTimeParsingSettingsTab(
 			text.inputEl.rows = 2;
 		});
 
-	// Time Format Configuration
-	containerEl.createEl("h3", { text: t("Time Format Configuration") });
+	new Setting(containerEl)
+		.setName(t("Time Format Configuration"))
+		.setDesc(t("Configure the format of time expressions"))
+		.setHeading();
 
 	// Preferred Time Format
 	new Setting(containerEl)
@@ -165,16 +171,24 @@ export function renderTimeParsingSettingsTab(
 			dropdown
 				.addOption("12h", t("12-hour format (1:30 PM)"))
 				.addOption("24h", t("24-hour format (13:30)"))
-				.setValue(pluginSettingTab.plugin.settings.timeParsing.timeDefaults?.preferredFormat || "24h")
+				.setValue(
+					pluginSettingTab.plugin.settings.timeParsing.timeDefaults
+						?.preferredFormat || "24h",
+				)
 				.onChange(async (value: "12h" | "24h") => {
-					if (!pluginSettingTab.plugin.settings.timeParsing.timeDefaults) {
-						pluginSettingTab.plugin.settings.timeParsing.timeDefaults = {
-							preferredFormat: value,
-							defaultPeriod: "AM",
-							midnightCrossing: "next-day",
-						};
+					if (
+						!pluginSettingTab.plugin.settings.timeParsing
+							.timeDefaults
+					) {
+						pluginSettingTab.plugin.settings.timeParsing.timeDefaults =
+							{
+								preferredFormat: value,
+								defaultPeriod: "AM",
+								midnightCrossing: "next-day",
+							};
 					} else {
-						pluginSettingTab.plugin.settings.timeParsing.timeDefaults.preferredFormat = value;
+						pluginSettingTab.plugin.settings.timeParsing.timeDefaults.preferredFormat =
+							value;
 					}
 					pluginSettingTab.applySettingsUpdate();
 				});
@@ -188,16 +202,24 @@ export function renderTimeParsingSettingsTab(
 			dropdown
 				.addOption("AM", t("AM (Morning)"))
 				.addOption("PM", t("PM (Afternoon/Evening)"))
-				.setValue(pluginSettingTab.plugin.settings.timeParsing.timeDefaults?.defaultPeriod || "AM")
+				.setValue(
+					pluginSettingTab.plugin.settings.timeParsing.timeDefaults
+						?.defaultPeriod || "AM",
+				)
 				.onChange(async (value: "AM" | "PM") => {
-					if (!pluginSettingTab.plugin.settings.timeParsing.timeDefaults) {
-						pluginSettingTab.plugin.settings.timeParsing.timeDefaults = {
-							preferredFormat: "24h",
-							defaultPeriod: value,
-							midnightCrossing: "next-day",
-						};
+					if (
+						!pluginSettingTab.plugin.settings.timeParsing
+							.timeDefaults
+					) {
+						pluginSettingTab.plugin.settings.timeParsing.timeDefaults =
+							{
+								preferredFormat: "24h",
+								defaultPeriod: value,
+								midnightCrossing: "next-day",
+							};
 					} else {
-						pluginSettingTab.plugin.settings.timeParsing.timeDefaults.defaultPeriod = value;
+						pluginSettingTab.plugin.settings.timeParsing.timeDefaults.defaultPeriod =
+							value;
 					}
 					pluginSettingTab.applySettingsUpdate();
 				});
@@ -206,22 +228,37 @@ export function renderTimeParsingSettingsTab(
 	// Midnight Crossing Behavior
 	new Setting(containerEl)
 		.setName(t("Midnight Crossing Behavior"))
-		.setDesc(t("How to handle time ranges that cross midnight (e.g., 23:00-01:00)"))
+		.setDesc(
+			t(
+				"How to handle time ranges that cross midnight (e.g., 23:00-01:00)",
+			),
+		)
 		.addDropdown((dropdown) => {
 			dropdown
-				.addOption("next-day", t("Next day (23:00 today - 01:00 tomorrow)"))
+				.addOption(
+					"next-day",
+					t("Next day (23:00 today - 01:00 tomorrow)"),
+				)
 				.addOption("same-day", t("Same day (treat as error)"))
 				.addOption("error", t("Show error"))
-				.setValue(pluginSettingTab.plugin.settings.timeParsing.timeDefaults?.midnightCrossing || "next-day")
+				.setValue(
+					pluginSettingTab.plugin.settings.timeParsing.timeDefaults
+						?.midnightCrossing || "next-day",
+				)
 				.onChange(async (value: "next-day" | "same-day" | "error") => {
-					if (!pluginSettingTab.plugin.settings.timeParsing.timeDefaults) {
-						pluginSettingTab.plugin.settings.timeParsing.timeDefaults = {
-							preferredFormat: "24h",
-							defaultPeriod: "AM",
-							midnightCrossing: value,
-						};
+					if (
+						!pluginSettingTab.plugin.settings.timeParsing
+							.timeDefaults
+					) {
+						pluginSettingTab.plugin.settings.timeParsing.timeDefaults =
+							{
+								preferredFormat: "24h",
+								defaultPeriod: "AM",
+								midnightCrossing: value,
+							};
 					} else {
-						pluginSettingTab.plugin.settings.timeParsing.timeDefaults.midnightCrossing = value;
+						pluginSettingTab.plugin.settings.timeParsing.timeDefaults.midnightCrossing =
+							value;
 					}
 					pluginSettingTab.applySettingsUpdate();
 				});
@@ -232,19 +269,30 @@ export function renderTimeParsingSettingsTab(
 		.setName(t("Time Range Separators"))
 		.setDesc(t("Characters used to separate time ranges (comma-separated)"))
 		.addTextArea((text) => {
-			const separators = pluginSettingTab.plugin.settings.timeParsing.timePatterns?.rangeSeparators || ["-", "~", "～"];
+			const separators = pluginSettingTab.plugin.settings.timeParsing
+				.timePatterns?.rangeSeparators || ["-", "~", "～"];
 			text.setValue(separators.join(", "))
 				.setPlaceholder("-, ~, ～, ' - ', ' ~ '")
 				.onChange(async (value) => {
-					if (!pluginSettingTab.plugin.settings.timeParsing.timePatterns) {
-						pluginSettingTab.plugin.settings.timeParsing.timePatterns = {
-							singleTime: [],
-							timeRange: [],
-							rangeSeparators: value.split(",").map(s => s.trim()).filter(s => s.length > 0),
-						};
+					if (
+						!pluginSettingTab.plugin.settings.timeParsing
+							.timePatterns
+					) {
+						pluginSettingTab.plugin.settings.timeParsing.timePatterns =
+							{
+								singleTime: [],
+								timeRange: [],
+								rangeSeparators: value
+									.split(",")
+									.map((s) => s.trim())
+									.filter((s) => s.length > 0),
+							};
 					} else {
-						pluginSettingTab.plugin.settings.timeParsing.timePatterns.rangeSeparators = 
-							value.split(",").map(s => s.trim()).filter(s => s.length > 0);
+						pluginSettingTab.plugin.settings.timeParsing.timePatterns.rangeSeparators =
+							value
+								.split(",")
+								.map((s) => s.trim())
+								.filter((s) => s.length > 0);
 					}
 					pluginSettingTab.applySettingsUpdate();
 				});
@@ -252,7 +300,10 @@ export function renderTimeParsingSettingsTab(
 		});
 
 	// Examples
-	containerEl.createEl("h3", { text: t("Examples") });
+	new Setting(containerEl)
+		.setName(t("Examples"))
+		.setDesc(t("Examples of time expressions"))
+		.setHeading();
 	const examplesEl = containerEl.createEl("div", {
 		cls: "time-parsing-examples",
 	});
@@ -265,10 +316,22 @@ export function renderTimeParsingSettingsTab(
 		{ input: "明天开会", output: "开会 📅 2025-01-05" },
 		{ input: "3天后完成", output: "完成 📅 2025-01-07" },
 		// Time examples
-		{ input: "meeting at 2:30 PM", output: "meeting 📅 2025-01-04 ⏰ 14:30" },
-		{ input: "workshop 9:00-17:00", output: "workshop 📅 2025-01-04 ⏰ 09:00-17:00" },
-		{ input: "call scheduled 12:00", output: "call 📅 2025-01-04 ⏰ 12:00" },
-		{ input: "lunch 12:00～13:00", output: "lunch 📅 2025-01-04 ⏰ 12:00-13:00" },
+		{
+			input: "meeting at 2:30 PM",
+			output: "meeting 📅 2025-01-04 ⏰ 14:30",
+		},
+		{
+			input: "workshop 9:00-17:00",
+			output: "workshop 📅 2025-01-04 ⏰ 09:00-17:00",
+		},
+		{
+			input: "call scheduled 12:00",
+			output: "call 📅 2025-01-04 ⏰ 12:00",
+		},
+		{
+			input: "lunch 12:00～13:00",
+			output: "lunch 📅 2025-01-04 ⏰ 12:00-13:00",
+		},
 	];
 
 	examples.forEach((example) => {
