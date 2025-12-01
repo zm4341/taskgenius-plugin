@@ -27,6 +27,12 @@ export interface McpToolResponse {
 	isError?: boolean;
 }
 
+/**
+ * Common field selection for reducing response size
+ * Supports dot notation for nested fields (e.g., "metadata.priority")
+ */
+export type FieldSelection = string[];
+
 export interface QueryTasksArgs {
 	filter?: {
 		completed?: boolean;
@@ -41,6 +47,8 @@ export interface QueryTasksArgs {
 		field: keyof Task;
 		order: "asc" | "desc";
 	};
+	/** Only return specified fields to reduce token usage */
+	fields?: FieldSelection;
 }
 
 export interface UpdateTaskArgs {
@@ -85,6 +93,7 @@ export interface SearchTasksArgs {
 	query: string;
 	limit?: number;
 	searchIn?: ("content" | "tags" | "project" | "context")[];
+	fields?: FieldSelection;
 }
 
 export interface QueryByDateArgs {
@@ -92,6 +101,23 @@ export interface QueryByDateArgs {
 	from?: string;
 	to?: string;
 	limit?: number;
+	fields?: FieldSelection;
+}
+
+// Meta tool types for dynamic tool discovery
+export interface McpListToolsArgs {
+	category?: "query" | "write" | "batch" | "meta" | "all";
+}
+
+export interface McpGetToolSchemaArgs {
+	toolName: string;
+}
+
+export interface McpToolSummary {
+	name: string;
+	title: string;
+	description: string;
+	category: "query" | "write" | "batch" | "meta";
 }
 
 export interface BatchCreateTasksArgs {

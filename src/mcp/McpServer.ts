@@ -17,6 +17,110 @@ const http = require("http");
 const url = require("url");
 
 /**
+ * Internal/noise fields that should be stripped from MCP responses
+ * These are implementation details not useful for AI agents
+ */
+const NOISE_FIELDS = new Set([
+	"_subtaskInheritanceRules",
+	"_computed",
+	"_internal",
+	"useAsDateType",
+	"heading", // Usually empty array, not useful for task operations
+	"dependsOn", // Usually empty, can be fetched when needed
+]);
+
+/**
+ * Recursively remove noise fields from an object
+ * Preserves empty arrays/objects for user-facing fields like tags, children
+ */
+function removeNoiseFields(obj: any): any {
+	if (obj === null || obj === undefined) return obj;
+	if (typeof obj !== "object") return obj;
+
+	if (Array.isArray(obj)) {
+		return obj.map((item) => removeNoiseFields(item));
+	}
+
+	const result: any = {};
+	for (const key of Object.keys(obj)) {
+		if (NOISE_FIELDS.has(key)) continue;
+
+		const value = obj[key];
+		if (typeof value === "object" && value !== null) {
+			result[key] = removeNoiseFields(value);
+		} else {
+			result[key] = value;
+		}
+	}
+	return result;
+}
+
+/**
+ * Pick specific fields from an object, supporting dot notation for nested access
+ * @example pickFields(task, ["id", "content", "metadata.priority"])
+ */
+function pickFields(obj: any, fields: string[]): any {
+	if (!obj || typeof obj !== "object") return obj;
+	const result: any = {};
+
+	for (const field of fields) {
+		const parts = field.split(".");
+		let src = obj;
+		let dest = result;
+
+		for (let i = 0; i < parts.length; i++) {
+			const key = parts[i];
+			if (src === null || src === undefined || !(key in src)) break;
+
+			if (i === parts.length - 1) {
+				dest[key] = src[key];
+			} else {
+				if (!dest[key]) dest[key] = {};
+				dest = dest[key];
+				src = src[key];
+			}
+		}
+	}
+	return result;
+}
+
+/**
+ * Filter response to only include specified fields and remove noise
+ * Handles both array responses and object responses with tasks array
+ * @param result - The response data
+ * @param fields - Fields to include (empty = all fields)
+ * @param stripNoise - Remove internal/noise fields (default: true)
+ */
+function filterResponseFields(
+	result: any,
+	fields: string[],
+	stripNoise: boolean = true,
+): any {
+	let processed = result;
+
+	// Step 1: Pick specific fields if requested
+	if (fields && fields.length > 0) {
+		if (result && Array.isArray(result.tasks)) {
+			processed = {
+				...result,
+				tasks: result.tasks.map((t: any) => pickFields(t, fields)),
+			};
+		} else if (Array.isArray(result)) {
+			processed = result.map((t: any) => pickFields(t, fields));
+		} else {
+			processed = pickFields(result, fields);
+		}
+	}
+
+	// Step 2: Remove noise fields if enabled
+	if (stripNoise) {
+		processed = removeNoiseFields(processed);
+	}
+
+	return processed;
+}
+
+/**
  * Log entry for MCP tool calls
  */
 export interface McpLogEntry {
@@ -47,7 +151,7 @@ export class McpServer {
 
 	constructor(
 		private plugin: TaskProgressBarPlugin,
-		private config: McpServerConfig
+		private config: McpServerConfig,
 	) {
 		this.authMiddleware = new AuthMiddleware(config.authToken);
 		this.bridgeReady = this.initializeTaskBridge();
@@ -214,7 +318,7 @@ export class McpServer {
 				new QueryAPI(
 					this.plugin.app,
 					this.plugin.app.vault,
-					this.plugin.app.metadataCache
+					this.plugin.app.metadataCache,
 				);
 
 			// Only run heavy initialization if we're using a standalone QueryAPI
@@ -237,19 +341,19 @@ export class McpServer {
 							.getRepository()
 							.getTaskById(id);
 						return task ?? null;
-					}
+					},
 				);
 
 			this.taskBridge = new DataflowBridge(
 				this.plugin,
 				queryAPI,
-				writeAPI
+				writeAPI,
 			);
 			console.log("MCP Server: Using DataflowBridge");
 		} catch (error) {
 			console.error(
 				"MCP Server: Failed to initialize DataflowBridge",
-				error
+				error,
 			);
 			throw error;
 		}
@@ -289,6 +393,41 @@ export class McpServer {
 	 */
 	private getTools(): any[] {
 		return [
+			// === Meta Tools for dynamic tool discovery ===
+			{
+				name: "mcp_list_tools",
+				title: "List Tools (Summary)",
+				description:
+					"List all available tools with brief descriptions. Use this to discover tools without fetching full schemas.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						category: {
+							type: "string",
+							enum: ["query", "write", "batch", "meta", "all"],
+							description:
+								"Filter by category: query (read operations), write (modifications), batch (bulk operations), meta (tool discovery), all (default)",
+						},
+					},
+				},
+			},
+			{
+				name: "mcp_get_tool_schema",
+				title: "Get Tool Schema",
+				description:
+					"Get the detailed input schema for a specific tool. Use after mcp_list_tools to get parameter details.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						toolName: {
+							type: "string",
+							description: "The exact name of the tool",
+						},
+					},
+					required: ["toolName"],
+				},
+			},
+			// === Task Status Tools ===
 			{
 				name: "update_task_status",
 				title: "Update Task Status",
@@ -368,6 +507,12 @@ export class McpServer {
 							description: "Which date field to use",
 						},
 						limit: { type: "number" },
+						fields: {
+							type: "array",
+							items: { type: "string" },
+							description:
+								"Only return these fields (e.g., ['id', 'content', 'metadata.dueDate'])",
+						},
 					},
 					required: ["period", "date"],
 				},
@@ -387,6 +532,12 @@ export class McpServer {
 							enum: ["due", "start", "scheduled", "completed"],
 						},
 						limit: { type: "number" },
+						fields: {
+							type: "array",
+							items: { type: "string" },
+							description:
+								"Only return these fields (e.g., ['id', 'content', 'metadata.dueDate'])",
+						},
 					},
 					required: ["from", "to"],
 				},
@@ -500,6 +651,12 @@ export class McpServer {
 								},
 							},
 						},
+						fields: {
+							type: "array",
+							items: { type: "string" },
+							description:
+								"Only return these fields to reduce token usage (e.g., ['id', 'content', 'completed', 'metadata.priority']). Supports dot notation for nested fields.",
+						},
 					},
 				},
 			},
@@ -600,6 +757,12 @@ export class McpServer {
 					type: "object",
 					properties: {
 						project: { type: "string" },
+						fields: {
+							type: "array",
+							items: { type: "string" },
+							description:
+								"Only return these fields (e.g., ['id', 'content', 'completed'])",
+						},
 					},
 					required: ["project"],
 				},
@@ -612,6 +775,12 @@ export class McpServer {
 					type: "object",
 					properties: {
 						context: { type: "string" },
+						fields: {
+							type: "array",
+							items: { type: "string" },
+							description:
+								"Only return these fields (e.g., ['id', 'content', 'completed'])",
+						},
 					},
 					required: ["context"],
 				},
@@ -625,6 +794,12 @@ export class McpServer {
 					properties: {
 						priority: { type: "number", minimum: 1, maximum: 5 },
 						limit: { type: "number" },
+						fields: {
+							type: "array",
+							items: { type: "string" },
+							description:
+								"Only return these fields (e.g., ['id', 'content', 'metadata.priority'])",
+						},
 					},
 					required: ["priority"],
 				},
@@ -639,6 +814,12 @@ export class McpServer {
 						from: { type: "string" },
 						to: { type: "string" },
 						limit: { type: "number" },
+						fields: {
+							type: "array",
+							items: { type: "string" },
+							description:
+								"Only return these fields (e.g., ['id', 'content', 'metadata.dueDate'])",
+						},
 					},
 				},
 			},
@@ -652,6 +833,12 @@ export class McpServer {
 						from: { type: "string" },
 						to: { type: "string" },
 						limit: { type: "number" },
+						fields: {
+							type: "array",
+							items: { type: "string" },
+							description:
+								"Only return these fields (e.g., ['id', 'content', 'metadata.startDate'])",
+						},
 					},
 				},
 			},
@@ -713,6 +900,12 @@ export class McpServer {
 								type: "string",
 								enum: ["content", "tags", "project", "context"],
 							},
+						},
+						fields: {
+							type: "array",
+							items: { type: "string" },
+							description:
+								"Only return these fields (e.g., ['id', 'content', 'metadata.tags'])",
 						},
 					},
 					required: ["query"],
@@ -921,107 +1114,188 @@ export class McpServer {
 	/**
 	 * Execute a tool
 	 */
+	/**
+	 * Get tool category for filtering
+	 */
+	private getToolCategory(
+		toolName: string,
+	): "query" | "write" | "batch" | "meta" {
+		if (toolName.startsWith("mcp_")) return "meta";
+		if (toolName.startsWith("batch_")) return "batch";
+		if (
+			toolName.startsWith("query_") ||
+			toolName.startsWith("search_") ||
+			toolName.startsWith("list_")
+		)
+			return "query";
+		return "write";
+	}
+
 	private async executeTool(
 		toolName: string,
 		args: any,
-		sessionId?: string
+		sessionId?: string,
 	): Promise<any> {
 		const startTime = Date.now();
-		const taskBridge = await this.requireTaskBridge();
 		let result: any;
 		let error: string | undefined;
 
 		try {
+			// Handle meta tools first (no bridge needed)
 			switch (toolName) {
-				case "query_tasks":
-					result = await taskBridge.queryTasks(args);
-					break;
-				case "update_task":
-					result = await taskBridge.updateTask(args);
-					break;
-				case "delete_task":
-					result = await taskBridge.deleteTask(args);
-					break;
-				case "create_task":
-					result = await taskBridge.createTask(args);
-					break;
-				case "create_task_in_daily_note":
-					result = await taskBridge.createTaskInDailyNote(args);
-					break;
-				case "query_project_tasks":
-					result = await taskBridge.queryProjectTasks(args.project);
-					break;
-				case "query_context_tasks":
-					result = await taskBridge.queryContextTasks(args.context);
-					break;
-				case "query_by_priority":
-					result = await taskBridge.queryByPriority(
-						args.priority,
-						args.limit
-					);
-					break;
-				case "query_by_due_date":
-					result = await taskBridge.queryByDate({
-						dateType: "due",
-						from: args.from,
-						to: args.to,
-						limit: args.limit,
-					});
-					break;
-				case "query_by_start_date":
-					result = await taskBridge.queryByDate({
-						dateType: "start",
-						from: args.from,
-						to: args.to,
-						limit: args.limit,
-					});
-					break;
-				case "batch_update_text":
-					result = await taskBridge.batchUpdateText(args);
-					break;
-				case "batch_create_subtasks":
-					result = await taskBridge.batchCreateSubtasks(args);
-					break;
-				case "search_tasks":
-					result = await taskBridge.searchTasks(args);
-					break;
-				case "batch_create_tasks":
-					result = await taskBridge.batchCreateTasks(args);
-					break;
-				case "add_project_quick_capture":
-					result = await taskBridge.addProjectTaskToQuickCapture(
-						args
-					);
-					break;
-				case "update_task_status":
-					result = await taskBridge.updateTaskStatus(args);
-					break;
-				case "batch_update_task_status":
-					result = await taskBridge.batchUpdateTaskStatus(args);
-					break;
-				case "postpone_tasks":
-					result = await taskBridge.postponeTasks(args);
-					break;
-				case "list_all_metadata":
-					result = taskBridge.listAllTagsProjectsContexts();
-					break;
-				case "list_tasks_for_period":
-					result = await taskBridge.listTasksForPeriod(args);
-					break;
-				case "list_tasks_in_range":
-					if (
-						typeof (taskBridge as any).listTasksInRange ===
-						"function"
-					) {
-						result = await (taskBridge as any).listTasksInRange(
-							args
+				case "mcp_list_tools": {
+					const allTools = this.getTools();
+					const category = args.category || "all";
+
+					let filteredTools = allTools;
+					if (category !== "all") {
+						filteredTools = allTools.filter(
+							(t) => this.getToolCategory(t.name) === category,
 						);
-					} else {
-						result = { error: "Not implemented in DataflowBridge" };
+					}
+
+					// Return only name, title, description (no inputSchema)
+					result = filteredTools.map((t) => ({
+						name: t.name,
+						title: t.title,
+						description: t.description,
+						category: this.getToolCategory(t.name),
+					}));
+					break;
+				}
+
+				case "mcp_get_tool_schema": {
+					const targetTool = this.getTools().find(
+						(t) => t.name === args.toolName,
+					);
+					if (!targetTool) {
+						throw new Error(`Tool '${args.toolName}' not found`);
+					}
+					result = targetTool;
+					break;
+				}
+
+				default: {
+					// All other tools need the bridge
+					const taskBridge = await this.requireTaskBridge();
+
+					switch (toolName) {
+						case "query_tasks":
+							result = await taskBridge.queryTasks(args);
+							break;
+						case "update_task":
+							result = await taskBridge.updateTask(args);
+							break;
+						case "delete_task":
+							result = await taskBridge.deleteTask(args);
+							break;
+						case "create_task":
+							result = await taskBridge.createTask(args);
+							break;
+						case "create_task_in_daily_note":
+							result =
+								await taskBridge.createTaskInDailyNote(args);
+							break;
+						case "query_project_tasks":
+							result = await taskBridge.queryProjectTasks(
+								args.project,
+							);
+							break;
+						case "query_context_tasks":
+							result = await taskBridge.queryContextTasks(
+								args.context,
+							);
+							break;
+						case "query_by_priority":
+							result = await taskBridge.queryByPriority(
+								args.priority,
+								args.limit,
+							);
+							break;
+						case "query_by_due_date":
+							result = await taskBridge.queryByDate({
+								dateType: "due",
+								from: args.from,
+								to: args.to,
+								limit: args.limit,
+							});
+							break;
+						case "query_by_start_date":
+							result = await taskBridge.queryByDate({
+								dateType: "start",
+								from: args.from,
+								to: args.to,
+								limit: args.limit,
+							});
+							break;
+						case "batch_update_text":
+							result = await taskBridge.batchUpdateText(args);
+							break;
+						case "batch_create_subtasks":
+							result = await taskBridge.batchCreateSubtasks(args);
+							break;
+						case "search_tasks":
+							result = await taskBridge.searchTasks(args);
+							break;
+						case "batch_create_tasks":
+							result = await taskBridge.batchCreateTasks(args);
+							break;
+						case "add_project_quick_capture":
+							result =
+								await taskBridge.addProjectTaskToQuickCapture(
+									args,
+								);
+							break;
+						case "update_task_status":
+							result = await taskBridge.updateTaskStatus(args);
+							break;
+						case "batch_update_task_status":
+							result =
+								await taskBridge.batchUpdateTaskStatus(args);
+							break;
+						case "postpone_tasks":
+							result = await taskBridge.postponeTasks(args);
+							break;
+						case "list_all_metadata":
+							result = taskBridge.listAllTagsProjectsContexts();
+							break;
+						case "list_tasks_for_period":
+							result = await taskBridge.listTasksForPeriod(args);
+							break;
+						case "list_tasks_in_range":
+							if (
+								typeof (taskBridge as any).listTasksInRange ===
+								"function"
+							) {
+								result = await (
+									taskBridge as any
+								).listTasksInRange(args);
+							} else {
+								result = {
+									error: "Not implemented in DataflowBridge",
+								};
+							}
+							break;
+						default:
+							throw new Error(`Tool not found: ${toolName}`);
 					}
 					break;
-				default:
-					throw new Error(`Tool not found: ${toolName}`);
+				}
+			}
+
+			// Apply field filtering and strip noise fields
+			const hasFieldFilter =
+				args.fields &&
+				Array.isArray(args.fields) &&
+				args.fields.length > 0;
+			const stripNoise = args.raw !== true; // Default: strip noise
+
+			if (hasFieldFilter || stripNoise) {
+				result = filterResponseFields(
+					result,
+					hasFieldFilter ? args.fields : [],
+					stripNoise,
+				);
 			}
 
 			// Log successful execution
@@ -1041,7 +1315,7 @@ export class McpServer {
 				content: [
 					{
 						type: "text",
-						text: JSON.stringify(result, null, 2),
+						text: JSON.stringify(result),
 					},
 				],
 			};
@@ -1072,7 +1346,7 @@ export class McpServer {
 						text: JSON.stringify(
 							{ success: false, error: err.message },
 							null,
-							2
+							2,
 						),
 					},
 				],
@@ -1086,7 +1360,7 @@ export class McpServer {
 	 */
 	private async handleMcpRequest(
 		request: any,
-		sessionId?: string
+		sessionId?: string,
 	): Promise<any> {
 		const { method, params, id } = request;
 
@@ -1166,7 +1440,7 @@ export class McpServer {
 							// Build the prompt template based on the prompt name
 							messages: this.buildPromptMessages(
 								promptName,
-								params?.arguments
+								params?.arguments,
 							),
 						},
 					};
@@ -1198,7 +1472,7 @@ export class McpServer {
 						const result = await this.executeTool(
 							toolName,
 							toolArgs,
-							sessionId
+							sessionId,
 						);
 						return {
 							jsonrpc: "2.0",
@@ -1260,16 +1534,16 @@ export class McpServer {
 					res.setHeader("Access-Control-Allow-Origin", "*");
 					res.setHeader(
 						"Access-Control-Allow-Methods",
-						"GET, POST, DELETE, OPTIONS"
+						"GET, POST, DELETE, OPTIONS",
 					);
 					// Allow both canonical and lowercase header spellings for robustness, including MCP-Protocol-Version
 					res.setHeader(
 						"Access-Control-Allow-Headers",
-						"Content-Type, Authorization, authorization, Mcp-Session-Id, mcp-session-id, Mcp-App-Id, mcp-app-id, MCP-Protocol-Version, mcp-protocol-version, Accept"
+						"Content-Type, Authorization, authorization, Mcp-Session-Id, mcp-session-id, Mcp-App-Id, mcp-app-id, MCP-Protocol-Version, mcp-protocol-version, Accept",
 					);
 					res.setHeader(
 						"Access-Control-Expose-Headers",
-						"Mcp-Session-Id"
+						"Mcp-Session-Id",
 					);
 				}
 
@@ -1295,7 +1569,7 @@ export class McpServer {
 								: 0,
 							requestCount: this.requestCount,
 							sessions: this.sessions.size,
-						})
+						}),
 					);
 					return;
 				}
@@ -1315,7 +1589,7 @@ export class McpServer {
 									code: -32603,
 									message: "Forbidden: Origin not allowed",
 								},
-							})
+							}),
 						);
 						return;
 					}
@@ -1339,7 +1613,7 @@ export class McpServer {
 									code: -32602,
 									message: `Unsupported MCP-Protocol-Version: ${protocolVersion}`,
 								},
-							})
+							}),
 						);
 						return;
 					}
@@ -1357,7 +1631,7 @@ export class McpServer {
 									message:
 										"Unauthorized: Invalid or missing authentication token",
 								},
-							})
+							}),
 						);
 						return;
 					}
@@ -1385,11 +1659,11 @@ export class McpServer {
 										source: headerAppId
 											? "header"
 											: bearerAppId
-											? "authorization"
-											: "none",
+												? "authorization"
+												: "none",
 									},
 								},
-							})
+							}),
 						);
 						return;
 					}
@@ -1410,7 +1684,10 @@ export class McpServer {
 					req.on("end", async () => {
 						// Debug: log received body for UTF-8 validation
 						if (body.includes("content")) {
-							console.log("[MCP Debug] Received body:", body.substring(0, 300));
+							console.log(
+								"[MCP Debug] Received body:",
+								body.substring(0, 300),
+							);
 						}
 
 						let request;
@@ -1427,7 +1704,7 @@ export class McpServer {
 										message: "Parse error: Invalid JSON",
 									},
 									id: null,
-								})
+								}),
 							);
 							return;
 						}
@@ -1438,12 +1715,12 @@ export class McpServer {
 								if (!sessionId) {
 									console.warn(
 										"Missing session ID for method:",
-										request.method
+										request.method,
 									);
 									res.statusCode = 200;
 									res.setHeader(
 										"Content-Type",
-										"application/json"
+										"application/json",
 									);
 									res.end(
 										JSON.stringify({
@@ -1454,19 +1731,19 @@ export class McpServer {
 												message:
 													"Missing session ID. Initialize connection first.",
 											},
-										})
+										}),
 									);
 									return;
 								}
 								if (!this.sessions.has(sessionId)) {
 									console.warn(
 										"Invalid session ID:",
-										sessionId
+										sessionId,
 									);
 									res.statusCode = 200;
 									res.setHeader(
 										"Content-Type",
-										"application/json"
+										"application/json",
 									);
 									res.end(
 										JSON.stringify({
@@ -1477,7 +1754,7 @@ export class McpServer {
 												message:
 													"Invalid or expired session",
 											},
-										})
+										}),
 									);
 									return;
 								}
@@ -1488,7 +1765,7 @@ export class McpServer {
 								console.log("[MCP] <-", request);
 							const response = await this.handleMcpRequest(
 								request,
-								sessionId
+								sessionId,
 							);
 							this.config.logLevel === "debug" &&
 								console.log("[MCP] ->", response);
@@ -1497,7 +1774,7 @@ export class McpServer {
 							if (response._sessionId) {
 								res.setHeader(
 									"Mcp-Session-Id",
-									response._sessionId
+									response._sessionId,
 								);
 								// Remove internal field from response
 								delete response._sessionId;
@@ -1518,7 +1795,7 @@ export class McpServer {
 										message: "Internal server error",
 									},
 									id: null,
-								})
+								}),
 							);
 						}
 					});
@@ -1532,7 +1809,7 @@ export class McpServer {
 					if (sessionId && !this.sessions.has(sessionId)) {
 						console.warn(
 							"SSE connection with invalid session ID:",
-							sessionId
+							sessionId,
 						);
 						// Continue anyway for compatibility
 					}
@@ -1586,7 +1863,7 @@ export class McpServer {
 							},
 							description:
 								"MCP server for Obsidian task management",
-						})
+						}),
 					);
 					return;
 				}
@@ -1602,9 +1879,9 @@ export class McpServer {
 							code: -32601,
 							message: `Path not found: ${pathname}`,
 						},
-					})
+					}),
 				);
-			}
+			},
 		);
 
 		// Start the server
@@ -1624,7 +1901,7 @@ export class McpServer {
 						this.actualPort = address?.port || this.config.port;
 
 						console.log(
-							`MCP Server started on ${this.config.host}:${this.actualPort}`
+							`MCP Server started on ${this.config.host}:${this.actualPort}`,
 						);
 
 						// Clean up old sessions periodically
@@ -1642,7 +1919,7 @@ export class McpServer {
 						}, 60000); // Check every minute
 
 						resolve();
-					}
+					},
 				);
 
 				this.httpServer.on("error", (error: any) => {
@@ -1713,7 +1990,7 @@ export class McpServer {
 
 		// Check exact match or prefix match
 		return allowedOrigins.some(
-			(allowed) => origin === allowed || origin.startsWith(allowed + ":")
+			(allowed) => origin === allowed || origin.startsWith(allowed + ":"),
 		);
 	}
 }
