@@ -996,3 +996,23 @@ button.fluent-new-task-btn:hover {
 		display: none;
 	}
 }
+
+/* Fluent Sidebar Sortable States */
+.fluent-navigation-item.sortable-ghost {
+	opacity: 0.4;
+	background-color: var(--background-modifier-hover);
+	border: 1px dashed var(--text-muted);
+}
+
+.fluent-navigation-item.sortable-chosen {
+	background-color: var(--background-modifier-active-hover);
+}
+
+.fluent-navigation-item.sortable-drag {
+	background-color: var(--background-secondary);
+	box-shadow: var(--shadow-l);
+	opacity: 0.9;
+	cursor: grabbing;
+	border-radius: 4px;
+	z-index: 1000;
+}
