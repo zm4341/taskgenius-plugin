@@ -43,13 +43,14 @@ export class ProjectViewComponent extends TwoColumnViewBase<string> {
 
 	/**
 	 * 重写基类中的索引构建方法，为项目创建索引
+	 * 使用 sourceTasks（筛选后的任务）构建索引，确保左侧栏只显示相关项目
 	 */
 	protected buildItemsIndex(): void {
 		// 清除现有索引
 		this.allProjectsMap.clear();
 
-		// 为每个任务的项目建立索引，使用 getEffectiveProject 统一获取项目名
-		this.allTasks.forEach((task) => {
+		// 使用 sourceTasks（筛选后的任务）为每个任务的项目建立索引
+		this.sourceTasks.forEach((task) => {
 			const projectName = getEffectiveProject(task);
 			if (projectName) {
 				if (!this.allProjectsMap.has(projectName)) {
@@ -59,9 +60,12 @@ export class ProjectViewComponent extends TwoColumnViewBase<string> {
 			}
 		});
 
-		// 构建项目树结构
+		// 构建项目树结构（同样使用 sourceTasks）
 		const separator = this.plugin.settings.projectPathSeparator || "/";
-		this.projectTree = buildProjectTreeFromTasks(this.allTasks, separator);
+		this.projectTree = buildProjectTreeFromTasks(
+			this.sourceTasks,
+			separator,
+		);
 
 		// 更新项目计数
 		if (this.countEl) {
@@ -244,11 +248,12 @@ export class ProjectViewComponent extends TwoColumnViewBase<string> {
 		}
 
 		// 根据视图模式使用不同的筛选逻辑
+		// 使用 sourceTasks 进行筛选，保持外部过滤状态
 		if (this.viewMode === "tree" && this.projectTree) {
 			// 树状模式：使用包含式筛选（选父含子）
 			const separator = this.plugin.settings.projectPathSeparator || "/";
 			this.filteredTasks = filterTasksByProjectPaths(
-				this.allTasks,
+				this.sourceTasks,
 				this.selectedItems.items,
 				separator,
 			);
@@ -265,8 +270,8 @@ export class ProjectViewComponent extends TwoColumnViewBase<string> {
 				}
 			});
 
-			// 将任务ID转换为实际任务对象
-			this.filteredTasks = this.allTasks.filter((task) =>
+			// 将任务ID转换为实际任务对象（从 sourceTasks 中筛选）
+			this.filteredTasks = this.sourceTasks.filter((task) =>
 				resultTaskIds.has(task.id),
 			);
 		}
@@ -358,6 +363,9 @@ export class ProjectViewComponent extends TwoColumnViewBase<string> {
 	 * 更新任务
 	 */
 	public updateTask(updatedTask: Task): void {
+		// 更新 allTasksMap
+		this.allTasksMap.set(updatedTask.id, updatedTask);
+
 		let needsFullRefresh = false;
 		const taskIndex = this.allTasks.findIndex(
 			(t) => t.id === updatedTask.id,
@@ -374,6 +382,14 @@ export class ProjectViewComponent extends TwoColumnViewBase<string> {
 			// 任务可能是新的，添加并刷新
 			this.allTasks.push(updatedTask);
 			needsFullRefresh = true;
+		}
+
+		// 同时更新 sourceTasks（如果任务存在于其中）
+		const sourceIndex = this.sourceTasks.findIndex(
+			(t) => t.id === updatedTask.id,
+		);
+		if (sourceIndex !== -1) {
+			this.sourceTasks[sourceIndex] = updatedTask;
 		}
 
 		// 如果项目更改或任务是新的，重建索引并完全刷新UI

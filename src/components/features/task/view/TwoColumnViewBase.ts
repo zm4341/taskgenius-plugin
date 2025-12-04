@@ -60,8 +60,9 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 	protected taskRenderer: TaskListRendererComponent | null = null;
 
 	// State
-	protected allTasks: Task[] = [];
-	protected filteredTasks: Task[] = [];
+	protected sourceTasks: Task[] = []; // Tasks used for building left-side index (may be filtered)
+	protected allTasks: Task[] = []; // All tasks (for right-side tree view parent-child lookup)
+	protected filteredTasks: Task[] = []; // Tasks to display on right side (after left-side selection)
 	protected selectedItems: SelectedItems<T> = {
 		items: [],
 		tasks: [],
@@ -82,7 +83,7 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 		protected parentEl: HTMLElement,
 		protected app: App,
 		protected plugin: TaskProgressBarPlugin,
-		protected config: TwoColumnViewConfig
+		protected config: TwoColumnViewConfig,
 	) {
 		super();
 	}
@@ -177,7 +178,7 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 						.onClick(() => {
 							this.toggleLeftColumnVisibility();
 						});
-				}
+				},
 			);
 		}
 
@@ -214,7 +215,7 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 			this.taskListContainerEl,
 			this.plugin,
 			this.app,
-			this.config.rendererContext
+			this.config.rendererContext,
 		);
 
 		// 连接事件处理器
@@ -234,12 +235,23 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 		};
 	}
 
-	public setTasks(tasks: Task[]) {
-		this.allTasks = tasks;
+	/**
+	 * Set tasks for the two-column view
+	 * @param tasks - Tasks for building left-side index (filtered tasks, shows only relevant items in sidebar)
+	 * @param allTasks - All tasks for tree view parent-child relationship lookup (optional, defaults to tasks)
+	 */
+	public setTasks(tasks: Task[], allTasks?: Task[]) {
+		// tasks: used for building left-side index (filtered tasks)
+		// allTasks: all tasks (for right-side tree view parent-child lookup)
+		this.sourceTasks = tasks;
+		this.allTasks = allTasks && allTasks.length > 0 ? allTasks : tasks;
+		this.allTasksMap = new Map(
+			this.allTasks.map((task) => [task.id, task]),
+		);
 		this.buildItemsIndex();
 		this.renderItemsList();
 
-		// 如果已选择项目，更新任务
+		// If items are already selected, update tasks
 		if (this.selectedItems.items.length > 0) {
 			this.updateSelectedTasks();
 		} else {
@@ -330,7 +342,7 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 
 		// Update the toggle button icon to match the initial state
 		const viewToggleBtn = this.rightColumnEl?.querySelector(
-			".view-toggle-btn"
+			".view-toggle-btn",
 		) as HTMLElement;
 		if (viewToggleBtn) {
 			setIcon(viewToggleBtn, this.isTreeView ? "git-branch" : "list");
@@ -345,7 +357,7 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 
 		// Update toggle button icon
 		const viewToggleBtn = this.rightColumnEl.querySelector(
-			".view-toggle-btn"
+			".view-toggle-btn",
 		) as HTMLElement;
 		if (viewToggleBtn) {
 			setIcon(viewToggleBtn, this.isTreeView ? "git-branch" : "list");
@@ -370,14 +382,14 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 	 */
 	protected updateTaskListHeader(title: string, countText: string) {
 		const taskHeaderEl = this.rightColumnEl.querySelector(
-			`.${this.config.classNamePrefix}-task-title`
+			`.${this.config.classNamePrefix}-task-title`,
 		);
 		if (taskHeaderEl) {
 			taskHeaderEl.textContent = title;
 		}
 
 		const taskCountEl = this.rightColumnEl.querySelector(
-			`.${this.config.classNamePrefix}-task-count`
+			`.${this.config.classNamePrefix}-task-count`,
 		);
 		if (taskCountEl) {
 			taskCountEl.textContent = countText;
@@ -404,7 +416,7 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 			title = String(this.selectedItems.items[0]);
 		} else if (this.selectedItems.items.length > 1) {
 			title = `${this.selectedItems.items.length} ${t(
-				this.config.multiSelectText
+				this.config.multiSelectText,
 			)}`;
 		}
 		const countText = `${this.filteredTasks.length} ${t("tasks")}`;
@@ -412,7 +424,7 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 
 		console.log("filteredTasks", this.filteredTasks, this.isTreeView);
 		this.allTasksMap = new Map(
-			this.allTasks.map((task) => [task.id, task])
+			this.allTasks.map((task) => [task.id, task]),
 		);
 		// Use renderer to display tasks
 		if (this.taskRenderer) {
@@ -420,7 +432,7 @@ export abstract class TwoColumnViewBase<T extends string> extends Component {
 				this.filteredTasks,
 				this.isTreeView,
 				this.allTasksMap,
-				t("No tasks in the selected items")
+				t("No tasks in the selected items"),
 			);
 		}
 	}

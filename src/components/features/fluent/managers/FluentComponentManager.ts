@@ -644,22 +644,28 @@ export class FluentComponentManager extends Component {
 
 			// Set tasks on the component
 			if (typeof targetComponent.setTasks === "function") {
-				// Special handling for components that need only all tasks (single parameter)
-				// Review and tags views need all tasks to build their indices
-				if (viewId === "review" || viewId === "tags") {
+				// Special handling for components that need filtered + all tasks
+				// Tags view: uses filtered tasks for tag index (left sidebar), all tasks for tree view lookup
+				if (viewId === "tags") {
+					console.log(
+						`[FluentComponent] Calling setTasks for ${viewId} with FILTERED tasks (${filteredTasks.length}) and ALL tasks (${tasks.length})`,
+					);
+					targetComponent.setTasks(filteredTasks, tasks);
+				} else if (viewId === "review") {
+					// Review view still needs all tasks
 					console.log(
 						`[FluentComponent] Calling setTasks for ${viewId} with ALL tasks:`,
 						tasks.length,
 					);
 					targetComponent.setTasks(tasks);
 				} else if (viewId === "projects" && !project) {
-					// Projects overview mode: pass ALL tasks to build project index
-					// and FILTERED tasks to apply filter to project task lists
-					// This ensures: left sidebar shows all projects, right panel shows filtered tasks
+					// Projects overview mode: standardized semantics
+					// First param: filtered tasks (for building sidebar project index)
+					// Second param: all tasks (for tree view parent-child lookup)
 					console.log(
-						`[FluentComponent] Calling setTasks for projects with ALL tasks (${tasks.length}) and FILTERED tasks (${filteredTasks.length})`,
+						`[FluentComponent] Calling setTasks for projects with FILTERED tasks (${filteredTasks.length}) and ALL tasks (${tasks.length})`,
 					);
-					targetComponent.setTasks(tasks, filteredTasks);
+					targetComponent.setTasks(filteredTasks, tasks);
 				} else {
 					// Use filtered tasks
 					let filteredTasksLocal = [...filteredTasks];
@@ -890,7 +896,10 @@ export class FluentComponentManager extends Component {
 		if (target?.setTasks) {
 			if (viewId === "projects" || this.isContentBasedView(viewId)) {
 				target.setTasks(filteredTasks, tasks, true);
-			} else if (viewId === "review" || viewId === "tags") {
+			} else if (viewId === "tags") {
+				// Tags view: filtered tasks for tag index, all tasks for tree view lookup
+				target.setTasks(filteredTasks, tasks);
+			} else if (viewId === "review") {
 				target.setTasks(tasks);
 			} else {
 				target.setTasks(filteredTasks);

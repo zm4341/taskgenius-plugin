@@ -45,8 +45,9 @@ export class TagsComponent extends Component {
 	private mainTaskRenderer: TaskListRendererComponent | null = null;
 
 	// State
-	private allTasks: Task[] = [];
-	private filteredTasks: Task[] = [];
+	private allTasks: Task[] = []; // All tasks (for global lookup and tree view)
+	private sourceTasks: Task[] = []; // Tasks used for building tag index (filtered tasks)
+	private filteredTasks: Task[] = []; // Tasks filtered by selected tags
 	private tagSections: TagSection[] = [];
 	private selectedTags: SelectedTags = {
 		tags: [],
@@ -65,7 +66,7 @@ export class TagsComponent extends Component {
 			onTaskCompleted?: (task: Task) => void;
 			onTaskUpdate?: (task: Task, updatedTask: Task) => Promise<void>;
 			onTaskContextMenu?: (event: MouseEvent, task: Task) => void;
-		} = {}
+		} = {},
 	) {
 		super();
 	}
@@ -178,7 +179,7 @@ export class TagsComponent extends Component {
 						.onClick(() => {
 							this.toggleLeftColumnVisibility();
 						});
-				}
+				},
 			);
 		}
 
@@ -209,10 +210,16 @@ export class TagsComponent extends Component {
 		});
 	}
 
-	public setTasks(tasks: Task[]) {
-		this.allTasks = tasks;
+	/**
+	 * Set tasks for the tags view
+	 * @param tasks - Filtered tasks (used for building tag index - only shows tags from these tasks)
+	 * @param allTasks - All tasks (used for global lookup in tree view)
+	 */
+	public setTasks(tasks: Task[], allTasks?: Task[]) {
+		this.sourceTasks = tasks;
+		this.allTasks = allTasks && allTasks.length > 0 ? allTasks : tasks;
 		this.allTasksMap = new Map(
-			this.allTasks.map((task) => [task.id, task])
+			this.allTasks.map((task) => [task.id, task]),
 		);
 		this.buildTagsIndex();
 		this.renderTagsList();
@@ -230,8 +237,9 @@ export class TagsComponent extends Component {
 		// Clear existing index
 		this.allTagsMap.clear();
 
-		// Build a map of tags to task IDs
-		this.allTasks.forEach((task) => {
+		// Build a map of tags to task IDs from sourceTasks (filtered tasks)
+		// This ensures the tag list only shows tags from filtered tasks
+		this.sourceTasks.forEach((task) => {
 			if (task.metadata.tags && task.metadata.tags.length > 0) {
 				task.metadata.tags.forEach((tag) => {
 					// Skip non-string tags
@@ -290,7 +298,7 @@ export class TagsComponent extends Component {
 	private renderTagHierarchy(
 		node: Record<string, any>,
 		parentEl: HTMLElement,
-		level: number
+		level: number,
 	) {
 		// Sort keys alphabetically, but exclude metadata properties
 		const keys = Object.keys(node)
@@ -363,7 +371,7 @@ export class TagsComponent extends Component {
 				this.renderTagHierarchy(
 					childNode,
 					childrenContainer,
-					level + 1
+					level + 1,
 				);
 			}
 		});
@@ -388,7 +396,7 @@ export class TagsComponent extends Component {
 			) {
 				this.cleanupRenderers();
 				this.renderEmptyTaskList(
-					t("Select a tag to see related tasks")
+					t("Select a tag to see related tasks"),
 				);
 				return;
 			}
@@ -430,7 +438,7 @@ export class TagsComponent extends Component {
 			if (this.selectedTags.tags.length === 0) {
 				this.cleanupRenderers();
 				this.renderEmptyTaskList(
-					t("Select a tag to see related tasks")
+					t("Select a tag to see related tasks"),
 				);
 			}
 		}
@@ -443,7 +451,7 @@ export class TagsComponent extends Component {
 		this.isTreeView = getInitialViewMode(this.app, this.plugin, "tags");
 		// Update the toggle button icon to match the initial state
 		const viewToggleBtn = this.taskContainerEl?.querySelector(
-			".view-toggle-btn"
+			".view-toggle-btn",
 		) as HTMLElement;
 		if (viewToggleBtn) {
 			setIcon(viewToggleBtn, this.isTreeView ? "git-branch" : "list");
@@ -455,7 +463,7 @@ export class TagsComponent extends Component {
 
 		// Update toggle button icon
 		const viewToggleBtn = this.taskContainerEl.querySelector(
-			".view-toggle-btn"
+			".view-toggle-btn",
 		) as HTMLElement;
 		if (viewToggleBtn) {
 			setIcon(viewToggleBtn, this.isTreeView ? "git-branch" : "list");
@@ -509,13 +517,14 @@ export class TagsComponent extends Component {
 				set.forEach((id) => resultTaskIds.add(id));
 			});
 
-			// Convert task IDs to actual task objects
-			this.filteredTasks = this.allTasks.filter((task) =>
-				resultTaskIds.has(task.id)
+			// Convert task IDs to actual task objects from sourceTasks
+			// This ensures we only show tasks that match the current filter
+			this.filteredTasks = this.sourceTasks.filter((task) =>
+				resultTaskIds.has(task.id),
 			);
 
 			const viewConfig = this.plugin.settings.viewConfiguration.find(
-				(view) => view.id === "tags"
+				(view) => view.id === "tags",
 			);
 			if (
 				viewConfig?.sortCriteria &&
@@ -524,7 +533,7 @@ export class TagsComponent extends Component {
 				this.filteredTasks = sortTasks(
 					this.filteredTasks,
 					viewConfig.sortCriteria,
-					this.plugin.settings
+					this.plugin.settings,
 				);
 			} else {
 				this.filteredTasks.sort((a, b) => {
@@ -573,7 +582,7 @@ export class TagsComponent extends Component {
 					(taskTag) =>
 						// Skip non-string tags
 						typeof taskTag === "string" &&
-						(taskTag === tag || taskTag.startsWith(tag + "/"))
+						(taskTag === tag || taskTag.startsWith(tag + "/")),
 				);
 			});
 
@@ -610,7 +619,7 @@ export class TagsComponent extends Component {
 			if (this.selectedTags.tags.length === 1) {
 				taskHeaderEl.textContent = `#${this.selectedTags.tags[0].replace(
 					"#",
-					""
+					"",
 				)}`;
 			} else if (this.selectedTags.tags.length > 1) {
 				taskHeaderEl.textContent = `${
@@ -626,7 +635,7 @@ export class TagsComponent extends Component {
 		if (taskCountEl) {
 			// Use filteredTasks length for the total count across selections/sections
 			taskCountEl.textContent = `${this.filteredTasks.length} ${t(
-				"tasks"
+				"tasks",
 			)}`;
 		}
 	}
@@ -684,7 +693,7 @@ export class TagsComponent extends Component {
 				this.taskListContainerEl,
 				this.plugin,
 				this.app,
-				"tags"
+				"tags",
 			);
 			this.params.onTaskSelected &&
 				(this.mainTaskRenderer.onTaskSelected =
@@ -703,7 +712,7 @@ export class TagsComponent extends Component {
 				this.isTreeView,
 				this.allTasksMap,
 				// Empty message handled above, so this shouldn't be shown
-				t("No tasks found.")
+				t("No tasks found."),
 			);
 		}
 	}
@@ -720,7 +729,7 @@ export class TagsComponent extends Component {
 			const toggleEl = headerEl.createDiv({ cls: "section-toggle" });
 			setIcon(
 				toggleEl,
-				section.isExpanded ? "chevron-down" : "chevron-right"
+				section.isExpanded ? "chevron-down" : "chevron-right",
 			);
 			const titleEl = headerEl.createDiv({ cls: "section-title" });
 			titleEl.setText(`#${section.tag.replace("#", "")}`);
@@ -739,7 +748,7 @@ export class TagsComponent extends Component {
 				taskListEl, // Render inside this section's container
 				this.plugin,
 				this.app,
-				"tags"
+				"tags",
 			);
 			this.params.onTaskSelected &&
 				(section.renderer.onTaskSelected = this.params.onTaskSelected);
@@ -757,7 +766,7 @@ export class TagsComponent extends Component {
 				section.tasks,
 				this.isTreeView,
 				this.allTasksMap,
-				t("No tasks found for this tag.")
+				t("No tasks found for this tag."),
 			);
 
 			// Register toggle event
@@ -765,7 +774,7 @@ export class TagsComponent extends Component {
 				section.isExpanded = !section.isExpanded;
 				setIcon(
 					toggleEl,
-					section.isExpanded ? "chevron-down" : "chevron-right"
+					section.isExpanded ? "chevron-down" : "chevron-right",
 				);
 				section.isExpanded ? taskListEl.show() : taskListEl.hide();
 			});
@@ -787,13 +796,25 @@ export class TagsComponent extends Component {
 	}
 
 	public updateTask(updatedTask: Task) {
+		// Update global tasks map and list
+		const globalIndex = this.allTasks.findIndex(
+			(t) => t.id === updatedTask.id,
+		);
+		if (globalIndex !== -1) {
+			this.allTasks[globalIndex] = updatedTask;
+		} else {
+			this.allTasks.push(updatedTask);
+		}
+		this.allTasksMap.set(updatedTask.id, updatedTask);
+
+		// Check if we need to refresh the tag index (based on sourceTasks)
 		let needsFullRefresh = false;
-		const taskIndex = this.allTasks.findIndex(
-			(t) => t.id === updatedTask.id
+		const sourceIndex = this.sourceTasks.findIndex(
+			(t) => t.id === updatedTask.id,
 		);
 
-		if (taskIndex !== -1) {
-			const oldTask = this.allTasks[taskIndex];
+		if (sourceIndex !== -1) {
+			const oldTask = this.sourceTasks[sourceIndex];
 			// Check if tags changed, necessitating a rebuild/re-render
 			const tagsChanged =
 				!oldTask.metadata.tags ||
@@ -804,13 +825,12 @@ export class TagsComponent extends Component {
 			if (tagsChanged) {
 				needsFullRefresh = true;
 			}
-			this.allTasks[taskIndex] = updatedTask;
-		} else {
-			this.allTasks.push(updatedTask);
-			needsFullRefresh = true; // New task, requires full refresh
+			this.sourceTasks[sourceIndex] = updatedTask;
 		}
+		// Note: If the task is not in sourceTasks, it means it was filtered out
+		// and we don't need to update the tag index unless the filter changes
 
-		// If tags changed or task is new, rebuild index and fully refresh UI
+		// If tags changed, rebuild index and fully refresh UI
 		if (needsFullRefresh) {
 			this.buildTagsIndex();
 			this.renderTagsList(); // Update left sidebar
@@ -818,7 +838,7 @@ export class TagsComponent extends Component {
 		} else {
 			// Otherwise, update the task in the filtered list
 			const filteredIndex = this.filteredTasks.findIndex(
-				(t) => t.id === updatedTask.id
+				(t) => t.id === updatedTask.id,
 			);
 			if (filteredIndex !== -1) {
 				this.filteredTasks[filteredIndex] = updatedTask;
@@ -835,13 +855,13 @@ export class TagsComponent extends Component {
 									// Skip non-string tags
 									typeof taskTag === "string" &&
 									(taskTag === section.tag ||
-										taskTag.startsWith(section.tag + "/"))
+										taskTag.startsWith(section.tag + "/")),
 							)
 						) {
 							// Check if the task is actually in this section's list
 							if (
 								section.tasks.some(
-									(t) => t.id === updatedTask.id
+									(t) => t.id === updatedTask.id,
 								)
 							) {
 								section.renderer?.updateTask(updatedTask);

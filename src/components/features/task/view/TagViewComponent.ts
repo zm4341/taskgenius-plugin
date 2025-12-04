@@ -23,7 +23,7 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 	constructor(
 		parentEl: HTMLElement,
 		app: App,
-		plugin: TaskProgressBarPlugin
+		plugin: TaskProgressBarPlugin,
 	) {
 		// 配置基类需要的参数
 		const config: TwoColumnViewConfig = {
@@ -45,31 +45,32 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 	 * @returns Normalized tag with # prefix
 	 */
 	private normalizeTag(tag: string): string {
-		if (typeof tag !== 'string') {
+		if (typeof tag !== "string") {
 			return tag;
 		}
-		
+
 		// Trim whitespace
 		const trimmed = tag.trim();
-		
+
 		// If empty or already starts with #, return as is
-		if (!trimmed || trimmed.startsWith('#')) {
+		if (!trimmed || trimmed.startsWith("#")) {
 			return trimmed;
 		}
-		
+
 		// Add # prefix
 		return `#${trimmed}`;
 	}
 
 	/**
 	 * 重写基类中的索引构建方法，为标签创建索引
+	 * 使用 sourceTasks（筛选后的任务）构建索引，确保左侧栏只显示相关标签
 	 */
 	protected buildItemsIndex(): void {
 		// 清除已有索引
 		this.allTagsMap.clear();
 
-		// 为每个任务的标签建立索引
-		this.allTasks.forEach((task) => {
+		// 使用 sourceTasks（筛选后的任务）为每个任务的标签建立索引
+		this.sourceTasks.forEach((task) => {
 			if (task.metadata.tags && task.metadata.tags.length > 0) {
 				task.metadata.tags.forEach((tag) => {
 					// 跳过非字符串类型的标签
@@ -139,7 +140,7 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 	private renderTagHierarchy(
 		node: Record<string, any>,
 		parentEl: HTMLElement,
-		level: number
+		level: number,
 	) {
 		// 按字母排序键，但排除元数据属性
 		const keys = Object.keys(node)
@@ -212,7 +213,7 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 				this.renderTagHierarchy(
 					childNode,
 					childrenContainer,
-					level + 1
+					level + 1,
 				);
 			}
 		});
@@ -260,9 +261,9 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 				set.forEach((id) => resultTaskIds.add(id));
 			});
 
-			// 将任务ID转换为实际任务对象
-			this.filteredTasks = this.allTasks.filter((task) =>
-				resultTaskIds.has(task.id)
+			// 将任务ID转换为实际任务对象（从 sourceTasks 中筛选，保持外部过滤状态）
+			this.filteredTasks = this.sourceTasks.filter((task) =>
+				resultTaskIds.has(task.id),
 			);
 
 			// 按优先级和截止日期排序
@@ -313,7 +314,7 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 					(taskTag) =>
 						// 跳过非字符串类型的标签
 						typeof taskTag === "string" &&
-						(taskTag === tag || taskTag.startsWith(tag + "/"))
+						(taskTag === tag || taskTag.startsWith(tag + "/")),
 				);
 			});
 
@@ -346,7 +347,7 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 		let title = t(this.config.rightColumnDefaultTitle);
 		if (this.selectedItems.items.length > 1) {
 			title = `${this.selectedItems.items.length} ${t(
-				this.config.multiSelectText
+				this.config.multiSelectText,
 			)}`;
 		}
 		const countText = `${this.filteredTasks.length} ${t("tasks")}`;
@@ -364,7 +365,7 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 			const toggleEl = headerEl.createDiv({ cls: "section-toggle" });
 			setIcon(
 				toggleEl,
-				section.isExpanded ? "chevron-down" : "chevron-right"
+				section.isExpanded ? "chevron-down" : "chevron-right",
 			);
 			const titleEl = headerEl.createDiv({ cls: "section-title" });
 			titleEl.setText(`#${section.tag.replace("#", "")}`);
@@ -382,7 +383,7 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 				taskListEl,
 				this.plugin,
 				this.app,
-				this.config.rendererContext
+				this.config.rendererContext,
 			);
 			section.renderer.onTaskSelected = this.onTaskSelected;
 			section.renderer.onTaskCompleted = this.onTaskCompleted;
@@ -393,7 +394,7 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 				section.tasks,
 				this.isTreeView,
 				this.allTasksMap,
-				t("No tasks found for this tag.")
+				t("No tasks found for this tag."),
 			);
 
 			// 注册切换事件
@@ -401,7 +402,7 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 				section.isExpanded = !section.isExpanded;
 				setIcon(
 					toggleEl,
-					section.isExpanded ? "chevron-down" : "chevron-right"
+					section.isExpanded ? "chevron-down" : "chevron-right",
 				);
 				section.isExpanded ? taskListEl.show() : taskListEl.hide();
 			});
@@ -446,9 +447,12 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 	 * 更新任务
 	 */
 	public updateTask(updatedTask: Task): void {
+		// 更新 allTasksMap
+		this.allTasksMap.set(updatedTask.id, updatedTask);
+
 		let needsFullRefresh = false;
 		const taskIndex = this.allTasks.findIndex(
-			(t) => t.id === updatedTask.id
+			(t) => t.id === updatedTask.id,
 		);
 
 		if (taskIndex !== -1) {
@@ -469,6 +473,14 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 			needsFullRefresh = true; // 新任务，需要完全刷新
 		}
 
+		// 同时更新 sourceTasks（如果任务存在于其中）
+		const sourceIndex = this.sourceTasks.findIndex(
+			(t) => t.id === updatedTask.id,
+		);
+		if (sourceIndex !== -1) {
+			this.sourceTasks[sourceIndex] = updatedTask;
+		}
+
 		// 如果标签变化或任务是新的，重建索引并完全刷新UI
 		if (needsFullRefresh) {
 			this.buildItemsIndex();
@@ -477,7 +489,7 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 		} else {
 			// 否则，仅更新过滤列表中的任务
 			const filteredIndex = this.filteredTasks.findIndex(
-				(t) => t.id === updatedTask.id
+				(t) => t.id === updatedTask.id,
 			);
 			if (filteredIndex !== -1) {
 				this.filteredTasks[filteredIndex] = updatedTask;
@@ -495,13 +507,13 @@ export class TagViewComponent extends TwoColumnViewBase<string> {
 									// 跳过非字符串类型的标签
 									typeof taskTag === "string" &&
 									(taskTag === section.tag ||
-										taskTag.startsWith(section.tag + "/"))
+										taskTag.startsWith(section.tag + "/")),
 							)
 						) {
 							// 检查任务是否实际存在于此分区的列表中
 							if (
 								section.tasks.some(
-									(t) => t.id === updatedTask.id
+									(t) => t.id === updatedTask.id,
 								)
 							) {
 								section.renderer?.updateTask(updatedTask);

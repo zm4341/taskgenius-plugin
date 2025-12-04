@@ -54,9 +54,9 @@ export class ProjectsComponent extends Component {
 	private escKeyHandler?: (e: KeyboardEvent) => void;
 
 	// State
-	private allTasks: Task[] = [];
-	private filteredTasks: Task[] = [];
-	private externalFilteredTasks: Task[] | null = null; // Externally filtered tasks from FluentView
+	private sourceTasks: Task[] = []; // Tasks used for building left-side project index (filtered tasks)
+	private allTasks: Task[] = []; // All tasks (for tree view parent-child lookup)
+	private filteredTasks: Task[] = []; // Tasks to display on right side (after project selection)
 	private selectedProjects: SelectedProjects = {
 		projects: [],
 		tasks: [],
@@ -292,7 +292,7 @@ export class ProjectsComponent extends Component {
 					this.app,
 					this.plugin,
 					{ project: selectedProject },
-					true
+					true,
 				).open();
 			} else {
 				new Notice(t("Please select a single project first"));
@@ -319,9 +319,15 @@ export class ProjectsComponent extends Component {
 		this.updateTgProjectPropsButton(null);
 	}
 
-	public setTasks(tasks: Task[], filteredTasks?: Task[]) {
-		this.allTasks = tasks;
-		this.externalFilteredTasks = filteredTasks || null;
+	/**
+	 * Set tasks for the projects view
+	 * @param tasks - Tasks for building left-side project index (filtered tasks, shows only relevant projects in sidebar)
+	 * @param allTasks - All tasks for tree view parent-child relationship lookup (optional, defaults to tasks)
+	 */
+	public setTasks(tasks: Task[], allTasks?: Task[]) {
+		// Standardized semantics: tasks = visible/filtered (for sidebar), allTasks = context (for tree view)
+		this.sourceTasks = tasks;
+		this.allTasks = allTasks && allTasks.length > 0 ? allTasks : tasks;
 		this.allTasksMap = new Map(
 			this.allTasks.map((task) => [task.id, task]),
 		);
@@ -346,8 +352,9 @@ export class ProjectsComponent extends Component {
 		// Clear existing index
 		this.allProjectsMap.clear();
 
-		// Build a map of projects to task IDs
-		this.allTasks.forEach((task) => {
+		// Build a map of projects to task IDs using sourceTasks (filtered tasks)
+		// This ensures the sidebar only shows projects that have matching tasks
+		this.sourceTasks.forEach((task) => {
 			const effectiveProject = getEffectiveProject(task);
 			if (effectiveProject) {
 				if (!this.allProjectsMap.has(effectiveProject)) {
@@ -648,9 +655,10 @@ export class ProjectsComponent extends Component {
 		}
 
 		// Use the project filter utility for inclusive filtering in tree view
+		// Filter from sourceTasks to maintain external filter state
 		if (this.isProjectTreeView) {
 			this.filteredTasks = filterTasksByProjectPaths(
-				this.allTasks,
+				this.sourceTasks,
 				this.selectedProjects.projects,
 				this.plugin.settings.projectPathSeparator || "/",
 			);
@@ -666,8 +674,8 @@ export class ProjectsComponent extends Component {
 				}
 			});
 
-			// Convert task IDs to actual task objects
-			this.filteredTasks = this.allTasks.filter((task) =>
+			// Convert task IDs to actual task objects (from sourceTasks)
+			this.filteredTasks = this.sourceTasks.filter((task) =>
 				resultTaskIds.has(task.id),
 			);
 		}
@@ -704,16 +712,8 @@ export class ProjectsComponent extends Component {
 			});
 		}
 
-		// Apply external filter if provided (from FluentView filter system)
-		// This ensures project tasks respect global filter conditions
-		if (this.externalFilteredTasks) {
-			const externalFilteredIds = new Set(
-				this.externalFilteredTasks.map((t) => t.id),
-			);
-			this.filteredTasks = this.filteredTasks.filter((task) =>
-				externalFilteredIds.has(task.id),
-			);
-		}
+		// Note: External filtering is now handled by using sourceTasks directly
+		// which already contains the filtered tasks from FluentView
 
 		// Update the task list using the renderer
 		this.renderTaskList();
@@ -1098,6 +1098,9 @@ export class ProjectsComponent extends Component {
 	}
 
 	public updateTask(updatedTask: Task) {
+		// Update allTasksMap
+		this.allTasksMap.set(updatedTask.id, updatedTask);
+
 		// Update in our main tasks list
 		const taskIndex = this.allTasks.findIndex(
 			(t) => t.id === updatedTask.id,
@@ -1114,6 +1117,14 @@ export class ProjectsComponent extends Component {
 			// Task is potentially new, add it and refresh
 			this.allTasks.push(updatedTask);
 			needsFullRefresh = true;
+		}
+
+		// Also update sourceTasks if the task exists there
+		const sourceIndex = this.sourceTasks.findIndex(
+			(t) => t.id === updatedTask.id,
+		);
+		if (sourceIndex !== -1) {
+			this.sourceTasks[sourceIndex] = updatedTask;
 		}
 
 		// If project changed or task is new, rebuild index and fully refresh UI
