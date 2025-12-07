@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 
+## [9.12.6](https://github.com/Quorafind/Obsidian-Task-Genius/compare/9.12.5...9.12.6) (2025-12-07)
+
+### Features
+
+* **quick-capture:** auto-fill metadata from active filter state ([bb79032](https://github.com/Quorafind/Obsidian-Task-Genius/commit/bb79032))
+
 ## [9.12.5](https://github.com/Quorafind/Obsidian-Task-Genius/compare/9.12.4...9.12.5) (2025-12-04)
 
 ### Bug Fixes
