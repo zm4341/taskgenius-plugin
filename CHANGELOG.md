@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 
+## [9.13.1](https://github.com/Quorafind/Obsidian-Task-Genius/compare/9.13.0...9.13.1) (2025-12-11)
+
 ## [9.13.0](https://github.com/Quorafind/Obsidian-Task-Genius/compare/9.12.6...9.13.0) (2025-12-09)
 
 ### Features
