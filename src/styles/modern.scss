@@ -1,0 +1,6 @@
+/* 删除与 fluent-modern.css 重复内容，仅保留 modern.css 独有或变体样式 */
+
+.task-item {
+	border-bottom: 1px solid var(--color-base-20);
+	/* 若需覆盖 fluent 变体可在此添加非重复样式 */
+}

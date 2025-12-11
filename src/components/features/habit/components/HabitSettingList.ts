@@ -10,7 +10,7 @@ import { BaseHabitData } from "@/types/habit-card";
 import TaskProgressBarPlugin from "@/index";
 import { HabitEditDialog } from "@/components/features/habit/components/HabitEditDialog";
 import { t } from "@/translations/helper";
-import "@/styles/habit-list.css";
+import "@/styles/habit-list.scss";
 
 export interface HabitSettings {
 	habits: BaseHabitData[];

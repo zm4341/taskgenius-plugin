@@ -9,7 +9,7 @@ import {
 	setTooltip,
 } from "obsidian";
 import { t } from "@/translations/helper";
-import "@/styles/date-picker.css";
+import "@/styles/date-picker.scss";
 import type TaskProgressBarPlugin from "@/index";
 
 export interface DatePickerState {

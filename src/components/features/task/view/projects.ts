@@ -8,8 +8,8 @@ import {
 } from "obsidian";
 import { Task, TgProject } from "@/types/task";
 import { t } from "@/translations/helper";
-import "@/styles/project-view.css";
-import "@/styles/project-tree.css";
+import "@/styles/project-view.scss";
+import "@/styles/project-tree.scss";
 import { TaskListRendererComponent } from "./TaskList";
 import TaskProgressBarPlugin from "@/index";
 import { sortTasks } from "@/commands/sortTaskCommands";

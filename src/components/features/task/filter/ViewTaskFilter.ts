@@ -10,7 +10,7 @@ import {
 } from "obsidian";
 import Sortable from "sortablejs";
 import { t } from "@/translations/helper"; // Adjusted path assuming helper.ts is in src/translations
-import "@/styles/global-filter.css";
+import "@/styles/global-filter.scss";
 import { FilterConfigModal } from "./FilterConfigModal";
 import type TaskProgressBarPlugin from "@/index";
 

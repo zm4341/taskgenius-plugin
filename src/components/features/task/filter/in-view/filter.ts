@@ -6,7 +6,7 @@ import {
 	FilterCategory,
 	FilterComponentOptions,
 } from "./filter-type";
-import "./filter.css";
+import "./filter.scss";
 import { Task } from "@/types/task";
 import TaskProgressBarPlugin from "@/index";
 import { t } from "@/translations/helper";

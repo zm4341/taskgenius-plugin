@@ -14,7 +14,7 @@ import { VirtualScrollManager } from "./VirtualScrollManager";
 import { TableHeader, TableHeaderCallbacks } from "./TableHeader";
 import { sortTasks } from "@/commands/sortTaskCommands";
 import { isProjectReadonly } from "@/utils/task/task-operations";
-import "@/styles/table.css";
+import "@/styles/table.scss";
 
 export interface TableViewCallbacks {
 	onTaskSelected?: (task: Task | null) => void;

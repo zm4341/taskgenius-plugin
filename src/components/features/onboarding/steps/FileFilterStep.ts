@@ -8,8 +8,8 @@ import {
 	SimpleFileSuggest as FileSuggest,
 } from "@/components/ui/inputs/AutoComplete";
 import { FileFilterRuleEditorModal } from "@/components/features/onboarding/modals/FileFilterRuleEditorModal";
-import "@/styles/onboarding-components.css";
-import "@/styles/file-filter-settings.css";
+import "@/styles/onboarding-components.scss";
+import "@/styles/file-filter-settings.scss";
 
 /**
  * File Filter Configuration Step

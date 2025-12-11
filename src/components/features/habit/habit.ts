@@ -22,7 +22,7 @@ import {
 	MappingHabitCard,
 } from "./habitcard/index"; // Import the habit card classes
 import { t } from "@/translations/helper";
-import "@/styles/habit.css";
+import "@/styles/habit.scss";
 import { HabitEditDialog } from "@/components/features/habit/components/HabitEditDialog";
 
 export class Habit extends Component {

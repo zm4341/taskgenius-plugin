@@ -10,12 +10,12 @@ import {
 import TaskProgressBarPlugin from ".";
 
 import { t } from "./translations/helper";
-import "./styles/setting.css";
-import "./styles/setting-v2.css";
-import "./styles/beta-warning.css";
-import "./styles/settings-search.css";
-import "./styles/settings-migration.css";
-import "./styles/workspace-settings-selector.css";
+import "./styles/setting.scss";
+import "./styles/setting-v2.scss";
+import "./styles/beta-warning.scss";
+import "./styles/settings-search.scss";
+import "./styles/settings-migration.scss";
+import "./styles/workspace-settings-selector.scss";
 import {
 	renderAboutSettingsTab,
 	renderBetaTestSettingsTab,

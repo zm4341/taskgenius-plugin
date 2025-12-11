@@ -1,20 +1,17 @@
 /* 现代 Fluent 侧边栏配色和布局变量 */
 .fluent-modern {
-	--modern-background-secondary: var(--color-base-25);
+	--modern-background-secondary: var(--background-secondary);
 	--modern-background-primary: var(--background-primary);
 }
 .theme-dark .fluent-modern {
-	--modern-background-secondary: var(--background-primary);
-	--modern-background-primary: var(--background-secondary);
+	--modern-background-secondary: var(--background-secondary);
+	--modern-background-primary: var(--background-primary);
 }
 
 /* —— Fluent 侧边栏及其内容区域 —— */
 .fluent-modern {
-	.tg-fluent-sidebar-container.fluent-sidebar {
-		border-radius: var(--radius-l);
-	}
 	.tg-fluent-sidebar-container {
-		background-color: var(--modern-background-primary);
+		background-color: var(--background-secondary);
 		border-right: unset;
 	}
 	.fluent-sidebar-content {
@@ -30,16 +27,16 @@
 		height: 100%;
 		width: 100%;
 		overflow: hidden;
-		padding: var(--size-4-2) 0;
-		gap: var(--size-4-2);
-		background: var(--modern-background-secondary);
+		/* padding: var(--size-4-2) 0; */
+		/* gap: var(--size-4-2); */
+		/* background: var(--modern-background-secondary); */
 	}
 	.tg-fluent-main-container {
 		flex: 1;
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
-		gap: var(--size-4-2);
+		/* gap: var(--size-4-2); */
 	}
 
 	/* 内容包裹 */
@@ -53,7 +50,7 @@
 	.tg-fluent-content {
 		flex: 1;
 		overflow-y: auto;
-		background: var(--modern-background-primary);
+		/* background: var(--modern-background-secondary); */
 	}
 
 	/* 搜索栏 */
@@ -84,6 +81,7 @@
 		cursor: pointer;
 		gap: var(--size-2-3);
 		min-height: 40px;
+		border-radius: var(--radius-s);
 	}
 	.task-item,
 	.task-item:hover {
@@ -111,20 +109,14 @@
 		height: 56px;
 		padding: 0 20px;
 		gap: 20px;
-		background-color: var(--modern-background-primary);
+		background-color: var(--background-primary);
 		border-radius: var(--radius-m);
-		border-bottom: unset;
+		/* border-bottom: unset; */
 		/* 其他可选边框/阴影已注释 */
 	}
 
-	/* 视图标题栏和容器样式 */
-	.workspace-leaf-content[data-type^="fluent-task-genius-view"] {
-		padding: var(--size-4-3);
-		background: var(--modern-background-secondary);
-	}
-
 	.workspace-leaf-content[data-type^="fluent-task-genius-view"] .view-header {
-		background-color: var(--modern-background-primary);
+		background-color: var(--modern-background-secondary);
 		border-radius: var(--radius-m);
 		height: var(--header-height);
 		display: flex;
@@ -137,8 +129,8 @@
 
 .is-mobile .fluent-modern {
 	.workspace-leaf-content[data-type^="fluent-task-genius-view"] {
-		padding: var(--size-4-2);
-		background: var(--modern-background-secondary);
+		/* padding: var(--size-4-2); */
+		/* background: var(--modern-background-secondary); */
 	}
 
 	.workspace-leaf-content[data-type^="fluent-task-genius-view"] .view-header {
@@ -155,7 +147,7 @@
 	.task-details-container {
 		width: 300px;
 		flex-shrink: 0;
-		background-color: var(--modern-background-secondary);
+		/* background-color: var(--modern-background-secondary); */
 		order: 1;
 		padding: var(--size-4-2) 0 var(--size-4-2) var(--size-4-2);
 		border-radius: var(--radius-m);
@@ -171,8 +163,5 @@
 		max-width: 400px;
 		background-color: var(--background-primary);
 		border-radius: var(--radius-m);
-	}
-	.tg-fluent-container {
-		background: var(--modern-background-secondary);
 	}
 }

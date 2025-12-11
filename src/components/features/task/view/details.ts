@@ -10,7 +10,7 @@ import {
 import { Task } from "@/types/task";
 import TaskProgressBarPlugin from "@/index";
 import { TaskProgressBarSettings } from "@/common/setting-definition";
-import "@/styles/task-details.css";
+import "@/styles/task-details.scss";
 import { t } from "@/translations/helper";
 import { clearAllMarks } from "@/components/ui/renderers/MarkdownRenderer";
 import { StatusComponent } from "@/components/ui/feedback/StatusIndicator";

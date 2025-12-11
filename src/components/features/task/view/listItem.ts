@@ -10,7 +10,7 @@ import {
 import { Task } from "@/types/task";
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
 
-import "@/styles/task-status-indicator.css";
+import "@/styles/task-status-indicator.scss";
 import { createTaskCheckbox } from "./details";
 import { TaskTimerManager } from "@/managers/timer-manager";
 import { getRelativeTimeString } from "@/utils/date/date-formatter";

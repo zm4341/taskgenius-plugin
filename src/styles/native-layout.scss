@@ -1,0 +1,393 @@
+/* src/styles/native-layout.css */
+/* ==========================================================================
+   Native Layout - Obsidian PDF Viewer Style
+   Zero gaps, border-based separation, flat visual hierarchy
+
+   NOTE: This file does NOT modify Fluent Sidebar (.tg-fluent-sidebar-container)
+         which maintains its original fluent-main.css styling.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. CSS Variables Definition
+   ========================================================================== */
+
+.task-genius-container,
+.tg-fluent-container,
+.task-genius-view,
+.task-genius-fluent-view {
+	/* Core background color - uses Obsidian variables by default */
+	--tg-bg-primary: var(--background-primary);
+	--tg-bg-secondary: var(--tg-bg-primary);
+
+	/* Border color for separation */
+	--tg-border-color: var(--background-modifier-border);
+
+	/* Interaction states - unified to use Obsidian's hover variable */
+	--tg-hover-bg: var(--background-modifier-hover);
+	--tg-active-bg: var(--background-modifier-hover);
+}
+
+/* Dark theme override - user specified #1c1c1c for main content area */
+.theme-dark .task-genius-container,
+.theme-dark .tg-fluent-container,
+.theme-dark .task-genius-view,
+.theme-dark .task-genius-fluent-view {
+	--tg-bg-primary: var(--background-primary);
+	/* Keep secondary as Obsidian default for sidebar compatibility */
+	--tg-bg-secondary: var(--background-secondary);
+}
+
+/* Light theme - provide reasonable alternative */
+.theme-light .task-genius-container,
+.theme-light .tg-fluent-container,
+.theme-light .task-genius-view,
+.theme-light .task-genius-fluent-view {
+	--tg-bg-primary: var(--background-primary);
+	--tg-bg-secondary: var(--tg-bg-primary);
+}
+
+/* ==========================================================================
+   2. Main Container Layout - Remove Gaps
+   ========================================================================== */
+
+/* Main containers - only affect layout, not sidebar */
+.task-genius-container,
+.tg-fluent-container {
+	display: flex;
+	flex-direction: row;
+	gap: 0;
+	padding: 0;
+	margin: 0;
+	height: 100%;
+	width: 100%;
+	border-top: 1px solid var(--tg-border-color);
+}
+
+/* Two-column layout containers */
+.two-column-container {
+	gap: 0;
+	padding: 0;
+}
+
+.two-column-content {
+	gap: 0;
+}
+
+/* ==========================================================================
+   3. Legacy Sidebar Styles (Non-Fluent) - Flat, No Float Effect
+   ========================================================================== */
+
+/* Standard sidebar (Legacy view only, not Fluent) */
+.task-sidebar {
+	background-color: var(--tg-bg-secondary);
+	border-right: 1px solid var(--tg-border-color);
+	margin: 0;
+	padding: 0;
+	box-shadow: none;
+}
+
+/* Sidebar navigation - remove internal gaps (Legacy only) */
+.sidebar-nav {
+	gap: 0;
+	padding: 8px 0;
+}
+
+/* Two-column left column */
+.two-column-left-column {
+	background-color: var(--tg-bg-secondary);
+	border-right: 1px solid var(--tg-border-color);
+	margin: 0;
+}
+
+/* ==========================================================================
+   4. Main Content Area - Apply New Background
+   ========================================================================== */
+
+/* Legacy task content */
+.task-content {
+	background-color: var(--tg-bg-primary);
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	gap: 0;
+	border: none;
+	box-shadow: none;
+}
+
+/* Fluent main container (right side content area, NOT sidebar) */
+.tg-fluent-main-container {
+	background-color: var(--tg-bg-primary);
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	gap: 0;
+	border: none;
+	box-shadow: none;
+}
+
+.two-column-right-column {
+	background-color: var(--tg-bg-primary);
+	margin: 0;
+}
+
+/* Fluent content area (task list area) */
+.tg-fluent-content {
+	background-color: var(--tg-bg-primary);
+}
+
+/* ==========================================================================
+   5. Header / Toolbar - Flat Look with Border Separation
+   ========================================================================== */
+
+/* Standard content header */
+.content-header {
+	background-color: var(--tg-bg-primary);
+	border-bottom: 1px solid var(--tg-border-color);
+	padding: 10px 16px;
+	margin: 0;
+}
+
+/* Fluent top navigation bar */
+.tg-fluent-top-nav {
+	background-color: var(--tg-bg-primary);
+	border-bottom: 1px solid var(--tg-border-color);
+}
+
+.fluent-top-navigation {
+	background-color: var(--tg-bg-primary);
+}
+
+/* Two-column headers */
+.two-column-sidebar-header,
+.two-column-task-header {
+	background-color: transparent;
+	border-bottom: 1px solid var(--tg-border-color);
+	margin: 0;
+}
+
+/* ==========================================================================
+   6. Toolbar Buttons - Unified Active/Hover States
+   ========================================================================== */
+
+/* View tabs in fluent toolbar */
+.fluent-view-tab {
+	background-color: transparent;
+	border: none;
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	transition:
+		background-color 0.15s ease,
+		color 0.15s ease;
+}
+
+.fluent-view-tab:hover {
+	background-color: var(--tg-hover-bg);
+	color: var(--text-normal);
+}
+
+/* Active state - use hover background as specified */
+.fluent-view-tab.is-active,
+.fluent-view-tab.active {
+	background-color: var(--tg-active-bg);
+	color: var(--text-normal);
+	box-shadow: none;
+}
+
+/* Icon buttons in toolbar */
+.fluent-nav-icon-button {
+	background-color: transparent;
+	border-radius: var(--radius-s);
+	transition:
+		background-color 0.15s ease,
+		color 0.15s ease;
+}
+
+.fluent-nav-icon-button:hover {
+	background-color: var(--tg-hover-bg);
+	color: var(--text-normal);
+}
+
+.fluent-nav-icon-button.is-active {
+	background-color: var(--tg-active-bg);
+}
+
+/* Standard clickable icons */
+.clickable-icon {
+	transition: background-color 0.15s ease;
+}
+
+.clickable-icon:hover {
+	background-color: var(--tg-hover-bg);
+}
+
+/* Nav buttons */
+.fluent-nav-button {
+	background-color: transparent;
+	border: 1px solid var(--tg-border-color);
+	transition: background-color 0.15s ease;
+}
+
+.fluent-nav-button:hover {
+	background-color: var(--tg-hover-bg);
+}
+
+/* ==========================================================================
+   7. Legacy Sidebar Navigation Items (Non-Fluent)
+   ========================================================================== */
+
+/* Standard sidebar nav items (Legacy view) */
+.sidebar-nav-item {
+	margin: 0 4px;
+	border-radius: var(--radius-s);
+	background-color: transparent;
+	transition: background-color 0.15s ease;
+}
+
+.sidebar-nav-item:hover {
+	background-color: var(--tg-hover-bg);
+}
+
+/* Active state - override the accent color with hover background */
+.sidebar-nav-item.is-active {
+	background-color: var(--tg-active-bg);
+	color: var(--text-normal);
+	--background-modifier-hover: var(--tg-hover-bg);
+}
+
+/* Two-column list items */
+.two-column-list-item {
+	border-radius: var(--radius-s);
+	transition: background-color 0.15s ease;
+}
+
+.two-column-list-item:hover {
+	background-color: var(--tg-hover-bg);
+}
+
+.two-column-list-item.selected {
+	background-color: var(--tg-active-bg);
+}
+
+/* ==========================================================================
+   8. Task List Items - Border Separation, Unified Hover
+   ========================================================================== */
+
+/* Standard task items */
+.task-item {
+	background-color: transparent;
+	border-bottom: 1px solid var(--tg-border-color);
+	margin: 0;
+	/* border-radius: 0; */
+	transition: background-color 0.15s ease;
+}
+
+.task-item:hover {
+	background-color: var(--tg-hover-bg);
+}
+
+.task-item.selected {
+	background-color: var(--tg-active-bg);
+}
+
+/* Last task item - optionally remove bottom border */
+.task-list > .task-item:last-child {
+	border-bottom: none;
+}
+
+/* Fluent task list items */
+.tg-task-list-item {
+	background-color: transparent;
+	border: none;
+	border-bottom: 1px solid var(--tg-border-color);
+	border-radius: 0;
+	margin: 0;
+	transition: background-color 0.15s ease;
+}
+
+.tg-task-list-item:hover {
+	background-color: var(--tg-hover-bg);
+	box-shadow: none;
+	transform: none;
+}
+
+.tg-task-list-item:hover::before {
+	background: transparent;
+}
+
+/* ==========================================================================
+   9. Task List Container - Remove Gaps
+   ========================================================================== */
+
+.task-list {
+	padding: 0;
+	gap: 0;
+}
+
+.task-list-container {
+	padding: 0;
+	gap: 0;
+}
+
+.task-tree-container {
+	padding: 0;
+	gap: 0;
+}
+
+/* Two-column task list */
+.two-column-task-list {
+	padding: 0;
+}
+
+.two-column-sidebar-list {
+	padding: 4px;
+	gap: 0;
+}
+
+/* ==========================================================================
+   10. Tree View Items
+   ========================================================================== */
+
+.task-genius-view .tree-item {
+	border-radius: var(--radius-s);
+	transition: background-color 0.15s ease;
+}
+
+.task-genius-view .tree-item:hover {
+	background-color: var(--tg-hover-bg);
+}
+
+.task-genius-view .tree-item.selected {
+	background-color: var(--tg-active-bg);
+}
+
+/* ==========================================================================
+   11. Fluent View Tabs Container
+   ========================================================================== */
+
+.fluent-view-tabs {
+	background-color: transparent;
+	border-radius: var(--radius-s);
+	padding: 2px;
+	gap: 2px;
+}
+
+/* ==========================================================================
+   12. Embedded Views
+   ========================================================================== */
+
+.internal-embed .task-genius-container {
+	border-top: 1px solid var(--tg-border-color);
+}
+
+/* ==========================================================================
+   13. Bases View Integration
+   ========================================================================== */
+
+.bases-view.task-genius-container {
+	border-top: none;
+	background-color: var(--tg-bg-primary);
+}

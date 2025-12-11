@@ -5,7 +5,7 @@ import { TwoColumnViewBase, TwoColumnViewConfig } from "./TwoColumnViewBase";
 import { t } from "@/translations/helper";
 import TaskProgressBarPlugin from "@/index";
 import { TwoColumnSpecificConfig } from "@/common/setting-definition";
-import "@/styles/property-view.css";
+import "@/styles/property-view.scss";
 import { getEffectiveProject } from "@/utils/task/task-operations";
 
 /**

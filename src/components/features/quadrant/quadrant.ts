@@ -3,7 +3,7 @@ import TaskProgressBarPlugin from "@/index";
 import { Task } from "@/types/task";
 import { QuadrantColumnComponent } from "./quadrant-column";
 import Sortable from "sortablejs";
-import "@/styles/quadrant/quadrant.css";
+import "@/styles/quadrant/quadrant.scss";
 import { t } from "@/translations/helper";
 import { FilterComponent } from "@/components/features/task/filter/in-view/filter";
 import { ActiveFilter } from "@/components/features/task/filter/in-view/filter-type";

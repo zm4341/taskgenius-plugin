@@ -4,7 +4,7 @@ import { Task } from "@/types/task";
 import { QuadrantDefinition } from './quadrant';
 import { QuadrantCardComponent } from "./quadrant-card";
 import { t } from "@/translations/helper";
-import "@/styles/quadrant/quadrant.css";
+import "@/styles/quadrant/quadrant.scss";
 
 export class QuadrantColumnComponent extends Component {
 	plugin: TaskProgressBarPlugin;

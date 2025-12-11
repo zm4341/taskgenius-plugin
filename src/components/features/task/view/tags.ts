@@ -8,7 +8,7 @@ import {
 import { Task } from "@/types/task";
 import { TaskListItemComponent } from "./listItem";
 import { t } from "@/translations/helper";
-import "@/styles/tag-view.css";
+import "@/styles/tag-view.scss";
 import { TaskTreeItemComponent } from "./treeItem";
 import { TaskListRendererComponent } from "./TaskList";
 import TaskProgressBarPlugin from "@/index";

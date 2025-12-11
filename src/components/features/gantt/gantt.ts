@@ -6,7 +6,7 @@ import {
 	TFile,
 } from "obsidian";
 import { type Task } from "@/types/task";
-import "@/styles/gantt/gantt.css";
+import "@/styles/gantt/gantt.scss";
 
 // Import new components and helpers
 import { DateHelper } from "@/utils/date/date-helper";

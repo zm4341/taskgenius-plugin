@@ -22,7 +22,7 @@ import {
 } from "@/types/ics";
 import { t } from "@/translations/helper";
 import TaskProgressBarPlugin from "@/index";
-import "@/styles/ics-settings.css";
+import "@/styles/ics-settings.scss";
 import { HolidayDetector } from "@/parsers/holiday-detector";
 import { WebcalUrlConverter } from "@/parsers/webcal-converter";
 

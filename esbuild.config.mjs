@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 
 import inlineWorkerPlugin from "esbuild-plugin-inline-worker";
+import { sassPlugin } from "esbuild-sass-plugin";
 
 // Respect release-it dry-run: skip writing build artifacts entirely
 const __D_RY__ =
@@ -52,10 +53,12 @@ const cssSettingsPluginWithDir = {
 			// Path to the output CSS file
 			const cssOutfile = path.join(outDir, "styles.css");
 
-			// The settings comment to prepend
+			// The settings comment to prepend (read from SCSS file now)
+			const indexFile = fs.existsSync("src/styles/index.scss")
+				? "src/styles/index.scss"
+				: "src/styles/index.css";
 			const settingsComment =
-				fs.readFileSync("src/styles/index.css", "utf8").split("*/")[0] +
-				"*/\n\n";
+				fs.readFileSync(indexFile, "utf8").split("*/")[0] + "*/\n\n";
 
 			if (fs.existsSync(cssOutfile)) {
 				// Read the current content
@@ -95,6 +98,12 @@ const buildOptions = {
 	entryPoints: ["src/index.ts"],
 	plugins: [
 		inlineWorkerPlugin({ workerName: "Task Genius Indexer" }),
+		sassPlugin({
+			// Enable modern SASS API
+			type: "css",
+			// Load paths for @use and @import
+			loadPaths: [path.resolve(process.cwd(), "src/styles")],
+		}),
 		renamePluginWithDir,
 		cssSettingsPluginWithDir,
 		copyManifestPlugin,

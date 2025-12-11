@@ -14,7 +14,7 @@ import { foldable, syntaxTree, tokenClassNodeProp } from "@codemirror/language";
 import { RegExpCursor } from "@/editor-extensions/core/regex-cursor";
 import TaskProgressBarPlugin from "@/index";
 import { shouldHideProgressBarInLivePriview } from "@/utils";
-import "../../styles/progressbar.css";
+import "../../styles/progressbar.scss";
 import { extractTaskAndGoalInfo } from "@/core/goal/edit-mode";
 import { showPopoverWithProgressBar } from "@/components/ui";
 

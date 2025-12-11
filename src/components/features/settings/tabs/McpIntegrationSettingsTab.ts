@@ -9,7 +9,7 @@ import { McpServerManager } from "@/mcp/McpServerManager";
 import { AuthMiddleware } from "@/mcp/auth/AuthMiddleware";
 import { ConfirmModal } from "@/components/ui/modals/ConfirmModal";
 import { McpLogModal } from "@/components/ui/modals/McpLogModal";
-import "@/styles/mcp-integration.css";
+import "@/styles/mcp-integration.scss";
 import { TaskProgressBarSettingTab } from "@/setting";
 
 function createConfigBlock(

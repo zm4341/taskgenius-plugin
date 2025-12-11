@@ -11,7 +11,7 @@ import {
 import TaskProgressBarPlugin from "@/index";
 import { t } from "@/translations/helper";
 import { getSuggestOptionsByTrigger } from "./SpecialCharacterSuggests";
-import "@/styles/universal-suggest.css";
+import "@/styles/universal-suggest.scss";
 
 export interface SuggestOption {
 	id: string;

@@ -1,8 +1,8 @@
 import { App, setIcon } from "obsidian";
 import { Task } from "@/types/task";
 import { t } from "@/translations/helper";
-import "@/styles/tag-view.css";
-import "@/styles/view-two-column-base.css";
+import "@/styles/tag-view.scss";
+import "@/styles/view-two-column-base.scss";
 import { TaskListRendererComponent } from "./TaskList";
 import TaskProgressBarPlugin from "@/index";
 import { TwoColumnViewBase, TwoColumnViewConfig } from "./TwoColumnViewBase";

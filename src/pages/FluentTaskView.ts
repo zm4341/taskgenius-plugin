@@ -1,11 +1,11 @@
 import { debounce, ItemView, Scope, WorkspaceLeaf, setIcon } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { Task } from "@/types/task";
-import "@/styles/fluent/fluent-main.css";
-import "@/styles/fluent/fluent-secondary.css";
-import "@/styles/fluent/fluent-content-header.css";
-import "@/styles/fluent/fluent-project-popover.css";
-import "@/styles/fluent/fluent-modern.css";
+import "@/styles/fluent/fluent-main.scss";
+import "@/styles/fluent/fluent-secondary.scss";
+import "@/styles/fluent/fluent-content-header.scss";
+import "@/styles/fluent/fluent-project-popover.scss";
+import "@/styles/fluent/fluent-modern.scss";
 import {
 	TopNavigation,
 	ViewMode,

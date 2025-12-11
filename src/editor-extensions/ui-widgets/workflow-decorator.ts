@@ -24,7 +24,7 @@ import { taskStatusChangeAnnotation } from "../task-operations/status-switcher";
 import { Range } from "@codemirror/state";
 import { RegExpCursor } from "@codemirror/search";
 import { setIcon } from "obsidian";
-import "../../styles/workflow.css";
+import "../../styles/workflow.scss";
 
 // Annotation that marks a transaction as a workflow decorator change
 export const workflowDecoratorAnnotation = Annotation.define<string>();

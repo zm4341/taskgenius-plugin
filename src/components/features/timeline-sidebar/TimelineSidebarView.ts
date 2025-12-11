@@ -19,7 +19,7 @@ import {
 	EmbeddableMarkdownEditor,
 } from "../../../editor-extensions/core/markdown-editor";
 import { saveCapture } from "@/utils/file/file-operations";
-import "@/styles/timeline-sidebar.css";
+import "@/styles/timeline-sidebar.scss";
 import { createTaskCheckbox } from "@/components/features/task/view/details";
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
 

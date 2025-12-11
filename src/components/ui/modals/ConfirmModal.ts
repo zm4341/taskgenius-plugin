@@ -1,6 +1,6 @@
 import { App, ButtonComponent, Modal, MarkdownRenderer } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
-import "@/styles/modal.css";
+import "@/styles/modal.scss";
 
 export class ConfirmModal extends Modal {
 	private plugin: TaskProgressBarPlugin;

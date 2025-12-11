@@ -1,7 +1,7 @@
 import { Modal, Setting, ButtonComponent } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { t } from "@/translations/helper";
-import "@/styles/modal.css";
+import "@/styles/modal.scss";
 
 export interface ListConfigModalParams {
 	title: string;

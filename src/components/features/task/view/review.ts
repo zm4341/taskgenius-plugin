@@ -11,7 +11,7 @@ import { Task } from "@/types/task";
 import { t } from "@/translations/helper";
 import { ProjectReviewSetting } from "@/common/setting-definition";
 import TaskProgressBarPlugin from "@/index"; // Path used in TaskView.ts
-import "@/styles/review-view.css"; // Assuming styles will be added here
+import "@/styles/review-view.scss"; // Assuming styles will be added here
 import { TaskListRendererComponent } from "./TaskList"; // Import the base renderer
 
 interface SelectedReviewProject {

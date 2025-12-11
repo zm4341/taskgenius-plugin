@@ -17,7 +17,7 @@ import {
 	FileLocationSuggest,
 	ActionTypeSuggest,
 } from "./OnCompletionSuggesters";
-import "@/styles/onCompletion.css";
+import "@/styles/onCompletion.scss";
 
 export interface OnCompletionConfiguratorOptions {
 	initialValue?: string;

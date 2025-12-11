@@ -6,7 +6,7 @@ import {
 	FolderSuggest,
 	SimpleFileSuggest as FileSuggest,
 } from "@/components/ui/inputs/AutoComplete";
-import "@/styles/file-filter-settings.css";
+import "@/styles/file-filter-settings.scss";
 
 interface FileFilterRuleEditorModalOptions {
 	autoAddRuleType?: FileFilterRule["type"];

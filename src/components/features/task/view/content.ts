@@ -18,10 +18,10 @@ import { TopNavigation } from "@/components/features/fluent/components/FluentTop
 import { TaskTimerManager } from "@/managers/timer-manager";
 import { TimerStatisticsPanel } from "./TimerStatisticsPanel";
 
-import "@/styles/task-list.css";
-import "@/styles/tree-view.css";
-import "@/styles/modern.css";
-import "@/styles/group-by.css";
+import "@/styles/task-list.scss";
+import "@/styles/tree-view.scss";
+import "@/styles/modern.scss";
+import "@/styles/group-by.scss";
 
 // @ts-ignore
 import { filterTasks } from "@/utils/task/task-filter-utils";
@@ -100,7 +100,7 @@ export class ContentComponent extends Component {
 		private parentEl: HTMLElement,
 		private app: App,
 		private plugin: TaskProgressBarPlugin,
-		private params: ContentComponentParams = {}
+		private params: ContentComponentParams = {},
 	) {
 		super();
 	}
@@ -194,7 +194,7 @@ export class ContentComponent extends Component {
 			{
 				root: this.taskListEl, // Observe within the task list container
 				threshold: 0.1, // Trigger when 10% of the marker is visible
-			}
+			},
 		);
 	}
 
@@ -205,11 +205,11 @@ export class ContentComponent extends Component {
 		this.isTreeView = getInitialViewMode(
 			this.app,
 			this.plugin,
-			this.currentViewId
+			this.currentViewId,
 		);
 		// Update the toggle button icon to match the initial state
 		const viewToggleBtn = this.headerEl?.querySelector(
-			".view-toggle-btn"
+			".view-toggle-btn",
 		) as HTMLElement;
 		if (viewToggleBtn) {
 			setIcon(viewToggleBtn, this.isTreeView ? "git-branch" : "list");
@@ -219,7 +219,7 @@ export class ContentComponent extends Component {
 	private toggleViewMode() {
 		this.isTreeView = !this.isTreeView;
 		const viewToggleBtn = this.headerEl.querySelector(
-			".view-toggle-btn"
+			".view-toggle-btn",
 		) as HTMLElement;
 		if (viewToggleBtn) {
 			setIcon(viewToggleBtn, this.isTreeView ? "git-branch" : "list");
@@ -235,7 +235,7 @@ export class ContentComponent extends Component {
 		if (this.isTreeView !== isTree) {
 			this.isTreeView = isTree;
 			const viewToggleBtn = this.headerEl?.querySelector(
-				".view-toggle-btn"
+				".view-toggle-btn",
 			) as HTMLElement;
 			if (viewToggleBtn) {
 				setIcon(viewToggleBtn, this.isTreeView ? "git-branch" : "list");
@@ -291,7 +291,7 @@ export class ContentComponent extends Component {
 
 		// Show menu at button position
 		const buttonEl = document.querySelector(
-			'.fluent-nav-custom-buttons [aria-label="' + t("Group By") + '"]'
+			'.fluent-nav-custom-buttons [aria-label="' + t("Group By") + '"]',
 		) as HTMLElement;
 
 		if (buttonEl) {
@@ -299,7 +299,7 @@ export class ContentComponent extends Component {
 				new MouseEvent("click", {
 					clientX: buttonEl.getBoundingClientRect().left,
 					clientY: buttonEl.getBoundingClientRect().bottom,
-				})
+				}),
 			);
 		} else {
 			// Fallback: show at current mouse position
@@ -323,7 +323,7 @@ export class ContentComponent extends Component {
 			this.taskGroups = groupTasksBy(
 				this.filteredTasks,
 				this.groupByDimension,
-				this.plugin.settings
+				this.plugin.settings,
 			);
 		}
 	}
@@ -357,7 +357,7 @@ export class ContentComponent extends Component {
 		group: TaskGroup,
 		containerEl: HTMLElement,
 		taskMap: Map<string, Task>,
-		level: number
+		level: number,
 	): void {
 		// Create section element with level-specific class
 		const sectionEl = containerEl.createDiv({
@@ -412,13 +412,13 @@ export class ContentComponent extends Component {
 			setGroupExpandedState(
 				this.currentViewId,
 				group.key,
-				group.isExpanded
+				group.isExpanded,
 			);
 
 			// Update icon
 			setIcon(
 				toggleEl,
-				group.isExpanded ? "chevron-down" : "chevron-right"
+				group.isExpanded ? "chevron-down" : "chevron-right",
 			);
 
 			// Show/hide and render/destroy content
@@ -448,7 +448,7 @@ export class ContentComponent extends Component {
 		group: TaskGroup,
 		containerEl: HTMLElement,
 		taskMap: Map<string, Task>,
-		level: number
+		level: number,
 	): void {
 		// Clear existing content
 		containerEl.empty();
@@ -460,7 +460,7 @@ export class ContentComponent extends Component {
 					childGroup,
 					containerEl,
 					taskMap,
-					level + 1
+					level + 1,
 				);
 			});
 		} else {
@@ -470,7 +470,7 @@ export class ContentComponent extends Component {
 				containerEl,
 				this.plugin,
 				this.app,
-				this.currentViewId
+				this.currentViewId,
 			);
 
 			// Set up callbacks
@@ -488,7 +488,7 @@ export class ContentComponent extends Component {
 			// Set up task update callback
 			group.renderer.onTaskUpdate = async (
 				originalTask: Task,
-				updatedTask: Task
+				updatedTask: Task,
 			) => {
 				if (this.params.onTaskUpdate) {
 					await this.params.onTaskUpdate(originalTask, updatedTask);
@@ -500,7 +500,7 @@ export class ContentComponent extends Component {
 				group.tasks,
 				this.isTreeView,
 				taskMap,
-				t("No tasks in this group.")
+				t("No tasks in this group."),
 			);
 		}
 	}
@@ -513,7 +513,7 @@ export class ContentComponent extends Component {
 	 */
 	private destroyGroupContent(
 		group: TaskGroup,
-		containerEl: HTMLElement
+		containerEl: HTMLElement,
 	): void {
 		// Recursively destroy child groups (depth-first)
 		if (group.children && group.children.length > 0) {
@@ -548,7 +548,7 @@ export class ContentComponent extends Component {
 	public setTasks(
 		tasks: Task[],
 		notFilteredTasks: Task[],
-		forceRefresh: boolean = false
+		forceRefresh: boolean = false,
 	) {
 		const updateSignatures = () => {
 			this.lastAllTasksSignature = this.computeTaskSignature(tasks);
@@ -577,7 +577,7 @@ export class ContentComponent extends Component {
 		// If a force refresh is pending, skip non-forced updates
 		if (this.pendingForceRefresh) {
 			console.log(
-				"ContentComponent: Skipping non-forced update, force refresh is pending"
+				"ContentComponent: Skipping non-forced update, force refresh is pending",
 			);
 			return;
 		}
@@ -590,7 +590,7 @@ export class ContentComponent extends Component {
 			nextNotFilteredSignature === this.lastNotFilteredTasksSignature
 		) {
 			console.log(
-				"ContentComponent: Task signatures unchanged, skipping refresh"
+				"ContentComponent: Task signatures unchanged, skipping refresh",
 			);
 			return;
 		}
@@ -676,7 +676,7 @@ export class ContentComponent extends Component {
 		});
 
 		console.log(
-			"[ContentComponent] Registered Group By button in TopNavigation"
+			"[ContentComponent] Registered Group By button in TopNavigation",
 		);
 	}
 
@@ -690,7 +690,7 @@ export class ContentComponent extends Component {
 
 		this.topNavigation.unregisterCustomButton("content-group-by");
 		console.log(
-			"[ContentComponent] Unregistered Group By button from TopNavigation"
+			"[ContentComponent] Unregistered Group By button from TopNavigation",
 		);
 	}
 
@@ -720,7 +720,7 @@ export class ContentComponent extends Component {
 		});
 
 		console.log(
-			"[ContentComponent] Registered Timer Statistics button for working-on view"
+			"[ContentComponent] Registered Timer Statistics button for working-on view",
 		);
 	}
 
@@ -778,7 +778,7 @@ export class ContentComponent extends Component {
 						this.params.onTaskContextMenu(event, task);
 					}
 				},
-			}
+			},
 		);
 		this.addChild(this.timerStatisticsPanel);
 		this.timerStatisticsPanel.load();
@@ -822,17 +822,17 @@ export class ContentComponent extends Component {
 			this.allTasks,
 			this.currentViewId,
 			this.plugin,
-			{ textQuery: this.filterInput?.value } // Pass text query from input
+			{ textQuery: this.filterInput?.value }, // Pass text query from input
 		);
 
 		const sortCriteria = this.plugin.settings.viewConfiguration.find(
-			(view) => view.id === this.currentViewId
+			(view) => view.id === this.currentViewId,
 		)?.sortCriteria;
 		if (sortCriteria && sortCriteria.length > 0) {
 			this.filteredTasks = sortTasks(
 				this.filteredTasks,
 				sortCriteria,
-				this.plugin.settings
+				this.plugin.settings,
 			);
 		} else {
 			// Default sorting: completed tasks last, then by priority, due date, content,
@@ -860,7 +860,7 @@ export class ContentComponent extends Component {
 				});
 				const contentCmp = collator.compare(
 					a.content ?? "",
-					b.content ?? ""
+					b.content ?? "",
 				);
 				if (contentCmp !== 0) return contentCmp;
 				// Lowest-priority tie-breakers to ensure stability across files
@@ -897,7 +897,7 @@ export class ContentComponent extends Component {
 					task.originalMarkdown ?? "",
 					task.content ?? "",
 					task.metadata ? JSON.stringify(task.metadata) : "",
-				].join("|")
+				].join("|"),
 			)
 			.join(";");
 	}
@@ -963,7 +963,7 @@ export class ContentComponent extends Component {
 		// If a render is already in progress, queue a refresh instead of skipping
 		if (this.isRendering) {
 			console.log(
-				"ContentComponent: Already rendering, queueing a refresh"
+				"ContentComponent: Already rendering, queueing a refresh",
 			);
 			this.pendingForceRefresh = true;
 			return;
@@ -995,7 +995,7 @@ export class ContentComponent extends Component {
 				this.taskListEl.replaceChildren();
 				this.disposeComponentList(previousTaskComponents);
 				this.disposeComponentList(previousTreeComponents);
-				this.addEmptyState(t("No tasks found."));
+				this.addEmptyState(t("No tasks here."));
 				return;
 			}
 
@@ -1019,19 +1019,19 @@ export class ContentComponent extends Component {
 				const taskMap = new Map<string, Task>();
 				// Add all non-filtered tasks to the taskMap
 				this.notFilteredTasks.forEach((task) =>
-					taskMap.set(task.id, task)
+					taskMap.set(task.id, task),
 				);
 				this.rootTasks = tasksToTree(this.filteredTasks); // Calculate root tasks
 				// Sort roots according to view's sort criteria (fallback to sensible defaults)
 				const viewSortCriteria =
 					this.plugin.settings.viewConfiguration.find(
-						(view) => view.id === this.currentViewId
+						(view) => view.id === this.currentViewId,
 					)?.sortCriteria;
 				if (viewSortCriteria && viewSortCriteria.length > 0) {
 					this.rootTasks = sortTasks(
 						this.rootTasks,
 						viewSortCriteria,
-						this.plugin.settings
+						this.plugin.settings,
 					);
 				} else {
 					// Default sorting: completed tasks last, then by priority, due date, content,
@@ -1060,12 +1060,12 @@ export class ContentComponent extends Component {
 						});
 						const contentCmp = collator.compare(
 							a.content ?? "",
-							b.content ?? ""
+							b.content ?? "",
 						);
 						if (contentCmp !== 0) return contentCmp;
 						// Lowest-priority tie-breakers to ensure stability across files
 						const fp = (a.filePath || "").localeCompare(
-							b.filePath || ""
+							b.filePath || "",
 						);
 						if (fp !== 0) return fp;
 						return (a.line ?? 0) - (b.line ?? 0);
@@ -1112,7 +1112,7 @@ export class ContentComponent extends Component {
 		const containerRect = container.getBoundingClientRect();
 		// Find first visible task item
 		const items = Array.from(
-			container.querySelectorAll<HTMLElement>(".task-item")
+			container.querySelectorAll<HTMLElement>(".task-item"),
 		);
 		for (const el of items) {
 			const rect = el.getBoundingClientRect();
@@ -1137,7 +1137,7 @@ export class ContentComponent extends Component {
 		// Try anchor-based restoration first
 		if (state.anchorId) {
 			const anchorEl = container.querySelector<HTMLElement>(
-				`[data-task-id="${state.anchorId}"]`
+				`[data-task-id="${state.anchorId}"]`,
 			);
 			if (anchorEl) {
 				const desiredOffset = state.anchorOffset;
@@ -1154,7 +1154,7 @@ export class ContentComponent extends Component {
 	}
 
 	private loadTaskBatch(
-		target: DocumentFragment | HTMLElement = this.taskListEl
+		target: DocumentFragment | HTMLElement = this.taskListEl,
 	): number {
 		const fragment = document.createDocumentFragment();
 		const countToLoad = this.taskPageSize;
@@ -1170,7 +1170,7 @@ export class ContentComponent extends Component {
 				this.currentViewId, // Pass currentViewId
 				this.app,
 				this.plugin,
-				this.params.selectionManager // Pass selection manager
+				this.params.selectionManager, // Pass selection manager
 			);
 
 			// Attach event handlers
@@ -1201,7 +1201,7 @@ export class ContentComponent extends Component {
 
 	private loadRootTaskBatch(
 		taskMap: Map<string, Task>,
-		target: DocumentFragment | HTMLElement = this.taskListEl
+		target: DocumentFragment | HTMLElement = this.taskListEl,
 	): number {
 		const fragment = document.createDocumentFragment();
 		const countToLoad = this.taskPageSize;
@@ -1218,7 +1218,7 @@ export class ContentComponent extends Component {
 		for (let i = start; i < end; i++) {
 			const rootTask = this.rootTasks[i];
 			const childTasks = this.notFilteredTasks.filter(
-				(task) => task.metadata.parent === rootTask.id
+				(task) => task.metadata.parent === rootTask.id,
 			);
 
 			const treeComponent = new TaskTreeItemComponent(
@@ -1229,7 +1229,7 @@ export class ContentComponent extends Component {
 				childTasks,
 				taskMap,
 				this.plugin,
-				this.params.selectionManager // Pass selection manager
+				this.params.selectionManager, // Pass selection manager
 			);
 
 			// Attach event handlers
@@ -1313,7 +1313,7 @@ export class ContentComponent extends Component {
 		}
 
 		const timerManager = new TaskTimerManager(
-			this.plugin.settings.taskTimer
+			this.plugin.settings.taskTimer,
 		);
 
 		let activeDuration = 0;
@@ -1325,7 +1325,7 @@ export class ContentComponent extends Component {
 			if (!blockId) return;
 			const timer = timerManager.getTimerByFileAndBlock(
 				task.filePath,
-				blockId
+				blockId,
 			);
 			if (!timer) return;
 			const duration = timerManager.getCurrentDuration(timer.taskId);
@@ -1349,8 +1349,8 @@ export class ContentComponent extends Component {
 
 		this.workingOnSummaryEl.setText(
 			`⏱ ${t("Active timers")}: ${activeCount} · ${t(
-				"Total time"
-			)}: ${activeText} · ${t("Completed time")}: ${completedText}`
+				"Total time",
+			)}: ${activeText} · ${t("Completed time")}: ${completedText}`,
 		);
 
 		// Ensure the summary stays at the top
@@ -1370,7 +1370,7 @@ export class ContentComponent extends Component {
 				// );
 				const taskMap = new Map<string, Task>();
 				this.filteredTasks.forEach((task) =>
-					taskMap.set(task.id, task)
+					taskMap.set(task.id, task),
 				);
 				this.loadRootTaskBatch(taskMap);
 			} else {
@@ -1431,12 +1431,12 @@ export class ContentComponent extends Component {
 	public updateTask(updatedTask: Task) {
 		// 1) Update sources
 		const taskIndexAll = this.allTasks.findIndex(
-			(t) => t.id === updatedTask.id
+			(t) => t.id === updatedTask.id,
 		);
 		if (taskIndexAll !== -1)
 			this.allTasks[taskIndexAll] = { ...updatedTask };
 		const taskIndexNotFiltered = this.notFilteredTasks.findIndex(
-			(t) => t.id === updatedTask.id
+			(t) => t.id === updatedTask.id,
 		);
 		if (taskIndexNotFiltered !== -1)
 			this.notFilteredTasks[taskIndexNotFiltered] = { ...updatedTask };
@@ -1447,17 +1447,17 @@ export class ContentComponent extends Component {
 		const prevLen = this.filteredTasks.length;
 		this.applyFilters();
 		const taskFromFiltered = this.filteredTasks.find(
-			(t) => t.id === updatedTask.id
+			(t) => t.id === updatedTask.id,
 		);
 		const taskStillVisible = !!taskFromFiltered;
 
 		// Helper: insert list item at correct position (list view)
 		const insertListItem = (taskToInsert: Task) => {
 			const compIds = new Set(
-				this.taskComponents.map((c) => c.getTask().id)
+				this.taskComponents.map((c) => c.getTask().id),
 			);
 			const sortedIndex = this.filteredTasks.findIndex(
-				(t) => t.id === taskToInsert.id
+				(t) => t.id === taskToInsert.id,
 			);
 			// Find the next rendered neighbor after sortedIndex
 			let nextComp: any = null;
@@ -1465,7 +1465,7 @@ export class ContentComponent extends Component {
 				const id = this.filteredTasks[i].id;
 				if (compIds.has(id)) {
 					nextComp = this.taskComponents.find(
-						(c) => c.getTask().id === id
+						(c) => c.getTask().id === id,
 					);
 					break;
 				}
@@ -1476,7 +1476,7 @@ export class ContentComponent extends Component {
 				this.currentViewId,
 				this.app,
 				this.plugin,
-				this.params.selectionManager // Pass selection manager
+				this.params.selectionManager, // Pass selection manager
 			);
 			// Attach events
 			taskComponent.onTaskSelected = this.selectTask.bind(this);
@@ -1497,7 +1497,7 @@ export class ContentComponent extends Component {
 			if (nextComp) {
 				this.taskListEl.insertBefore(
 					taskComponent.element,
-					nextComp.element
+					nextComp.element,
 				);
 				const idx = this.taskComponents.indexOf(nextComp);
 				this.taskComponents.splice(idx, 0, taskComponent);
@@ -1510,7 +1510,7 @@ export class ContentComponent extends Component {
 		// Helper: remove list item
 		const removeListItem = (taskId: string) => {
 			const idx = this.taskComponents.findIndex(
-				(c) => c.getTask().id === taskId
+				(c) => c.getTask().id === taskId,
 			);
 			if (idx >= 0) {
 				const comp = this.taskComponents[idx];
@@ -1531,7 +1531,7 @@ export class ContentComponent extends Component {
 			if (!this.isTreeView) {
 				// List view: update in place or insert if new to view
 				const comp = this.taskComponents.find(
-					(c) => c.getTask().id === updatedTask.id
+					(c) => c.getTask().id === updatedTask.id,
 				);
 				if (comp) {
 					comp.updateTask(taskFromFiltered!);
@@ -1541,7 +1541,7 @@ export class ContentComponent extends Component {
 			} else {
 				// Tree view: update existing subtree or insert to parent/root
 				const comp = this.treeComponents.find(
-					(c) => c.getTask().id === updatedTask.id
+					(c) => c.getTask().id === updatedTask.id,
 				);
 				if (comp) {
 					comp.updateTask(taskFromFiltered!);
@@ -1566,7 +1566,7 @@ export class ContentComponent extends Component {
 									const newChildren =
 										this.notFilteredTasks.filter(
 											(t) =>
-												t.metadata.parent === parentId
+												t.metadata.parent === parentId,
 										);
 									parentComp.updateChildTasks(newChildren);
 									updated = true;
@@ -1577,11 +1577,11 @@ export class ContentComponent extends Component {
 							// Root insertion
 							const taskMap = new Map<string, Task>();
 							this.notFilteredTasks.forEach((t) =>
-								taskMap.set(t.id, t)
+								taskMap.set(t.id, t),
 							);
 							const childTasks = this.notFilteredTasks.filter(
 								(t) =>
-									t.metadata.parent === taskFromFiltered!.id
+									t.metadata.parent === taskFromFiltered!.id,
 							);
 							const newRoot = new TaskTreeItemComponent(
 								taskFromFiltered!,
@@ -1591,7 +1591,7 @@ export class ContentComponent extends Component {
 								childTasks,
 								taskMap,
 								this.plugin,
-								this.params.selectionManager // Pass selection manager
+								this.params.selectionManager, // Pass selection manager
 							);
 							newRoot.onTaskSelected = this.selectTask.bind(this);
 							newRoot.onTaskCompleted = (t) => {
@@ -1616,7 +1616,7 @@ export class ContentComponent extends Component {
 								if (
 									rootComparator(
 										taskFromFiltered!,
-										this.treeComponents[i].getTask()
+										this.treeComponents[i].getTask(),
 									) < 0
 								) {
 									insertAt = i;
@@ -1626,12 +1626,12 @@ export class ContentComponent extends Component {
 							if (insertAt < this.treeComponents.length) {
 								this.taskListEl.insertBefore(
 									newRoot.element,
-									this.treeComponents[insertAt].element
+									this.treeComponents[insertAt].element,
 								);
 								this.treeComponents.splice(
 									insertAt,
 									0,
-									newRoot
+									newRoot,
 								);
 							} else {
 								this.taskListEl.appendChild(newRoot.element);
@@ -1653,7 +1653,7 @@ export class ContentComponent extends Component {
 				// Tree view removal
 				// If root component exists, remove it
 				const idx = this.treeComponents.findIndex(
-					(c) => c.getTask().id === updatedTask.id
+					(c) => c.getTask().id === updatedTask.id,
 				);
 				if (idx >= 0) {
 					const comp = this.treeComponents[idx];

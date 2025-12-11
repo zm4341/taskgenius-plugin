@@ -1,7 +1,7 @@
 import { t } from "@/translations/helper";
 import { OnboardingController } from "../OnboardingController";
 import { ComponentPreviewFactory } from "../previews/ComponentPreviewFactory";
-import "@/styles/onboarding-components.css";
+import "@/styles/onboarding-components.scss";
 
 type ComponentType = "sidebar" | "topnav" | "content" | "project";
 

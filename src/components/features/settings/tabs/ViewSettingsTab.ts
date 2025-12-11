@@ -5,7 +5,7 @@ import { TaskProgressBarSettingTab } from "@/setting";
 import { ViewConfigModal } from "@/components/features/task/view/modals/ViewConfigModal";
 import { TaskFilterComponent } from "@/components/features/task/filter/ViewTaskFilter";
 import Sortable from "sortablejs";
-import "@/styles/view-setting-tab.css";
+import "@/styles/view-setting-tab.scss";
 
 export function renderViewSettingsTab(
 	settingTab: TaskProgressBarSettingTab,

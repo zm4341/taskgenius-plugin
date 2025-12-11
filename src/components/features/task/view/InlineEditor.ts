@@ -11,7 +11,7 @@ import {
 	createEmbeddableMarkdownEditor,
 	EmbeddableMarkdownEditor,
 } from "@/editor-extensions/core/markdown-editor";
-import "@/styles/inline-editor.css";
+import "@/styles/inline-editor.scss";
 import {
 	getEffectiveProject,
 	isProjectReadonly,

@@ -23,7 +23,7 @@ import {
 import TaskProgressBarPlugin from "../../index";
 import { saveCapture, processDateTemplates } from "@/utils/file/file-operations";
 import { t } from "@/translations/helper";
-import "@/styles/quick-capture.css";
+import "@/styles/quick-capture.scss";
 import { FileSuggest } from "@/components/ui/inputs/AutoComplete";
 import { QuickCaptureSuggest } from "@/editor-extensions/autocomplete/task-metadata-suggest";
 

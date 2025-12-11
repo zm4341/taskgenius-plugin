@@ -32,7 +32,7 @@ import {
 } from "@/utils/task/filter-compatibility";
 import { t } from "@/translations/helper";
 import { Task as TaskIndexTask } from "@/types/task";
-import "@/styles/task-filter.css";
+import "@/styles/task-filter.scss";
 
 // Effect to toggle the filter panel
 export const toggleTaskFilter = StateEffect.define<boolean>();

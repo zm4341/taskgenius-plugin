@@ -2,7 +2,7 @@ import { t } from "@/translations/helper";
 import { SelectableCard, SelectableCardConfig } from "../ui/SelectableCard";
 import { OnboardingController } from "../OnboardingController";
 import { Alert } from "../ui/Alert";
-import "@/styles/layout-placement.css";
+import "@/styles/layout-placement.scss";
 
 export type Placement = "sideleaves" | "inline";
 

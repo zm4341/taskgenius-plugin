@@ -1,7 +1,7 @@
 import { Modal, ButtonComponent, ExtraButtonComponent } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { McpLogEntry } from "@/mcp/McpServer";
-import "@/styles/modal.css";
+import "@/styles/modal.scss";
 import { formatDate } from "@/utils/date/date-formatter";
 
 /**

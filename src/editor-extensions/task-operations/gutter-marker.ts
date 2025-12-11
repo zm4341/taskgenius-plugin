@@ -14,7 +14,7 @@ import { TaskDetailsPopover } from "@/components/features/task/edit/TaskDetailsP
 import { MarkdownTaskParser } from "@/dataflow/core/ConfigurableTaskParser";
 // @ts-ignore - This import is necessary but TypeScript can't find it
 import { syntaxTree, tokenClassNodeProp } from "@codemirror/language";
-import "@/styles/task-gutter.css";
+import "@/styles/task-gutter.scss";
 import { getConfig } from "@/common/task-parser-config";
 import { TaskParserConfig } from "@/types/TaskParserConfig";
 

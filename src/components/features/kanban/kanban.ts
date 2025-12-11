@@ -11,7 +11,7 @@ import { Task } from "@/types/task"; // Adjust path as needed
 import { KanbanColumnComponent } from "./kanban-column";
 // import { DragManager, DragMoveEvent, DragEndEvent } from "@/components/ui/behavior/DragManager";
 import Sortable from "sortablejs";
-import "@/styles/kanban/kanban.css";
+import "@/styles/kanban/kanban.scss";
 import { t } from "@/translations/helper"; // Added import for t
 import {
 	FilterComponent,

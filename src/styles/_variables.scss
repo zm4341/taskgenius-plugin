@@ -1,0 +1,119 @@
+// ==========================================================================
+// Task Genius - SCSS Variables
+// ==========================================================================
+
+// ==========================================================================
+// 1. Plugin-specific Variables (Native Layout)
+// ==========================================================================
+
+// Background colors
+$tg-bg-primary: var(--background-primary);
+$tg-bg-secondary: var(--background-secondary);
+
+// Dark theme specific background
+$tg-bg-primary-dark: #1c1c1c;
+$tg-bg-secondary-dark: #1c1c1c;
+
+// Border color
+$tg-border-color: var(--background-modifier-border);
+
+// Interaction states - unified hover/active
+$tg-hover-bg: var(--background-modifier-hover);
+$tg-active-bg: var(--background-modifier-hover);
+
+// ==========================================================================
+// 2. Shadows (Fluent-inspired)
+// ==========================================================================
+
+$tg-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+$tg-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+$tg-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+$tg-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+$tg-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+// Dark theme shadows
+$tg-shadow-sm-dark: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+$tg-shadow-dark: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+$tg-shadow-md-dark: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+$tg-shadow-lg-dark: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+$tg-shadow-xl-dark: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.3);
+
+// ==========================================================================
+// 3. Animations & Transitions
+// ==========================================================================
+
+$tg-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+$tg-transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+$tg-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+// ==========================================================================
+// 4. Border Radius
+// ==========================================================================
+
+$tg-radius-sm: 0.25rem;
+$tg-radius: 0.375rem;
+$tg-radius-md: 0.5rem;
+$tg-radius-lg: 0.75rem;
+$tg-radius-full: 9999px;
+
+// ==========================================================================
+// 5. Spacing (based on Obsidian's size variables)
+// ==========================================================================
+
+$tg-space-1: var(--size-2-1);
+$tg-space-2: var(--size-2-2);
+$tg-space-3: var(--size-2-3);
+$tg-space-4: var(--size-4-2);
+$tg-space-6: var(--size-4-3);
+$tg-space-8: var(--size-4-4);
+
+// ==========================================================================
+// 6. Layout - Zero Gap Approach
+// ==========================================================================
+
+// Force zero gaps for native layout
+$tg-gap-none: 0;
+
+// ==========================================================================
+// 7. Mixins
+// ==========================================================================
+
+// Remove gaps mixin
+@mixin no-gap {
+  gap: $tg-gap-none;
+  margin: 0;
+  padding: 0;
+}
+
+// Flat container (no shadow, no float effect)
+@mixin flat-container {
+  box-shadow: none;
+  border-radius: 0;
+}
+
+// Interactive hover state
+@mixin hover-state {
+  transition: background-color $tg-transition-fast;
+
+  &:hover {
+    background-color: $tg-hover-bg;
+  }
+}
+
+// Active/Selected state
+@mixin active-state {
+  background-color: $tg-active-bg;
+}
+
+// Border separator (instead of gap)
+@mixin border-right {
+  border-right: 1px solid $tg-border-color;
+}
+
+@mixin border-bottom {
+  border-bottom: 1px solid $tg-border-color;
+}
+
+@mixin border-top {
+  border-top: 1px solid $tg-border-color;
+}

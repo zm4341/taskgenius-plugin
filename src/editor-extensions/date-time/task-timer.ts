@@ -23,7 +23,7 @@ import { TaskTimerMetadataDetector } from "@/services/timer-metadata-service";
 import { TaskTimerManager, TimerState } from "@/managers/timer-manager";
 import { TaskTimerFormatter } from "@/services/timer-format-service";
 import { taskStatusChangeAnnotation } from "@/editor-extensions/task-operations/status-switcher";
-import "@/styles/task-timer.css";
+import "@/styles/task-timer.scss";
 
 // Extension configuration for StateField access
 interface TaskTimerConfig {

@@ -7,7 +7,7 @@ import {
 	TimerState,
 } from "@/managers/timer-manager";
 import { t } from "@/translations/helper";
-import "@/styles/timer-statistics.css";
+import "@/styles/timer-statistics.scss";
 
 interface TimerStatisticsOptions {
 	onTaskClick?: (task: Task | null) => void;

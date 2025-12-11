@@ -4,7 +4,7 @@ import { CustomCalendarViewConfig } from "@/common/setting-definition";
 import { t } from "@/translations/helper";
 import { CalendarViewConfigModal } from "@/components/ui/modals/CalendarViewConfigModal";
 import Sortable from "sortablejs";
-import "@/styles/calendar-view-settings.css";
+import "@/styles/calendar-view-settings.scss";
 
 /**
  * Built-in calendar view templates that users can use as base

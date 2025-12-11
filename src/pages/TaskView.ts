@@ -24,7 +24,7 @@ import {
 	TaskDetailsComponent,
 	createTaskCheckbox,
 } from "@/components/features/task/view/details";
-import "../styles/view.css";
+import "../styles/view.scss";
 import TaskProgressBarPlugin from "../index";
 import { QuickCaptureModal } from "@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch";
 import { t } from "@/translations/helper";

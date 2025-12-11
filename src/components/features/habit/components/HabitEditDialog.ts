@@ -20,7 +20,7 @@ import {
 import TaskProgressBarPlugin from '@/index';
 import { t } from '@/translations/helper';
 import { attachIconMenu } from '@/components/ui/menus/IconMenu';
-import "@/styles/habit-edit-dialog.css";
+import "@/styles/habit-edit-dialog.scss";
 
 export class HabitEditDialog extends Modal {
 	plugin: TaskProgressBarPlugin;

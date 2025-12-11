@@ -6,7 +6,7 @@ import {
 } from "@/utils/date/date-formatter";
 import { HabitCard } from "@/components/features/habit/habitcard/habitcard";
 import { t } from "@/translations/helper";
-import "@/styles/habit.css";
+import "@/styles/habit.scss";
 
 export class HabitChartModal extends Modal {
 	private habit: DailyHabitProps;

@@ -52,10 +52,10 @@ import {
 	type CalendarEvent as AdapterCalendarEvent,
 } from "@/utils/adapters/TaskCalendarAdapter";
 import "@taskgenius/calendar/styles.css";
-import "@/styles/taskgenius-calendar.css";
-import "@/styles/calendar/view.css";
-import "@/styles/calendar/event.css";
-import "@/styles/calendar/badge.css";
+import "@/styles/taskgenius-calendar.scss";
+import "@/styles/calendar/view.scss";
+import "@/styles/calendar/event.scss";
+import "@/styles/calendar/badge.scss";
 import { t } from "@/translations/helper";
 
 // Import new TG-based view implementations
