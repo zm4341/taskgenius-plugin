@@ -4,6 +4,12 @@ All notable changes to beta releases will be documented in this file.
 
 
 
+## [9.14.0-beta.2](///compare/9.14.0-beta.1...9.14.0-beta.2) (2025-12-14)
+
+### Features
+
+* **settings:** add modal settings interface with vertical tabs c3165c5
+
 ## [9.14.0-beta.1](///compare/9.14.0-beta.0...9.14.0-beta.1) (2025-12-13)
 
 ### Bug Fixes
