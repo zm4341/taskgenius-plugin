@@ -1301,27 +1301,33 @@ export class TimelineSidebarView extends ItemView {
 		targetInfoEl.empty();
 
 		const settings = this.plugin.settings.quickCapture;
-		let targetText = "";
+		let fileName = "";
+		let fullPath = "";
 
 		if (settings.targetType === "daily-note") {
 			const dateStr = moment().format(settings.dailyNoteSettings.format);
-			const fileName = `${dateStr}.md`;
-			const fullPath = settings.dailyNoteSettings.folder
+			fileName = `${dateStr}.md`;
+			fullPath = settings.dailyNoteSettings.folder
 				? `${settings.dailyNoteSettings.folder}/${fileName}`
 				: fileName;
-			targetText = `${t("to")} ${fullPath}`;
 		} else {
-			targetText = `${t("to")} ${
-				settings.targetFile || "Quick Capture.md"
-			}`;
+			const targetFile = settings.targetFile || "Quick Capture.md";
+			// Extract just the filename from the path
+			fileName = targetFile.split("/").pop() || targetFile;
+			fullPath = targetFile;
 		}
+
+		// Display only filename, show full path in tooltip
+		let displayText = `${t("to")} ${fileName}`;
+		let tooltipText = `${t("to")} ${fullPath}`;
 
 		if (settings.targetHeading) {
-			targetText += ` → ${settings.targetHeading}`;
+			displayText += ` → ${settings.targetHeading}`;
+			tooltipText += ` → ${settings.targetHeading}`;
 		}
 
-		targetInfoEl.setText(targetText);
-		targetInfoEl.setAttribute("title", targetText);
+		targetInfoEl.setText(displayText);
+		targetInfoEl.setAttribute("title", tooltipText);
 	}
 
 	// Method to trigger view update (called when settings change)

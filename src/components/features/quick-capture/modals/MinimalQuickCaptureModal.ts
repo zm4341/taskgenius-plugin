@@ -37,7 +37,7 @@ interface TaskMetadata {
 	project?: string;
 	context?: string;
 	tags?: string[];
-	location?: "fixed" | "daily-note" | "custom-file";
+	location?: "fixed" | "daily-note" | "custom-file" | "custom";
 	targetFile?: string;
 }
 
@@ -84,8 +84,17 @@ export class MinimalQuickCaptureModal extends Modal {
 		// Initialize default metadata with fallback
 		const minimalSettings =
 			this.plugin.settings.quickCapture.minimalModeSettings;
-		this.taskMetadata.location =
-			this.plugin.settings.quickCapture.targetType || "fixed";
+		// Map targetType to location
+		const targetType = this.plugin.settings.quickCapture.targetType;
+		if (targetType === "custom-file") {
+			this.taskMetadata.location = "custom-file";
+		} else if (targetType === "daily-note") {
+			this.taskMetadata.location = "daily-note";
+		} else if (targetType === "custom") {
+			this.taskMetadata.location = "custom";
+		} else {
+			this.taskMetadata.location = "fixed";
+		}
 		this.taskMetadata.targetFile = this.getTargetFile();
 	}
 

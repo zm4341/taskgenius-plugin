@@ -4,6 +4,81 @@ name: Task Genius
 id: task-genius
 settings:
     - 
+        id: transparent-theme-heading
+        title: Transparent Theme (透明主题)
+        title.zh: 透明主题
+        type: heading
+        level: 1
+        collapsed: false
+    - 
+        id: enable-transparent-theme
+        title: Enable Transparent Background
+        title.zh: 启用透明背景
+        description: Make the Task Genius panel background transparent
+        description.zh: 使 Task Genius 面板背景透明
+        type: class-toggle
+        default: false
+    - 
+        id: transparent-header-opacity-preset
+        title: Glass Opacity Level
+        title.zh: 玻璃透明度级别
+        description: Select background opacity level for all elements (headers, cards, rows)
+        description.zh: 选择所有元素（头部、卡片、行）的背景透明度级别
+        type: class-select
+        allowEmpty: false
+        default: tg-header-opacity-medium
+        options:
+            - 
+                label: Very Low (20%)
+                label.zh: 非常低 (20%)
+                value: tg-header-opacity-very-low
+            - 
+                label: Low (35%)
+                label.zh: 低 (35%)
+                value: tg-header-opacity-low
+            - 
+                label: Medium (50%)
+                label.zh: 中等 (50%)
+                value: tg-header-opacity-medium
+            - 
+                label: High (65%)
+                label.zh: 高 (65%)
+                value: tg-header-opacity-high
+            - 
+                label: Very High (80%)
+                label.zh: 非常高 (80%)
+                value: tg-header-opacity-very-high
+    - 
+        id: transparent-blur-preset
+        title: Blur Effect Level
+        title.zh: 模糊效果级别
+        description: Select backdrop blur effect level
+        description.zh: 选择背景模糊效果的级别
+        type: class-select
+        allowEmpty: false
+        default: tg-blur-medium
+        options:
+            - 
+                label: None (0px)
+                label.zh: 无 (0px)
+                value: tg-blur-none
+            - 
+                label: Light (5px)
+                label.zh: 轻微 (5px)
+                value: tg-blur-light
+            - 
+                label: Medium (10px)
+                label.zh: 中等 (10px)
+                value: tg-blur-medium
+            - 
+                label: Strong (15px)
+                label.zh: 强烈 (15px)
+                value: tg-blur-strong
+            - 
+                label: Very Strong (20px)
+                label.zh: 非常强烈 (20px)
+                value: tg-blur-very-strong
+    - 
         id: task-colors-heading
         title: Checkbox Status Colors
         type: heading

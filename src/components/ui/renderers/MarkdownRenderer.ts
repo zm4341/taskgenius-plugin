@@ -122,11 +122,14 @@ export function clearAllMarks(markdown: string): string {
 		"",
 	);
 
-	// Remove standalone exclamation marks (priority indicators)
-	// These might be used as priority indicators in some formats
-	cleanedMarkdown = cleanedMarkdown.replace(/\s+!+(?:\s|$)/g, " ");
-	cleanedMarkdown = cleanedMarkdown.replace(/^!+\s*/, "");
-	cleanedMarkdown = cleanedMarkdown.replace(/\s*!+$/, "");
+	// Remove standalone exclamation marks that are clearly priority indicators
+	// Only remove ! when it appears isolated (surrounded by spaces or at boundaries)
+	// AND looks like a priority marker (just ! without adjacent text)
+	// Preserve exclamation marks that are part of natural text (like "Hello!" or "Important!")
+	// Only match: start of string followed by just !, or space followed by just ! followed by space/end
+	cleanedMarkdown = cleanedMarkdown.replace(/^(!+)\s+(?=\S)/g, ""); // "!! task" -> "task"
+	cleanedMarkdown = cleanedMarkdown.replace(/\s+(!+)\s*$/g, ""); // "task !!" -> "task"
+	cleanedMarkdown = cleanedMarkdown.replace(/\s+(!+)\s+/g, " "); // "task !! more" -> "task more"
 
 	// Remove non-date metadata fields (id, dependsOn, onCompletion)
 	cleanedMarkdown = cleanedMarkdown.replace(/🆔\s*[^\s]+/g, ""); // Remove id

@@ -360,6 +360,7 @@ export class QuadrantComponent extends Component {
 			animation: 150,
 			ghostClass: "tg-quadrant-card--ghost",
 			dragClass: "tg-quadrant-card--dragging",
+			chosenClass: "tg-quadrant-card--chosen",
 			// Mobile-specific optimizations - following kanban pattern
 			delay: isMobile ? 150 : 0, // Longer delay on mobile to distinguish from scroll
 			touchStartThreshold: isMobile ? 5 : 3, // More threshold on mobile
@@ -371,7 +372,44 @@ export class QuadrantComponent extends Component {
 			scrollSpeed: isMobile ? 15 : 10, // Faster scroll on mobile
 			bubbleScroll: true, // Enable bubble scrolling for nested containers
 
+			onStart: () => {
+				// Add dragging state to all columns for visual feedback
+				this.containerEl.addClass("tg-quadrant--is-dragging");
+				// Add drop target indicator to all column contents
+				this.containerEl
+					.querySelectorAll(".tg-quadrant-column-content")
+					.forEach((el) => {
+						el.addClass("tg-quadrant-column-content--can-drop");
+					});
+			},
+
+			onMove: (evt) => {
+				// Remove active state from all columns first
+				this.containerEl
+					.querySelectorAll(".tg-quadrant-column-content")
+					.forEach((el) => {
+						el.removeClass("tg-quadrant-column-content--drop-active");
+					});
+				
+				// Add active state to the target column
+				const targetContainer = evt.to;
+				if (targetContainer) {
+					targetContainer.addClass("tg-quadrant-column-content--drop-active");
+				}
+				
+				return true; // Allow the move
+			},
+
 			onEnd: (event) => {
+				// Remove all drag-related states
+				this.containerEl.removeClass("tg-quadrant--is-dragging");
+				this.containerEl
+					.querySelectorAll(".tg-quadrant-column-content")
+					.forEach((el) => {
+						el.removeClass("tg-quadrant-column-content--can-drop");
+						el.removeClass("tg-quadrant-column-content--drop-active");
+					});
+				
 				this.handleSortEnd(event, quadrant);
 			},
 		});
@@ -451,8 +489,11 @@ export class QuadrantComponent extends Component {
 		if (!task) return;
 
 		try {
-			// Create a copy of the task for modification
-			const updatedTask = { ...task };
+			// Create a deep copy of the task for modification, preserving all metadata
+			const updatedTask = {
+				...task,
+				metadata: { ...task.metadata },
+			};
 
 			// Ensure metadata exists
 			if (!updatedTask.metadata) {

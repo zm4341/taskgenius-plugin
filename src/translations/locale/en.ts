@@ -190,6 +190,7 @@ const translations = {
 		"Choose whether to capture to a fixed file or daily note",
 	"Fixed file": "Fixed file",
 	"Daily note": "Daily note",
+	"Custom (select at capture time)": "Custom (select at capture time)",
 	"Sync with Daily Notes plugin": "Sync with Daily Notes plugin",
 	"Automatically sync settings from the Daily Notes plugin":
 		"Automatically sync settings from the Daily Notes plugin",
@@ -816,6 +817,7 @@ const translations = {
 	"Coming Up": "Coming Up",
 	Task: "Task",
 	Tasks: "Tasks",
+	"No.": "No.",
 	"No upcoming tasks": "No upcoming tasks",
 	"No tasks scheduled": "No tasks scheduled",
 	"0 tasks": "0 tasks",
@@ -1634,6 +1636,7 @@ const translations = {
 	"Click to change status": "Click to change status",
 	"Click to set priority": "Click to set priority",
 	Yesterday: "Yesterday",
+	ago: "ago",
 	"Click to edit date": "Click to edit date",
 	"No tags": "No tags",
 	"Click to open file": "Click to open file",

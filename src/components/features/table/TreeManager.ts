@@ -211,13 +211,28 @@ export class TreeManager extends Component {
 
 	/**
 	 * Flatten tree nodes into table rows
+	 * @param nodes - Tree nodes to flatten
+	 * @param rows - Array to collect rows
+	 * @param level - Current level in tree
+	 * @param parentRowNumber - Parent's row number prefix (empty for root)
+	 * @param siblingIndex - Index among siblings (1-based)
 	 */
 	private flattenTreeNodes(
 		nodes: TreeNode[],
 		rows: TableRow[],
-		level: number
+		level: number,
+		parentRowNumber: string = "",
+		startIndex: number = 1
 	) {
-		nodes.forEach((node) => {
+		nodes.forEach((node, index) => {
+			// Calculate row number
+			// Root level: 1, 2, 3...
+			// Subtasks: 1.1, 1.2, 1.3... or 2.1, 2.2...
+			const currentIndex = startIndex + index;
+			const rowNumber = parentRowNumber 
+				? `${parentRowNumber}.${index + 1}` 
+				: currentIndex.toString();
+
 			// Create table row for this node
 			const row: TableRow = {
 				id: node.task.id,
@@ -225,14 +240,15 @@ export class TreeManager extends Component {
 				level: node.level,
 				expanded: node.expanded,
 				hasChildren: node.children.length > 0,
-				cells: this.createCellsForNode(node, rows.length + 1),
+				cells: this.createCellsForNode(node, rowNumber),
 			};
 
 			rows.push(row);
 
 			// If node is expanded and has children, add children recursively
+			// Children always start from index 1
 			if (node.expanded && node.children.length > 0) {
-				this.flattenTreeNodes(node.children, rows, level + 1);
+				this.flattenTreeNodes(node.children, rows, level + 1, rowNumber, 1);
 			}
 		});
 	}
@@ -240,7 +256,7 @@ export class TreeManager extends Component {
 	/**
 	 * Create table cells for a tree node using the same logic as TableView
 	 */
-	private createCellsForNode(node: TreeNode, rowNumber: number): TableCell[] {
+	private createCellsForNode(node: TreeNode, rowNumber: string): TableCell[] {
 		const task = node.task;
 
 		return this.columns.map((column) => {
@@ -250,7 +266,7 @@ export class TreeManager extends Component {
 			switch (column.id) {
 				case "rowNumber":
 					value = rowNumber;
-					displayValue = rowNumber.toString();
+					displayValue = rowNumber;
 					break;
 				case "status":
 					value = task.status;

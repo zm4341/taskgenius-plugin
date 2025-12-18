@@ -38,6 +38,9 @@ export class FluentSidebar extends Component {
 	private otherViewsSection: HTMLElement | null = null;
 	private railEl: HTMLElement | null = null;
 	private sortables: Sortable[] = [];
+	private filterResetBtn: HTMLElement | null = null;
+	private onFilterReset?: () => void;
+	private getLiveFilterState?: () => any;
 
 	// System views definition for migration and label/icon lookup
 	private readonly SYSTEM_VIEWS: Record<
@@ -58,6 +61,8 @@ export class FluentSidebar extends Component {
 		private onNavigate: (viewId: string) => void,
 		private onProjectSelect: (projectId: string) => void,
 		collapsed = false,
+		onFilterReset?: () => void,
+		getLiveFilterState?: () => any,
 	) {
 		super();
 		this.containerEl = containerEl;
@@ -65,6 +70,8 @@ export class FluentSidebar extends Component {
 		this.collapsed = collapsed;
 		this.currentWorkspaceId =
 			plugin.workspaceManager?.getActiveWorkspace().id || "";
+		this.onFilterReset = onFilterReset;
+		this.getLiveFilterState = getLiveFilterState;
 	}
 
 	private isViewVisible(viewId: string): boolean {
@@ -258,6 +265,18 @@ export class FluentSidebar extends Component {
 			// Button container for tree toggle and sort
 			const buttonContainer = projectHeader.createDiv({
 				cls: "fluent-project-header-buttons",
+			});
+
+			// Reset filter button (conditionally shown)
+			this.filterResetBtn = buttonContainer.createDiv({
+				cls: "fluent-filter-reset-btn",
+				attr: { "aria-label": t("Reset Filter") },
+			});
+			setIcon(this.filterResetBtn, "filter-x");
+			this.filterResetBtn.hide(); // Hidden by default
+
+			this.registerDomEvent(this.filterResetBtn, "click", () => {
+				this.onFilterReset?.();
 			});
 
 			// Tree/List toggle button
@@ -637,6 +656,26 @@ export class FluentSidebar extends Component {
 		} else {
 			// Just toggle the class for mobile
 			this.containerEl.toggleClass("is-collapsed", collapsed);
+		}
+	}
+
+	/**
+	 * Update the visibility of the filter reset button
+	 * Called when filter state changes
+	 */
+	public updateFilterResetButton(): void {
+		if (!this.filterResetBtn) return;
+
+		const liveFilterState = this.getLiveFilterState?.();
+		const hasActiveFilters =
+			liveFilterState &&
+			liveFilterState.filterGroups &&
+			liveFilterState.filterGroups.length > 0;
+
+		if (hasActiveFilters) {
+			this.filterResetBtn.show();
+		} else {
+			this.filterResetBtn.hide();
 		}
 	}
 

@@ -122,6 +122,8 @@ export class TableEditor extends Component {
 			case "dueDate":
 			case "startDate":
 			case "scheduledDate":
+			case "createdDate":
+			case "completedDate":
 				return this.createDateInput(currentValue);
 			case "tags":
 				return this.createTagsInput(currentValue);

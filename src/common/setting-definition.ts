@@ -398,7 +398,7 @@ export interface QuickCaptureSettings {
 	placeholder: string;
 	appendToFile: "append" | "prepend" | "replace";
 	// New settings for enhanced quick capture
-	targetType: "fixed" | "daily-note" | "custom-file"; // Target type: fixed file, daily note, or custom file
+	targetType: "fixed" | "daily-note" | "custom-file" | "custom"; // Target type: fixed file, daily note, custom file, or custom (select at capture time)
 	targetHeading?: string; // Optional heading to append under
 	// Daily note settings
 	dailyNoteSettings: {

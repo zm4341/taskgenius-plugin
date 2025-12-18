@@ -36,7 +36,7 @@ import { RootFilterState } from "@/components/features/task/filter/ViewTaskFilte
  */
 export class FluentLayoutManager extends Component {
 	// Layout state
-	public isSidebarCollapsed = false;
+	public isSidebarCollapsed = true;
 	public isDetailsVisible = false;
 	public isMobileDrawerOpen = false;
 
@@ -157,10 +157,23 @@ export class FluentLayoutManager extends Component {
 				}
 			},
 			initialCollapsedState,
+			() => {
+				// Reset filter callback
+				this.onFilterReset?.();
+			},
+			() => {
+				// Get live filter state callback
+				return this.getLiveFilterState?.();
+			},
 		);
 
 		// Add sidebar as a child component for proper lifecycle management
 		this.addChild(this.sidebar);
+
+		// Set initial collapsed class on root container
+		if (initialCollapsedState && !Platform.isPhone) {
+			this.rootContainerEl?.addClass("fluent-sidebar-collapsed");
+		}
 	}
 
 	/**
@@ -610,7 +623,7 @@ export class FluentLayoutManager extends Component {
 	 * Update action buttons visibility (mainly Reset Filter button)
 	 */
 	updateActionButtons(): void {
-		// Remove reset filter button if exists
+		// Remove reset filter button from action bar if exists
 		const resetButton = this.headerEl.querySelector(
 			".view-action.task-filter-reset",
 		);
@@ -618,19 +631,8 @@ export class FluentLayoutManager extends Component {
 			resetButton.remove();
 		}
 
-		// Add reset filter button if there are active filters
-		const liveFilterState = this.getLiveFilterState?.();
-		if (
-			liveFilterState &&
-			liveFilterState.filterGroups &&
-			liveFilterState.filterGroups.length > 0
-		) {
-			this.view
-				.addAction("reset", t("Reset Filter"), () => {
-					this.onFilterReset?.();
-				})
-				.addClass("task-filter-reset");
-		}
+		// Update sidebar's filter reset button visibility
+		this.sidebar?.updateFilterResetButton();
 	}
 
 	/**

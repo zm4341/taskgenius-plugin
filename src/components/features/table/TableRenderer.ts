@@ -237,18 +237,28 @@ export class TableRenderer extends Component {
 			// Create header content container
 			const headerContent = th.createDiv("task-table-header-content");
 
-			// Add column title
+			// Add column title as a clickable element (for selecting sort field)
 			const titleSpan = headerContent.createSpan(
 				"task-table-header-title",
 			);
 			titleSpan.textContent = column.title;
 
-			// Add sort indicator if sortable
+			// Add sort indicator if sortable - as separate clickable element (for toggling sort order)
 			if (column.sortable) {
 				th.addClass("sortable");
+
+				// Make title clickable for filtering by column values
+				titleSpan.addClass("clickable-title");
+				titleSpan.dataset.action = "select-sort-field";
+				titleSpan.title = t("Click to filter by values");
+
+				// Create sort icon as separate clickable element for order toggling
 				const sortIcon = headerContent.createSpan(
 					"task-table-sort-icon",
 				);
+				sortIcon.addClass("clickable-sort-icon");
+				sortIcon.dataset.action = "toggle-sort-order";
+				sortIcon.title = t("Click to toggle sort order");
 				setIcon(sortIcon, "chevrons-up-down");
 			}
 
@@ -355,14 +365,32 @@ export class TableRenderer extends Component {
 			// Sort by target index to insert in correct order
 			rowsToInsert.sort((a, b) => a.index - b.index);
 
-			// Use insertBefore for precise positioning
-			const children = Array.from(this.bodyEl.children);
+			// For correct positioning after sorting, we need to rebuild the order
+			// by removing and re-inserting elements in the correct sequence
+			// First, detach all elements that need repositioning
+			const elementsToReposition = rowsToInsert.map(({ element }) => {
+				if (element.parentNode === this.bodyEl) {
+					this.bodyEl.removeChild(element);
+				}
+				return element;
+			});
+
+			// Re-sort rowsToInsert by target index after detaching
+			rowsToInsert.sort((a, b) => a.index - b.index);
+
+			// Now insert each element at its correct position
 			rowsToInsert.forEach(({ element, index }) => {
-				const referenceNode = children[index];
-				if (referenceNode && referenceNode !== element) {
-					this.bodyEl.insertBefore(element, referenceNode);
-				} else if (!referenceNode) {
+				// Get fresh children list each time since DOM changes
+				const currentChildren = this.bodyEl.children;
+				if (index >= currentChildren.length) {
 					this.bodyEl.appendChild(element);
+				} else {
+					const referenceNode = currentChildren[index];
+					if (referenceNode && referenceNode !== element) {
+						this.bodyEl.insertBefore(element, referenceNode);
+					} else if (!referenceNode) {
+						this.bodyEl.appendChild(element);
+					}
 				}
 			});
 		}
@@ -1029,8 +1057,17 @@ export class TableRenderer extends Component {
 				relativeIndicator.textContent = t("Yesterday");
 				relativeIndicator.addClass("yesterday");
 			} else if (diffDays < 0) {
-				relativeIndicator.textContent = t("Overdue");
-				relativeIndicator.addClass("overdue");
+				// Only show "Overdue" for due dates, not for start dates or other date types
+				// Start date being in the past is normal (task has started)
+				// Only due date being in the past means the task is overdue
+				if (cell.columnId === "dueDate") {
+					relativeIndicator.textContent = t("Overdue");
+					relativeIndicator.addClass("overdue");
+				} else {
+					// For other date types (startDate, scheduledDate, etc.), show how many days ago
+					relativeIndicator.textContent = `${Math.abs(diffDays)}d ${t("ago")}`;
+					relativeIndicator.addClass("past");
+				}
 			} else if (diffDays <= 7) {
 				relativeIndicator.textContent = `${diffDays}d`;
 				relativeIndicator.addClass("upcoming");

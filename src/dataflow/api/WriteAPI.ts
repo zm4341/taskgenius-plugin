@@ -493,13 +493,14 @@ export class WriteAPI {
 						"start",
 						"scheduled",
 						"due",
+						"created",
 						"completion",
 						"cancelled",
 						"onCompletion",
 						"dependsOn",
 						"id",
 					].join("|");
-					const baseEmoji2 = "(🔺|⏫|🔼|🔽|⏬|🛫|⏳|📅|✅|🔁)";
+					const baseEmoji2 = "(🔺|⏫|🔼|🔽|⏬|🛫|⏳|📅|✅|🔁|➕)";
 					const dvFieldToken2 = `\\[(?:${dvKeysGroup2})\\s*::[^\\]]*\\]`;
 					const tagToken2 = EMOJI_TAG_REGEX.source;
 					const atToken2 = TOKEN_CONTEXT_REGEX.source;
@@ -562,6 +563,7 @@ export class WriteAPI {
 						"startDate",
 						"dueDate",
 						"scheduledDate",
+						"createdDate",
 						"recurrence",
 						"completedDate",
 						"onCompletion",
@@ -620,13 +622,14 @@ export class WriteAPI {
 								"start",
 								"scheduled",
 								"due",
+								"created",
 								"completion",
 								"cancelled",
 								"onCompletion",
 								"dependsOn",
 								"id",
 							].join("|");
-							const baseEmoji = "(🔺|⏫|🔼|🔽|⏬|🛫|⏳|📅|✅|🔁)";
+							const baseEmoji = "(🔺|⏫|🔼|🔽|⏬|🛫|⏳|📅|✅|🔁|➕)";
 							const dvFieldToken = `\\[(?:${dvKeysGroup})\\s*::[^\\]]*\\]`;
 							// Tasks-format prefixes
 							const projectPrefixTasks =
@@ -721,6 +724,7 @@ export class WriteAPI {
 								startDate: mergedMd.startDate,
 								dueDate: mergedMd.dueDate,
 								scheduledDate: mergedMd.scheduledDate,
+								createdDate: mergedMd.createdDate,
 								recurrence: mergedMd.recurrence,
 								completed: completedFlag,
 								completedDate: mergedMd.completedDate,
@@ -1534,6 +1538,7 @@ export class WriteAPI {
 								"start",
 								"scheduled",
 								"due",
+								"created",
 								"completion",
 								"cancelled",
 								"onCompletion",
@@ -1541,7 +1546,7 @@ export class WriteAPI {
 								"id",
 							].join("|");
 							const baseEmoji3 =
-								"(🔺|⏫|🔼|🔽|⏬|🛫|⏳|📅|✅|🔁)";
+								"(🔺|⏫|🔼|🔽|⏬|🛫|⏳|📅|✅|🔁|➕)";
 							const dvFieldToken3 = `\\[(?:${dvKeysGroup3})\\s*::[^\\]]*\\]`;
 							const tagToken3 = EMOJI_TAG_REGEX.source;
 							const atToken3 = TOKEN_CONTEXT_REGEX.source;
@@ -2072,6 +2077,7 @@ export class WriteAPI {
 		startDate?: number;
 		dueDate?: number;
 		scheduledDate?: number;
+		createdDate?: number;
 		recurrence?: string;
 		completed?: boolean;
 		completedDate?: number;
@@ -2226,6 +2232,18 @@ export class WriteAPI {
 			if (dateStr) {
 				metadata.push(
 					useDataviewFormat ? `[due:: ${dateStr}]` : `📅 ${dateStr}`,
+				);
+			}
+		}
+
+		// Created Date
+		if (args.createdDate) {
+			const dateStr = this.formatDateForWrite(args.createdDate);
+			if (dateStr) {
+				metadata.push(
+					useDataviewFormat
+						? `[created:: ${dateStr}]`
+						: `➕ ${dateStr}`,
 				);
 			}
 		}
@@ -2643,22 +2661,23 @@ export class WriteAPI {
 			this.plugin.settings.projectTagPrefix?.dataview || "project";
 		const contextKeyD =
 			this.plugin.settings.contextTagPrefix?.dataview || "context";
-		const dvKeysGroupD = [
-			"tags",
-			escD(projectKeyD),
-			escD(contextKeyD),
-			"priority",
-			"repeat",
-			"start",
-			"scheduled",
-			"due",
-			"completion",
-			"cancelled",
-			"onCompletion",
-			"dependsOn",
-			"id",
-		].join("|");
-		const baseEmojiD = "(🔺|⏫|🔼|🔽|⏬|🛫|⏳|📅|✅|🔁)";
+	const dvKeysGroupD = [
+		"tags",
+		escD(projectKeyD),
+		escD(contextKeyD),
+		"priority",
+		"repeat",
+		"start",
+		"scheduled",
+		"due",
+		"created",
+		"completion",
+		"cancelled",
+		"onCompletion",
+		"dependsOn",
+		"id",
+	].join("|");
+	const baseEmojiD = "(🔺|⏫|🔼|🔽|⏬|🛫|⏳|📅|✅|🔁|➕)";
 		const dvFieldTokenD = `\\[(?:${dvKeysGroupD})\\s*::[^\\]]*\\]`;
 		const tagTokenD = "#[A-Za-z][\\w/-]*";
 		const atTokenD = "@[A-Za-z][\\w/-]*";

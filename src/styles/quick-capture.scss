@@ -499,6 +499,28 @@
 	max-width: 500px;
 }
 
+/* File suggest item styles */
+.file-suggest-item {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+	overflow: hidden;
+}
+
+.file-suggest-name {
+	font-weight: 500;
+	color: var(--text-normal);
+	flex-shrink: 0;
+}
+
+.file-suggest-path {
+	font-size: 0.85em;
+	color: var(--text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .quick-capture-buttons {
 	display: flex;
 	justify-content: flex-end;
@@ -581,8 +603,18 @@
 	color: var(--text-normal);
 }
 
-.quick-capture-target-container {
+/* Target file selector row */
+.quick-capture-target-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	margin-bottom: 16px;
+}
+
+.quick-capture-target-label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	flex-shrink: 0;
 }
 
 .quick-capture-modal.full .quick-capture-modal-editor {

@@ -1,0 +1,911 @@
+/* Task Genius - Transparent Theme Styles */
+/* 透明面板样式，通过 Style Settings 插件控制 */
+/* 使用 color-mix 实现半透明玻璃效果，兼容 Border 主题 */
+
+/* ==================== 透明主题（仅在启用时生效） ==================== */
+
+/* 当 Style Settings 启用透明主题时，body 会有 .enable-transparent-theme 类 */
+body.enable-transparent-theme {
+	/* ==================== 默认透明度值 ==================== */
+	--tg-header-opacity-pct: 50%;
+	--tg-blur-px: 10px;
+
+	/* ==================== 头部/卡片不透明度预设（下拉选择） ==================== */
+	&.tg-header-opacity-very-low { --tg-header-opacity-pct: 20%; }
+	&.tg-header-opacity-low { --tg-header-opacity-pct: 35%; }
+	&.tg-header-opacity-medium { --tg-header-opacity-pct: 50%; }
+	&.tg-header-opacity-high { --tg-header-opacity-pct: 65%; }
+	&.tg-header-opacity-very-high { --tg-header-opacity-pct: 80%; }
+
+	/* ==================== 模糊效果预设（下拉选择） ==================== */
+	&.tg-blur-none { --tg-blur-px: 0px; }
+	&.tg-blur-light { --tg-blur-px: 5px; }
+	&.tg-blur-medium { --tg-blur-px: 10px; }
+	&.tg-blur-strong { --tg-blur-px: 15px; }
+	&.tg-blur-very-strong { --tg-blur-px: 20px; }
+
+	/* ==================== Border 主题兼容覆盖 ==================== */
+	/* 使用最高优先级选择器覆盖 Border 主题的背景设置 */
+	
+	/* 覆盖 workspace leaf 背景 - 兼容 Border 主题 */
+	.workspace-leaf-content[data-type="task-genius-view"],
+	.workspace-leaf-content[data-type="task-genius-fluent-view"],
+	.workspace-leaf-content:has(.task-genius-view),
+	.workspace-leaf-content:has(.task-genius-fluent-view),
+	.workspace-leaf-content:has(.task-genius-container) {
+		background: transparent !important;
+		background-color: transparent !important;
+		--background-primary: transparent !important;
+		--background-secondary: transparent !important;
+	}
+	
+	/* 覆盖 view-content 背景 */
+	.view-content:has(.task-genius-view),
+	.view-content:has(.task-genius-fluent-view),
+	.view-content:has(.task-genius-container) {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	/* ==================== 核心容器透明 ==================== */
+	
+	.task-genius-view,
+	.task-genius-view > *,
+	.task-genius-view > * > *,
+	.task-genius-fluent-view,
+	.task-genius-fluent-view > *,
+	.task-genius-fluent-view > * > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.task-genius-container,
+	.task-genius-container > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.task-sidebar,
+	.task-sidebar > * {
+		background: transparent !important;
+		background-color: transparent !important;
+		border-right-color: color-mix(in srgb, var(--background-modifier-border) 30%, transparent) !important;
+	}
+
+	.task-sidebar .sidebar-nav,
+	.task-sidebar .nav-files-container,
+	.sidebar-nav-item,
+	.sidebar-nav {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	/* Obsidian 容器透明 */
+	.workspace-leaf-content:has(.task-genius-view),
+	.workspace-leaf-content:has(.task-genius-fluent-view),
+	.workspace-leaf-content:has(.task-genius-container),
+	.view-content:has(.task-genius-view),
+	.view-content:has(.task-genius-fluent-view),
+	.view-content:has(.task-genius-container) {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.task-content,
+	.task-content > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.content-header {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		border-bottom-color: color-mix(in srgb, var(--background-modifier-border) 40%, transparent) !important;
+	}
+	
+	.content-header > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	/* Fluent 顶部导航栏 - 使用头部不透明度变量 */
+	.tg-fluent-top-nav,
+	.fluent-top-navigation {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		border-bottom-color: color-mix(in srgb, var(--background-modifier-border) 40%, transparent) !important;
+	}
+	
+	.fluent-nav-left,
+	.fluent-nav-center,
+	.fluent-nav-right,
+	.fluent-nav-custom-buttons {
+		background: transparent !important;
+	}
+
+	.task-list-container,
+	.task-list-wrapper,
+	.task-content-wrapper,
+	.task-list,
+	.task-list-container > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.bases-view,
+	.bases-view > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	/* ==================== 项目/标签/时间线/预测/复习视图透明 ==================== */
+
+	.projects-container,
+	.projects-container > *,
+	.projects-left-column,
+	.projects-left-column > *,
+	.projects-right-column,
+	.projects-right-column > *,
+	.project-content,
+	.project-header {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.tags-container,
+	.tags-container > *,
+	.tags-left-column,
+	.tags-left-column > *,
+	.tags-right-column,
+	.tags-right-column > *,
+	.tag-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.timeline-container,
+	.timeline-container > *,
+	.timeline-sidebar,
+	.timeline-sidebar > *,
+	.timeline-content,
+	.timeline-content > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	/* ==================== 时间轴侧边栏透明 ==================== */
+	
+	/* 时间轴侧边栏主容器 */
+	div[data-type^="tg-timeline-sidebar-view"],
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-sidebar-container {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 时间轴侧边栏所在的 workspace-leaf */
+	.workspace-leaf-content[data-type^="tg-timeline-sidebar-view"],
+	.workspace-leaf-content[data-type^="tg-timeline-sidebar-view"] .view-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 时间轴头部 - 半透明毛玻璃效果 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-header {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+	}
+	
+	/* 时间轴内容区域 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 日期分组 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-date-group {
+		background: transparent !important;
+	}
+	
+	/* 今日日期分组 - 半透明强调 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-date-group.is-today {
+		background: color-mix(in srgb, var(--interactive-accent) 15%, transparent) !important;
+		backdrop-filter: blur(calc(var(--tg-blur-px, 10px) * 0.5));
+		-webkit-backdrop-filter: blur(calc(var(--tg-blur-px, 10px) * 0.5));
+	}
+	
+	/* 日期头部 - 半透明 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-date-header {
+		background: color-mix(in srgb, var(--background-primary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+	}
+	
+	/* 事件项 - 悬停时半透明 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-event {
+		background: transparent !important;
+		transition: all 0.2s ease;
+	}
+	
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-event:hover {
+		background: color-mix(in srgb, var(--background-modifier-hover) 60%, transparent) !important;
+	}
+	
+	/* 分组事件项 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-event.timeline-event-grouped {
+		background: color-mix(in srgb, var(--background-primary) var(--tg-card-opacity-pct, 55%), transparent) !important;
+	}
+	
+	/* 时间分组 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-time-group {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-card-opacity-pct, 55%), transparent) !important;
+		backdrop-filter: blur(calc(var(--tg-blur-px, 10px) * 0.5));
+		-webkit-backdrop-filter: blur(calc(var(--tg-blur-px, 10px) * 0.5));
+	}
+	
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-time-group-header {
+		background: color-mix(in srgb, var(--background-modifier-hover) 50%, transparent) !important;
+	}
+	
+	/* 日期仅显示区域头部 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-date-only-header {
+		background: color-mix(in srgb, var(--background-modifier-hover) 40%, transparent) !important;
+	}
+	
+	/* 快速输入区域 - 半透明毛玻璃 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-quick-input {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(calc(var(--tg-blur-px, 10px) * 1.2)) !important;
+		-webkit-backdrop-filter: blur(calc(var(--tg-blur-px, 10px) * 1.2)) !important;
+	}
+	
+	/* 折叠状态的头部 */
+	div[data-type^="tg-timeline-sidebar-view"] .quick-input-header-collapsed {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+	}
+	
+	div[data-type^="tg-timeline-sidebar-view"] .quick-input-header-collapsed:hover {
+		background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
+	}
+	
+	/* 输入编辑器 */
+	div[data-type^="tg-timeline-sidebar-view"] .quick-input-editor {
+		background: color-mix(in srgb, var(--background-primary) var(--tg-card-opacity-pct, 55%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px));
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px));
+	}
+	
+	/* 滚动条 */
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-content::-webkit-scrollbar-track {
+		background: transparent !important;
+	}
+	
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-content::-webkit-scrollbar-thumb {
+		background: color-mix(in srgb, var(--background-modifier-border) 50%, transparent) !important;
+	}
+
+	.forecast-container,
+	.forecast-container > *,
+	.forecast-left-column,
+	.forecast-left-column > *,
+	.forecast-right-column,
+	.forecast-right-column > *,
+	.forecast-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.review-container,
+	.review-container > *,
+	.review-content,
+	.review-content > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	/* ==================== 矩阵视图透明 ==================== */
+
+	.tg-quadrant-component-container,
+	.tg-quadrant-component-container > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.tg-quadrant-grid,
+	.tg-quadrant-grid > * {
+		background: transparent !important;
+		background-color: transparent !important;
+		gap: 1px;
+	}
+
+	.tg-quadrant-column,
+	.tg-quadrant-column > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.tg-quadrant-column-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.tg-quadrant-column .tg-quadrant-header,
+	.tg-quadrant-header {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+	}
+
+	/* 矩阵卡片 - 半透明玻璃效果 */
+	/* 使用嵌套选择器和 !important 确保覆盖 quadrant.scss 的默认样式 */
+	.tg-quadrant-column-content .tg-quadrant-card,
+	.tg-quadrant-card {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+		background-color: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		border: 1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent) !important;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+	}
+
+	.tg-quadrant-column-content .tg-quadrant-card:hover,
+	.tg-quadrant-card:hover {
+		background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
+		background-color: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
+		border-color: var(--background-modifier-border-hover) !important;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+	}
+
+	/* ==================== 表格视图透明 ==================== */
+
+	.task-table-container,
+	.task-table-container > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.task-table,
+	.task-table tbody {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	/* 表格头部 - 使用固定透明度和模糊效果 */
+	.task-table thead {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 8px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 8px)) !important;
+	}
+
+	/* 表格头部单元格 */
+	.task-table-header-cell {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		background-color: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 8px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 8px)) !important;
+		border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 60%, transparent) !important;
+	}
+	
+	/* 表格头部行 */
+	.task-table thead tr {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+	}
+	
+	.task-table th,
+	.task-table-header {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 8px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 8px)) !important;
+	}
+
+	/* 表格行 - 半透明玻璃效果 */
+	.task-table tbody .task-table-row,
+	.task-table-row {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+		background-color: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 6px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 6px)) !important;
+		border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 30%, transparent) !important;
+	}
+
+	.task-table tbody .task-table-row:nth-child(odd),
+	.task-table-row:nth-child(odd) {
+		background: color-mix(in srgb, var(--background-primary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+		background-color: color-mix(in srgb, var(--background-primary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+	}
+
+	.task-table tbody .task-table-row:hover,
+	.task-table-row:hover {
+		background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
+		background-color: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
+	}
+
+	.task-table tbody .task-table-row.selected,
+	.task-table-row.selected {
+		background: color-mix(in srgb, var(--interactive-accent) 20%, transparent) !important;
+		background-color: color-mix(in srgb, var(--interactive-accent) 20%, transparent) !important;
+		border-left: 3px solid var(--interactive-accent) !important;
+	}
+
+	.task-table-cell {
+		background: transparent !important;
+	}
+
+	/* ==================== 看板视图透明 ==================== */
+
+	.tg-kanban-view,
+	.tg-kanban-view > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.tg-kanban-container,
+	.tg-kanban-container > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.tg-kanban-column {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		border: 1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent) !important;
+	}
+
+	.tg-kanban-column-header {
+		background: transparent !important;
+		background-color: transparent !important;
+		border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent) !important;
+	}
+
+	/* 看板卡片 - 半透明玻璃效果 */
+	.tg-kanban-column .tg-kanban-card,
+	.tg-kanban-card {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+		background-color: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		border: 1px solid color-mix(in srgb, var(--background-modifier-border) 40%, transparent) !important;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+	}
+
+	.tg-kanban-column .tg-kanban-card:hover,
+	.tg-kanban-card:hover {
+		background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
+		background-color: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+	}
+
+	/* ==================== 任务列表透明 ==================== */
+
+	.task-list {
+		background: transparent !important;
+	}
+
+	.task-list-container {
+		background: transparent !important;
+	}
+
+	/* 任务列表项 - 半透明玻璃效果 */
+	.task-list-container .task-list-item,
+	.task-list-item {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+		background-color: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 6px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 6px)) !important;
+		border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 25%, transparent) !important;
+		border-left: 2px solid transparent;
+		transition: all 0.15s ease;
+		margin: 2px 0;
+		border-radius: 4px;
+	}
+
+	.task-list-item:hover {
+		background: color-mix(in srgb, var(--background-modifier-hover) 60%, transparent) !important;
+		border-left-color: var(--interactive-accent);
+	}
+
+	.task-list-item.selected {
+		background: color-mix(in srgb, var(--interactive-accent) 15%, transparent) !important;
+		border-left-color: var(--interactive-accent);
+	}
+
+	/* 任务树项目 - 半透明玻璃效果 */
+	.task-tree-item {
+		background: color-mix(in srgb, var(--background-primary) var(--tg-header-opacity-pct, 50%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 6px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 6px)) !important;
+		border-left: 2px solid transparent;
+		transition: all 0.15s ease;
+		border-radius: 4px;
+		margin: 1px 0;
+	}
+
+	.task-tree-item:hover {
+		background: color-mix(in srgb, var(--background-modifier-hover) 50%, transparent) !important;
+		border-left-color: color-mix(in srgb, var(--interactive-accent) 60%, transparent);
+	}
+
+	.task-tree-item.selected {
+		background: color-mix(in srgb, var(--interactive-accent) 15%, transparent) !important;
+		border-left-color: var(--interactive-accent);
+	}
+
+	/* ==================== 侧边栏导航透明 ==================== */
+
+	.sidebar-nav {
+		background: transparent !important;
+	}
+
+	.sidebar-nav-item {
+		background: transparent !important;
+		transition: all 0.15s ease;
+	}
+
+	.sidebar-nav-item:hover {
+		background: color-mix(in srgb, var(--background-modifier-hover) 60%, transparent) !important;
+	}
+
+	.sidebar-nav-item.is-active {
+		background: color-mix(in srgb, var(--interactive-accent) 80%, transparent) !important;
+	}
+
+	/* ==================== 项目树透明 ==================== */
+
+	.project-tree {
+		background: transparent !important;
+	}
+
+	.tree-item {
+		background: transparent !important;
+	}
+
+	.tree-item:hover {
+		background: color-mix(in srgb, var(--background-modifier-hover) 50%, transparent) !important;
+	}
+
+	.tree-item.selected {
+		background: color-mix(in srgb, var(--interactive-accent) 15%, transparent) !important;
+	}
+
+	/* ==================== Fluent 视图透明 ==================== */
+
+	.fluent-main-content,
+	.fluent-main-content > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.fluent-secondary-content,
+	.fluent-secondary-content > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.fluent-view-container,
+	.fluent-view-container > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.fluent-task-card,
+	.tg-fluent-card {
+		position: relative;
+		isolation: isolate; /* 创建新的层叠上下文 */
+		background: transparent !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px));
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px));
+		border: 1px solid rgba(128, 128, 128, 0.3) !important;
+	}
+	
+	.fluent-task-card::before,
+	.tg-fluent-card::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: var(--background-primary);
+		opacity: var(--tg-card-opacity, 0.55);
+		z-index: -1;
+		pointer-events: none;
+		border-radius: inherit;
+	}
+	
+	/* 确保卡片内容在伪元素上方 */
+	.fluent-task-card > *,
+	.tg-fluent-card > * {
+		position: relative;
+		z-index: 1;
+	}
+
+	.fluent-task-card:hover::before,
+	.tg-fluent-card:hover::before {
+		opacity: calc(var(--tg-card-opacity, 0.55) + 0.15);
+	}
+
+	/* ==================== 任务详情面板透明 ==================== */
+
+	.task-details {
+		background: color-mix(in srgb, var(--background-primary) var(--tg-card-opacity-pct, 55%), transparent) !important;
+		backdrop-filter: blur(calc(var(--tg-blur-px, 10px) * 1.2));
+		-webkit-backdrop-filter: blur(calc(var(--tg-blur-px, 10px) * 1.2));
+		border-left: 1px solid color-mix(in srgb, var(--background-modifier-border) 50%, transparent) !important;
+	}
+
+	/* ==================== 日历视图透明 ==================== */
+
+	.full-calendar-container,
+	.full-calendar-container > *,
+	.calendar-view-container,
+	.calendar-view-container > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.calendar-day {
+		background: transparent !important;
+		background-color: transparent !important;
+		border: 1px solid color-mix(in srgb, var(--background-modifier-border) 30%, transparent) !important;
+	}
+
+	.calendar-day:hover {
+		background: color-mix(in srgb, var(--background-modifier-hover) 50%, transparent) !important;
+	}
+
+	.calendar-day.today {
+		background: color-mix(in srgb, var(--interactive-accent) 20%, transparent) !important;
+	}
+
+	/* ==================== 甘特图透明 ==================== */
+
+	.tg-gantt-container,
+	.tg-gantt-container > *,
+	.tg-gantt-view,
+	.tg-gantt-view > * {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+
+	.tg-gantt-header {
+		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
+		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
+	}
+
+	/* ==================== 分隔线和边框优化 ==================== */
+
+	.task-separator {
+		height: 1px;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			color-mix(in srgb, var(--background-modifier-border) 30%, transparent) 20%,
+			color-mix(in srgb, var(--background-modifier-border) 30%, transparent) 80%,
+			transparent
+		);
+		margin: 4px 0;
+	}
+
+	/* ==================== 滚动条透明化 ==================== */
+
+	.task-genius-container ::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	.task-genius-container ::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.task-genius-container ::-webkit-scrollbar-thumb {
+		background: color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
+		border-radius: 4px;
+	}
+
+	.task-genius-container ::-webkit-scrollbar-thumb:hover {
+		background: color-mix(in srgb, var(--background-modifier-border) 80%, transparent);
+	}
+
+	/* ==================== 优先级左边框 - 增强识别度 ==================== */
+
+	.task-list-item[data-priority="5"],
+	.task-tree-item[data-priority="5"],
+	.tg-quadrant-card--priority-highest,
+	.tg-kanban-card[data-priority="5"] {
+		border-left: 3px solid var(--text-error) !important;
+	}
+
+	.task-list-item[data-priority="4"],
+	.task-tree-item[data-priority="4"],
+	.tg-quadrant-card--priority-high,
+	.tg-kanban-card[data-priority="4"] {
+		border-left: 3px solid var(--text-warning) !important;
+	}
+
+	.task-list-item[data-priority="3"],
+	.task-tree-item[data-priority="3"],
+	.tg-quadrant-card--priority-medium,
+	.tg-kanban-card[data-priority="3"] {
+		border-left: 3px solid var(--color-accent) !important;
+	}
+
+	.task-list-item[data-priority="2"],
+	.task-tree-item[data-priority="2"],
+	.tg-quadrant-card--priority-low,
+	.tg-kanban-card[data-priority="2"] {
+		border-left: 3px solid var(--text-success) !important;
+	}
+
+	.task-list-item[data-priority="1"],
+	.task-tree-item[data-priority="1"],
+	.tg-quadrant-card--priority-lowest,
+	.tg-kanban-card[data-priority="1"] {
+		border-left: 3px solid var(--text-muted) !important;
+	}
+
+	/* ==================== 响应式优化 ==================== */
+
+	@media (max-width: 768px) {
+		.task-list-item,
+		.task-tree-item {
+			border-bottom-width: 1px;
+			border-bottom-color: color-mix(in srgb, var(--background-modifier-border) 30%, transparent);
+		}
+		
+		.tg-quadrant-card,
+		.tg-kanban-card {
+			border-width: 1px;
+		}
+	}
+}
+
+/* ==================== 暗色主题下的透明优化 ==================== */
+
+body.theme-dark.enable-transparent-theme {
+	.tg-quadrant-card,
+	.tg-kanban-card,
+	.fluent-task-card,
+	.tg-fluent-card {
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	}
+	
+	.tg-quadrant-card:hover,
+	.tg-kanban-card:hover,
+	.fluent-task-card:hover,
+	.tg-fluent-card:hover {
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	}
+}
+
+/* ==================== 减少动画（无障碍） ==================== */
+
+@media (prefers-reduced-motion: reduce) {
+	body.enable-transparent-theme .task-genius-container * {
+		transition: none !important;
+	}
+}
+
+/* ==================== Border 主题特定覆盖（最高优先级） ==================== */
+/* 这些规则放在最后以确保最高优先级覆盖 Border 主题的样式 */
+
+body.enable-transparent-theme {
+	/* 通用覆盖 - 使用属性选择器增加特异性 */
+	[class*="task-genius"],
+	[class*="tg-quadrant"],
+	[class*="tg-kanban"],
+	[class*="tg-gantt"] {
+		&:not(.tg-quadrant-card):not(.tg-kanban-card):not(.fluent-task-card):not(.task-table-row):not(.tg-quadrant-header):not(.task-table):not(.tg-kanban-column):not(.task-details):not(.tg-gantt-header) {
+			background: transparent !important;
+			background-color: transparent !important;
+		}
+	}
+	
+	/* workspace-leaf 内的 Task Genius 视图 - 最高优先级 */
+	.workspace-leaf .workspace-leaf-content .view-content .task-genius-view,
+	.workspace-leaf .workspace-leaf-content .view-content .task-genius-fluent-view,
+	.workspace-leaf .workspace-leaf-content .view-content .task-genius-container,
+	.workspace-leaf .workspace-leaf-content .view-content .task-sidebar,
+	.workspace-leaf .workspace-leaf-content .view-content .task-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 矩阵视图所有层级 */
+	.workspace-leaf .tg-quadrant-component-container,
+	.workspace-leaf .tg-quadrant-grid,
+	.workspace-leaf .tg-quadrant-column,
+	.workspace-leaf .tg-quadrant-column-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 表格视图所有层级 */
+	.workspace-leaf .task-table-container,
+	.workspace-leaf .task-table tbody {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 看板视图所有层级 */
+	.workspace-leaf .tg-kanban-view,
+	.workspace-leaf .tg-kanban-container {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* Fluent 视图所有层级 */
+	.workspace-leaf .fluent-view-container,
+	.workspace-leaf .fluent-main-content,
+	.workspace-leaf .fluent-secondary-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 甘特图视图所有层级 */
+	.workspace-leaf .tg-gantt-view,
+	.workspace-leaf .tg-gantt-container {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 日历视图所有层级 */
+	.workspace-leaf .calendar-view-container,
+	.workspace-leaf .full-calendar-container {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 其他视图容器 */
+	.workspace-leaf .projects-container,
+	.workspace-leaf .tags-container,
+	.workspace-leaf .timeline-container,
+	.workspace-leaf .forecast-container,
+	.workspace-leaf .review-container,
+	.workspace-leaf .bases-view {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 时间轴侧边栏 - Border 主题覆盖 */
+	.workspace-leaf-content[data-type^="tg-timeline-sidebar-view"],
+	.workspace-leaf-content[data-type^="tg-timeline-sidebar-view"] .view-content,
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-sidebar-container,
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+}
+
+/* Border 主题暗色模式特定覆盖 */
+body.theme-dark.enable-transparent-theme {
+	.workspace-leaf .workspace-leaf-content .view-content .task-genius-view,
+	.workspace-leaf .workspace-leaf-content .view-content .task-genius-fluent-view,
+	.workspace-leaf .workspace-leaf-content .view-content .task-genius-container,
+	.workspace-leaf .workspace-leaf-content .view-content .task-sidebar,
+	.workspace-leaf .workspace-leaf-content .view-content .task-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 时间轴侧边栏 - 暗色模式覆盖 */
+	.workspace-leaf-content[data-type^="tg-timeline-sidebar-view"],
+	.workspace-leaf-content[data-type^="tg-timeline-sidebar-view"] .view-content,
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-sidebar-container,
+	div[data-type^="tg-timeline-sidebar-view"] .timeline-content {
+		background: transparent !important;
+		background-color: transparent !important;
+	}
+	
+	/* 覆盖可能的 Border 主题 CSS 变量 */
+	.workspace-leaf-content:has(.task-genius-view),
+	.workspace-leaf-content:has(.task-genius-fluent-view),
+	.workspace-leaf-content[data-type^="tg-timeline-sidebar-view"] {
+		--background-primary: transparent;
+		--background-secondary: transparent;
+		--background-primary-alt: transparent;
+		--background-secondary-alt: transparent;
+	}
+}

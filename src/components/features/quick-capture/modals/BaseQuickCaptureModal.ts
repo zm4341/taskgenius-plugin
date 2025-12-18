@@ -210,6 +210,9 @@ export abstract class BaseQuickCaptureModal extends Modal {
 				? `${settings.dailyNoteSettings.folder}/${dateStr}.md`
 				: `${dateStr}.md`;
 			this.tempTargetFilePath = this.sanitizeFilePath(pathWithDate);
+		} else if (settings.targetType === "custom") {
+			// Custom mode: use targetFile as default but allow user to change
+			this.tempTargetFilePath = settings.targetFile || "QuickCapture.md";
 		} else {
 			this.tempTargetFilePath = settings.targetFile;
 		}

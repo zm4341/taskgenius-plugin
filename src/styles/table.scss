@@ -95,14 +95,43 @@
 	white-space: nowrap;
 }
 
+/* Clickable header title for selecting sort field */
+.task-table-header-title.clickable-title {
+	cursor: pointer;
+	padding: 4px 8px;
+	margin: -4px -4px -4px -8px;
+	border-radius: 4px;
+	transition: background-color 0.2s;
+}
+
+.task-table-header-title.clickable-title:hover {
+	background-color: var(--background-modifier-hover);
+}
+
 .task-table-sort-icon {
 	font-size: 12px;
 	opacity: 0.5;
-	transition: opacity 0.2s;
+	transition: opacity 0.2s, background-color 0.2s;
 	display: flex;
 	align-items: center;
 	width: 16px;
 	height: 16px;
+}
+
+/* Clickable sort icon for toggling sort order */
+.task-table-sort-icon.clickable-sort-icon {
+	cursor: pointer;
+	padding: 4px;
+	margin: -4px;
+	border-radius: 4px;
+	width: 24px;
+	height: 24px;
+	justify-content: center;
+}
+
+.task-table-sort-icon.clickable-sort-icon:hover {
+	background-color: var(--background-modifier-hover);
+	opacity: 1;
 }
 
 .task-table-sort-icon.asc,
@@ -880,7 +909,8 @@
 
 /* Enhanced Tree View Styles */
 .task-table-subtask {
-	border-left: 2px solid var(--background-modifier-border-hover);
+	/* 移除子任务左边框，避免中间出现竖线 */
+	/* border-left: 2px solid var(--background-modifier-border-hover); */
 }
 
 .task-table-parent .task-table-cell:first-child {
@@ -888,7 +918,8 @@
 }
 
 .task-table-subtask-cell {
-	border-left: 1px solid var(--background-modifier-border-focus);
+	/* 移除子任务单元格左边框 */
+	/* border-left: 1px solid var(--background-modifier-border-focus); */
 }
 
 .task-table-tree-container {

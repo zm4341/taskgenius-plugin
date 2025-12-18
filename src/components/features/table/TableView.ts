@@ -1,4 +1,4 @@
-import { Component, App, debounce } from "obsidian";
+import { Component, App, debounce, Menu } from "obsidian";
 import { Task } from "@/types/task";
 import {
 	TableSpecificConfig,
@@ -56,6 +56,9 @@ export class TableView extends Component {
 	private currentSortOrder: "asc" | "desc" = "asc";
 	private isLoading: boolean = false;
 
+	// Column filters: columnId -> Set of selected values (empty set means no filter)
+	private columnFilters: Map<string, Set<any>> = new Map();
+
 	// Performance optimization
 	private scrollRAF: number | null = null;
 	private lastScrollTime: number = 0;
@@ -103,7 +106,7 @@ export class TableView extends Component {
 		const allColumns: TableColumn[] = [
 			{
 				id: "rowNumber",
-				title: "#",
+				title: t("No."),
 				width: 60,
 				sortable: false,
 				resizable: false,
@@ -421,8 +424,27 @@ export class TableView extends Component {
 	 * Apply current filters and sorting to the task list
 	 */
 	private applyFiltersAndSort() {
-		// Apply any additional filters here if needed
+		// Start with all tasks
 		this.filteredTasks = [...this.allTasks];
+
+		// Apply column filters
+		if (this.columnFilters.size > 0) {
+			this.filteredTasks = this.filteredTasks.filter((task) => {
+				// Task must match ALL column filters
+				for (const [columnId, filterValues] of this.columnFilters) {
+					if (filterValues.size === 0) continue;
+
+					const { value } = this.getTaskValueForColumn(task, columnId);
+					const taskValue = value ?? null;
+
+					// Check if task value matches any of the filter values
+					if (!filterValues.has(taskValue)) {
+						return false;
+					}
+				}
+				return true;
+			});
+		}
 
 		// Sort tasks using the centralized sorting function
 		if (this.currentSortField) {
@@ -437,10 +459,6 @@ export class TableView extends Component {
 				sortCriteria,
 				this.plugin.settings
 			);
-
-			console.log("sort tasks", this.filteredTasks, sortCriteria);
-
-			console.log(this.filteredTasks);
 		}
 	}
 
@@ -732,9 +750,29 @@ export class TableView extends Component {
 			return;
 		}
 
-		// Handle sorting logic
+		// Check what was clicked: title or sort icon
+		const action = target.dataset.action;
+
+		if (action === "select-sort-field") {
+			// Clicked on title - show column filter menu with unique values
+			this.showColumnFilterMenu(event, columnId);
+			return;
+		} else if (action === "toggle-sort-order") {
+			// Clicked on sort icon - toggle sort order for current column
+			this.toggleSortOrder(columnId);
+			return;
+		}
+
+		// Fallback: if clicked elsewhere on the header, toggle sort order
+		this.toggleSortOrder(columnId);
+	}
+
+	/**
+	 * Toggle sort order for a column: asc -> desc -> no sort
+	 */
+	private toggleSortOrder(columnId: string) {
 		if (this.currentSortField === columnId) {
-			// Same column clicked - cycle through: asc -> desc -> no sort
+			// Same column - cycle through: asc -> desc -> no sort
 			if (this.currentSortOrder === "asc") {
 				this.currentSortOrder = "desc";
 			} else if (this.currentSortOrder === "desc") {
@@ -743,12 +781,215 @@ export class TableView extends Component {
 				this.currentSortOrder = "asc";
 			}
 		} else {
-			// Different column clicked - clear previous sorting and start with asc
+			// Different column - start with asc
 			this.currentSortField = columnId;
 			this.currentSortOrder = "asc";
 		}
 
-		// Reset virtual scroll state when sorting changes to ensure proper re-rendering
+		this.applySortAndRefresh();
+	}
+
+	/**
+	 * Show column filter menu with unique values from that column
+	 */
+	private showColumnFilterMenu(event: MouseEvent, columnId: string) {
+		const menu = new Menu();
+		const column = this.columns.find((c) => c.id === columnId);
+		if (!column) return;
+
+		// Get unique values for this column
+		const uniqueValues = this.getUniqueValuesForColumn(columnId);
+		const currentFilter = this.columnFilters.get(columnId) || new Set();
+
+		// Add "Show All" option
+		menu.addItem((item) => {
+			const isShowAll = currentFilter.size === 0;
+			item.setTitle(t("Show All"))
+				.setIcon(isShowAll ? "check" : "circle")
+				.onClick(() => {
+					this.columnFilters.delete(columnId);
+					this.applyFiltersAndRefresh();
+				});
+		});
+
+		menu.addSeparator();
+
+		// Add unique values as filter options
+		uniqueValues.forEach(({ value, displayValue, count }) => {
+			menu.addItem((item) => {
+				const isSelected = currentFilter.has(value);
+				item.setTitle(`${displayValue} (${count})`)
+					.setIcon(isSelected ? "check" : "circle")
+					.onClick(() => {
+						// Toggle this value in the filter
+						if (!this.columnFilters.has(columnId)) {
+							this.columnFilters.set(columnId, new Set());
+						}
+						const filter = this.columnFilters.get(columnId)!;
+
+						if (isSelected) {
+							filter.delete(value);
+							if (filter.size === 0) {
+								this.columnFilters.delete(columnId);
+							}
+						} else {
+							filter.add(value);
+						}
+
+						this.applyFiltersAndRefresh();
+					});
+			});
+		});
+
+		// Add clear filter option if filter is active
+		if (currentFilter.size > 0) {
+			menu.addSeparator();
+			menu.addItem((item) => {
+				item.setTitle(t("Clear filter"))
+					.setIcon("x")
+					.onClick(() => {
+						this.columnFilters.delete(columnId);
+						this.applyFiltersAndRefresh();
+					});
+			});
+		}
+
+		menu.showAtMouseEvent(event);
+	}
+
+	/**
+	 * Get unique values for a column from all tasks
+	 */
+	private getUniqueValuesForColumn(
+		columnId: string
+	): Array<{ value: any; displayValue: string; count: number }> {
+		const valueMap = new Map<any, { displayValue: string; count: number }>();
+
+		this.allTasks.forEach((task) => {
+			const { value, displayValue } = this.getTaskValueForColumn(
+				task,
+				columnId
+			);
+
+			// Handle null/undefined as a special "empty" value
+			const key = value ?? "__empty__";
+
+			if (valueMap.has(key)) {
+				valueMap.get(key)!.count++;
+			} else {
+				valueMap.set(key, {
+					displayValue: displayValue || t("(Empty)"),
+					count: 1,
+				});
+			}
+		});
+
+		// Convert to array and sort by display value
+		return Array.from(valueMap.entries())
+			.map(([value, { displayValue, count }]) => ({
+				value: value === "__empty__" ? null : value,
+				displayValue,
+				count,
+			}))
+			.sort((a, b) => {
+				// Put empty values at the end
+				if (a.value === null) return 1;
+				if (b.value === null) return -1;
+				// Sort by display value
+				return String(a.displayValue).localeCompare(
+					String(b.displayValue)
+				);
+			});
+	}
+
+	/**
+	 * Get value and display value for a task column
+	 */
+	private getTaskValueForColumn(
+		task: Task,
+		columnId: string
+	): { value: any; displayValue: string } {
+		switch (columnId) {
+			case "status":
+				return {
+					value: task.status,
+					displayValue: this.formatStatus(task.status),
+				};
+			case "priority":
+				return {
+					value: task.metadata?.priority,
+					displayValue: this.formatPriority(task.metadata?.priority),
+				};
+			case "dueDate":
+				return {
+					value: task.metadata?.dueDate,
+					displayValue: this.formatDate(task.metadata?.dueDate),
+				};
+			case "startDate":
+				return {
+					value: task.metadata?.startDate,
+					displayValue: this.formatDate(task.metadata?.startDate),
+				};
+			case "scheduledDate":
+				return {
+					value: task.metadata?.scheduledDate,
+					displayValue: this.formatDate(task.metadata?.scheduledDate),
+				};
+			case "createdDate":
+				return {
+					value: task.metadata?.createdDate,
+					displayValue: this.formatDate(task.metadata?.createdDate),
+				};
+			case "completedDate":
+				return {
+					value: task.metadata?.completedDate,
+					displayValue: this.formatDate(task.metadata?.completedDate),
+				};
+			case "project":
+				return {
+					value: task.metadata?.project,
+					displayValue: task.metadata?.project || "",
+				};
+			case "context":
+				return {
+					value: task.metadata?.context,
+					displayValue: task.metadata?.context || "",
+				};
+			case "tags":
+				const tags = task.metadata?.tags || [];
+				return {
+					value: tags.join(","),
+					displayValue: tags.join(", "),
+				};
+			case "filePath":
+				return {
+					value: task.filePath,
+					displayValue: this.formatFilePath(task.filePath),
+				};
+			default:
+				return { value: null, displayValue: "" };
+		}
+	}
+
+	/**
+	 * Apply filters and refresh display
+	 */
+	private applyFiltersAndRefresh() {
+		// Reset virtual scroll state
+		if (this.virtualScroll) {
+			this.virtualScroll.reset();
+		}
+
+		this.applyFiltersAndSort();
+		this.refreshDisplay();
+		this.updateTableHeaderInfo();
+	}
+
+	/**
+	 * Apply sorting and refresh display
+	 */
+	private applySortAndRefresh() {
+		// Reset virtual scroll state when sorting changes
 		if (this.virtualScroll) {
 			this.virtualScroll.reset();
 		}
@@ -757,15 +998,12 @@ export class TableView extends Component {
 		this.refreshDisplay();
 		this.updateSortIndicators();
 
-		// Debug logging to help identify sorting issues
+		// Debug logging
 		console.log(
 			`Table sorted by ${this.currentSortField} (${this.currentSortOrder})`
 		);
-		console.log(`Filtered tasks count: ${this.filteredTasks.length}`);
-		console.log(`Displayed rows count: ${this.displayedRows.length}`);
 
-		// Fallback: If the table doesn't seem to be updating properly, force a complete refresh
-		// This is a safety net for any edge cases in the rendering logic
+		// Fallback: force refresh if row count mismatch
 		setTimeout(() => {
 			const currentRowCount =
 				this.bodyEl.querySelectorAll("tr[data-row-id]").length;
@@ -773,11 +1011,11 @@ export class TableView extends Component {
 
 			if (currentRowCount !== expectedRowCount && expectedRowCount > 0) {
 				console.warn(
-					`Table row count mismatch detected. Expected: ${expectedRowCount}, Actual: ${currentRowCount}. Forcing refresh.`
+					`Table row count mismatch detected. Forcing refresh.`
 				);
 				this.forceRefresh();
 			}
-		}, 100); // Small delay to allow rendering to complete
+		}, 100);
 	}
 
 	private handleKeyDown(event: KeyboardEvent) {
@@ -1344,16 +1582,11 @@ export class TableView extends Component {
 			this.onTaskUpdated(updatedTask);
 		}
 
-		// Also update the filteredTasks array if this task is in it
-		const filteredIndex = this.filteredTasks.findIndex(
-			(t) => t.id === rowId
-		);
-		if (filteredIndex !== -1) {
-			// Update the reference to point to the updated task
-			this.filteredTasks[filteredIndex] = task;
-		}
+		// Re-apply filters and sorting to ensure correct order after property change
+		// This is important for fields that affect sorting (priority, dates, etc.)
+		this.applyFiltersAndSort();
 
-		// Refresh display
+		// Refresh display with the newly sorted data
 		this.refreshDisplay();
 	}
 }

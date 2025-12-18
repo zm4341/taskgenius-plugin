@@ -235,9 +235,9 @@ export class QuadrantCardComponent extends Component {
 			const fileName = el.createSpan("tg-quadrant-card-file-name");
 			fileName.textContent = this.getFileName();
 
-			// Line number
+			// Line number (display as 1-indexed for human readability)
 			const lineEl = el.createSpan("tg-quadrant-card-line");
-			lineEl.textContent = `L${this.task.line}`;
+			lineEl.textContent = `L${this.task.line + 1}`;
 		});
 	}
 
@@ -350,9 +350,10 @@ export class QuadrantCardComponent extends Component {
 			await leaf.openFile(file as any);
 
 			// Navigate to the specific line
+			// task.line is already 0-indexed, which is what setCursor expects
 			const view = leaf.view;
 			if (view && view instanceof MarkdownView && view.editor) {
-				const lineNumber = this.task.line - 1;
+				const lineNumber = this.task.line;
 				view.editor.setCursor(lineNumber, 0);
 				view.editor.scrollIntoView(
 					{
@@ -367,8 +368,11 @@ export class QuadrantCardComponent extends Component {
 
 	private async addTagToTask(tag: string) {
 		try {
-			// Create a copy of the task with the new tag
-			const updatedTask = { ...this.task };
+			// Create a deep copy of the task with the new tag, preserving all metadata
+			const updatedTask = {
+				...this.task,
+				metadata: { ...this.task.metadata },
+			};
 
 			// Initialize tags array if it doesn't exist
 			if (!updatedTask.metadata.tags) {
@@ -398,8 +402,11 @@ export class QuadrantCardComponent extends Component {
 
 	private async removeTagFromTask(tag: string) {
 		try {
-			// Create a copy of the task without the tag
-			const updatedTask = { ...this.task };
+			// Create a deep copy of the task without the tag, preserving all metadata
+			const updatedTask = {
+				...this.task,
+				metadata: { ...this.task.metadata },
+			};
 
 			// Remove the tag from the tags array
 			updatedTask.metadata.tags = updatedTask.metadata.tags.filter(

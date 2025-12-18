@@ -169,7 +169,8 @@ button.fluent-new-task-btn:hover {
 
 .fluent-add-project-btn,
 .fluent-sort-project-btn,
-.fluent-tree-toggle-btn {
+.fluent-tree-toggle-btn,
+.fluent-filter-reset-btn {
 	cursor: pointer;
 	color: var(--text-muted);
 	transition: color 0.15s;
@@ -182,8 +183,13 @@ button.fluent-new-task-btn:hover {
 
 .fluent-add-project-btn:hover,
 .fluent-sort-project-btn:hover,
-.fluent-tree-toggle-btn:hover {
+.fluent-tree-toggle-btn:hover,
+.fluent-filter-reset-btn:hover {
 	color: var(--text-normal);
+}
+
+.fluent-filter-reset-btn {
+	color: var(--text-accent);
 }
 
 /* Navigation Items */
@@ -336,6 +342,11 @@ button.fluent-new-task-btn:hover {
 }
 
 /* Tree indentation */
+/* Level 0 items keep default padding (8px) - no extra indent for top-level */
+.fluent-project-list.is-tree-view .fluent-project-item[data-level="0"] {
+	padding-left: 8px;
+}
+
 .fluent-project-list.is-tree-view .fluent-project-item[data-level="1"] {
 	padding-left: 28px;
 }

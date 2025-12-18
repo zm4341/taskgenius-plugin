@@ -1596,6 +1596,7 @@ const translations = {
 		"固定ファイルまたは日報ノートのどちらにキャプチャするか選択",
 	"Fixed file": "固定ファイル",
 	"Daily note": "日報ノート",
+	"Custom (select at capture time)": "カスタム（キャプチャ時に選択）",
 	"The file where captured text will be saved. You can include a path, e.g., 'folder/Quick Capture.md'. Supports date templates like {{DATE:YYYY-MM-DD}} or {{date:YYYY-MM-DD-HHmm}}":
 		"キャプチャしたテキストが保存されるファイル。パスを含めることができます。例：'folder/Quick Capture.md'。{{DATE:YYYY-MM-DD}}や{{date:YYYY-MM-DD-HHmm}}などの日付テンプレートに対応",
 	"Sync with Daily Notes plugin": "Daily Notesプラグインと同期",

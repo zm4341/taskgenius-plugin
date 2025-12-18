@@ -84,6 +84,7 @@ import "./styles/universal-suggest.scss";
 import "./styles/noise.scss";
 import "./styles/changelog.scss";
 import "./styles/widgets.scss";
+import "./styles/transparent-theme.scss";
 
 import {
 	TASK_SPECIFIC_VIEW_TYPE,

@@ -39,10 +39,11 @@ export function renderQuickCaptureSettingsTab(
 			dropdown
 				.addOption("fixed", t("Fixed file"))
 				.addOption("daily-note", t("Daily note"))
+				.addOption("custom", t("Custom (select at capture time)"))
 				.setValue(settingTab.plugin.settings.quickCapture.targetType)
 				.onChange(async (value) => {
 					settingTab.plugin.settings.quickCapture.targetType =
-						value as "fixed" | "daily-note";
+						value as "fixed" | "daily-note" | "custom";
 					settingTab.applySettingsUpdate();
 					// Refresh the settings display to show/hide relevant options
 					setTimeout(() => {

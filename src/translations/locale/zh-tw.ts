@@ -519,6 +519,7 @@ const translations = {
 	"Coming Up": "即將到來",
 	Task: "任務",
 	Tasks: "任務",
+	"No.": "序號",
 	"No upcoming tasks": "沒有即將到來的任務",
 	"No tasks scheduled": "沒有計劃中的任務",
 	"0 tasks": "0 個任務",
@@ -1203,6 +1204,7 @@ const translations = {
 	"Click to change status": "點擊更改狀態",
 	"Click to set priority": "點擊設置優先級",
 	Yesterday: "昨天",
+	ago: "前",
 	"Click to edit date": "點擊編輯日期",
 	"No tags": "無標籤",
 	"Click to open file": "點擊打開文件",
@@ -1517,6 +1519,7 @@ const translations = {
 		"選擇要儲存到固定檔案或每日筆記",
 	"Fixed file": "固定檔案",
 	"Daily note": "每日筆記",
+	"Custom (select at capture time)": "自訂（擷取時選擇）",
 	"The file where captured text will be saved. You can include a path, e.g., 'folder/Quick Capture.md'. Supports date templates like {{DATE:YYYY-MM-DD}} or {{date:YYYY-MM-DD-HHmm}}":
 		"儲存擷取內容的檔案。可包含路徑，例如 'folder/Quick Capture.md'。支援日期模板如 {{DATE:YYYY-MM-DD}} 或 {{date:YYYY-MM-DD-HHmm}}",
 	"Sync with Daily Notes plugin": "與每日筆記外掛同步",

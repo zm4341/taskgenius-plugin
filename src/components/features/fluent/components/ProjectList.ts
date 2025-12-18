@@ -574,8 +574,9 @@ export class ProjectList extends Component {
 				const nodeId = treeNode?.fullPath || project.id;
 				this.toggleNodeExpanded(nodeId);
 			});
-		} else if (this.isTreeView) {
-			// Add spacer for items without children to align them
+		} else if (this.isTreeView && level > 0) {
+			// Add spacer for non-top-level items without children to align them
+			// Top-level items (level 0) don't need spacer to avoid extra offset
 			projectItem.createDiv({ cls: "fluent-project-chevron-spacer" });
 		}
 

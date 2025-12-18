@@ -237,9 +237,11 @@ export class TopNavigation extends Component {
 			cls: "fluent-notification-badge",
 			text: String(this.notificationCount),
 		});
-		// Don't hide badge initially - let updateNotificationCount decide
-		// This prevents badge from disappearing during async load
-		if (this.notificationCount > 0) {
+		// Initially hide badge - updateNotificationCount will show it if needed
+		// This fixes the issue where badge shows red dot even with 0 notifications
+		if (this.notificationCount === 0) {
+			badge.hide();
+		} else {
 			badge.show();
 		}
 		this.registerDomEvent(notificationBtn, "click", (e) =>

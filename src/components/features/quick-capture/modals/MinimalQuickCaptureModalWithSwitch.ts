@@ -49,8 +49,16 @@ export class MinimalQuickCaptureModal extends BaseQuickCaptureModal {
 
 		// Initialize default metadata for checkbox mode
 		const targetType = this.plugin.settings.quickCapture.targetType;
-		this.taskMetadata.location =
-			(targetType === "custom-file" ? "file" : targetType) || "fixed";
+		// Map targetType to location: custom-file -> file, custom -> fixed (default)
+		let location: "fixed" | "daily-note" | "file" = "fixed";
+		if (targetType === "custom-file") {
+			location = "file";
+		} else if (targetType === "daily-note") {
+			location = "daily-note";
+		} else {
+			location = "fixed";
+		}
+		this.taskMetadata.location = location;
 		this.taskMetadata.targetFile = this.getTargetFile();
 
 		// Merge passed metadata with existing taskMetadata

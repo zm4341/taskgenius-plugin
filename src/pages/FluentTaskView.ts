@@ -643,25 +643,11 @@ export class FluentTaskView extends ItemView {
 				this.updateView();
 			},
 			onProjectSelected: (projectId) => {
-				console.log(`[Task Genius] Project selected: ${projectId}`);
+				console.log(`[Task Genius] Project selected: ${projectId}, current view: ${this.currentViewId}`);
 				this.viewState.selectedProject = projectId;
 
-				// Switch to projects view
-				this.recordViewModeForView(
-					this.currentViewId,
-					this.viewState.viewMode
-				);
-				this.currentViewId = "projects";
-				this.filteredTasks = this.dataManager.applyFilters(this.tasks);
-				const projectsViewMode = this.ensureViewModeForView(
-					this.currentViewId
-				);
-				this.viewState.viewMode = projectsViewMode;
-				this.recordViewModeForView(
-					this.currentViewId,
-					projectsViewMode
-				);
-				this.topNavigation?.setViewMode(projectsViewMode);
+				// Don't switch view - just apply project filter to current view
+				// This allows users to stay in table/list/tree view while filtering by project
 
 				// Reflect selection into the Filter UI state so the top Filter button shows active and can be reset via "X"
 				try {

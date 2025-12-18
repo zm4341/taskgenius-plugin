@@ -313,43 +313,74 @@ export class QuickCaptureModal extends BaseQuickCaptureModal {
 	}
 
 	/**
-	 * Create target file selector
+	 * Create target file selector - simple contenteditable with FileSuggest
+	 * Based on the working implementation in MinimalQuickCaptureModalWithSwitch.ts
 	 */
 	private createTargetFileSelector(container: HTMLElement): void {
-		const targetFileContainer = container.createDiv({
-			cls: "quick-capture-target-container",
+		// Create a row container similar to quick-capture-header
+		const targetRow = container.createDiv({
+			cls: "quick-capture-target-row",
 		});
 
-		targetFileContainer.createDiv({
+		// Label
+		targetRow.createSpan({
+			cls: "quick-capture-target-label",
 			text: t("Capture to:"),
-			cls: "quick-capture-section-title",
 		});
 
-		const targetFileEl = targetFileContainer.createEl("div", {
+		// Extract filename from path for display
+		const getFileName = (path: string) => path.split("/").pop() || path;
+
+		// Check if file selection is allowed (fixed or custom mode)
+		const targetType = this.plugin.settings.quickCapture.targetType;
+		const isEditable = targetType === "fixed" || targetType === "custom";
+
+		// Create contenteditable element for file selection (always visible)
+		const targetFileEl = targetRow.createEl("div", {
 			cls: "quick-capture-target",
 			attr: {
-				contenteditable:
-					this.plugin.settings.quickCapture.targetType === "fixed"
-						? "true"
-						: "false",
+				contenteditable: isEditable ? "true" : "false",
 				spellcheck: "false",
 			},
-			text: this.tempTargetFilePath,
 		});
+		
+		// Show only filename, full path in tooltip
+		targetFileEl.textContent = getFileName(this.tempTargetFilePath);
+		targetFileEl.title = this.tempTargetFilePath;
 
-		// Only add file suggest for fixed file type
-		if (this.plugin.settings.quickCapture.targetType === "fixed") {
+		// Add file suggest for fixed or custom file type
+		if (isEditable) {
 			new FileSuggest(
 				this.app,
 				targetFileEl,
 				this.plugin.settings.quickCapture,
 				(file: TFile) => {
-					targetFileEl.textContent = file.path;
+					// Update both display and internal path
+					targetFileEl.textContent = getFileName(file.path);
+					targetFileEl.title = file.path;
 					this.tempTargetFilePath = file.path;
 					this.markdownEditor?.editor?.focus();
 				},
 			);
 		}
+
+		// Update tempTargetFilePath when manually edited
+		targetFileEl.addEventListener("blur", () => {
+			const inputText = targetFileEl.textContent?.trim() || "";
+			if (inputText && inputText !== getFileName(this.tempTargetFilePath)) {
+				// User typed something different, try to match a file
+				const files = this.app.vault.getMarkdownFiles();
+				const matchedFile = files.find(f => 
+					f.name.toLowerCase() === inputText.toLowerCase() ||
+					f.basename.toLowerCase() === inputText.toLowerCase()
+				);
+				if (matchedFile) {
+					this.tempTargetFilePath = matchedFile.path;
+					targetFileEl.textContent = getFileName(matchedFile.path);
+					targetFileEl.title = matchedFile.path;
+				}
+			}
+		});
 	}
 
 	/**

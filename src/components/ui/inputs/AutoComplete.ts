@@ -523,7 +523,15 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
 	}
 
 	renderSuggestion(file: TFile, el: HTMLElement): void {
-		el.setText(file.path);
+		// Display filename prominently, with folder path in muted color
+		const container = el.createDiv({ cls: "file-suggest-item" });
+		const fileName = file.name;
+		const folderPath = file.parent?.path || "";
+		
+		container.createSpan({ text: fileName, cls: "file-suggest-name" });
+		if (folderPath) {
+			container.createSpan({ text: ` — ${folderPath}`, cls: "file-suggest-path" });
+		}
 	}
 
 	selectSuggestion(file: TFile, evt: MouseEvent | KeyboardEvent): void {

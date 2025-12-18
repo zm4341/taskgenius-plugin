@@ -86,7 +86,7 @@ export class TaskView extends ItemView {
 	private selectionManager: TaskSelectionManager;
 
 	// UI state management
-	private isSidebarCollapsed = false;
+	private isSidebarCollapsed = true;
 	private isDetailsVisible = false;
 	private sidebarToggleBtn: HTMLElement;
 	private detailsToggleBtn: HTMLElement;
@@ -443,6 +443,10 @@ export class TaskView extends ItemView {
 		);
 		this.addChild(this.sidebarComponent);
 		this.sidebarComponent.load();
+
+		// Set initial collapsed state
+		this.sidebarComponent.setCollapsed(this.isSidebarCollapsed);
+		this.rootContainerEl.toggleClass("sidebar-collapsed", this.isSidebarCollapsed);
 
 		this.createSidebarToggle();
 
