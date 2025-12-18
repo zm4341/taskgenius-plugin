@@ -59,7 +59,7 @@ export class DatePickerPopover extends Component implements CloseableComponent {
 		this.datePickerComponent.onload();
 
 		// Set up date change callback
-		this.datePickerComponent.setOnDateChange((date: string) => {
+		this.datePickerComponent.setOnDateChange((date: string | null) => {
 			if (this.onDateSelected) {
 				this.onDateSelected(date);
 			}

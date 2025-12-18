@@ -22,7 +22,7 @@ export class DatePickerComponent extends Component {
 	private app: App;
 	private plugin?: TaskProgressBarPlugin;
 	private state: DatePickerState;
-	private onDateChange?: (date: string) => void;
+	private onDateChange?: (date: string | null) => void;
 	private currentViewDate: moment.Moment;
 
 	constructor(
@@ -51,7 +51,7 @@ export class DatePickerComponent extends Component {
 		this.hostEl.empty();
 	}
 
-	setOnDateChange(callback: (date: string) => void): void {
+	setOnDateChange(callback: (date: string | null) => void): void {
 		this.onDateChange = callback;
 	}
 
@@ -62,8 +62,8 @@ export class DatePickerComponent extends Component {
 	setSelectedDate(date: string | null): void {
 		this.state.selectedDate = date;
 		this.updateSelectedDateDisplay();
-		if (this.onDateChange && date) {
-			// Only pass the date string, let the caller handle formatting
+		if (this.onDateChange) {
+			// Pass the date string (or null for clear), let the caller handle formatting
 			this.onDateChange(date);
 		}
 	}

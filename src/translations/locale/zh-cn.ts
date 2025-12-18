@@ -156,6 +156,11 @@ const translations = {
 	"Enable date picker": "启用日期选择器",
 	"Toggle this to enable date picker for tasks. This will add a calendar icon near your tasks which you can click to select a date.":
 		"切换此选项以启用任务的日期选择器。这将在您的任务旁边添加一个日历图标，您可以点击它来选择日期。",
+	"Date write format": "日期写入格式",
+	"Choose the format for writing dates to files. Date only (YYYY-MM-DD) or Date with time (YYYY-MM-DD HH:mm).":
+		"选择将日期写入文件的格式。仅日期 (YYYY-MM-DD) 或日期加时间 (YYYY-MM-DD HH:mm)。",
+	"Date only (YYYY-MM-DD)": "仅日期 (YYYY-MM-DD)",
+	"Date with time (YYYY-MM-DD HH:mm)": "日期加时间 (YYYY-MM-DD HH:mm)",
 	"Date mark": "日期标记",
 	"Emoji mark to identify dates. You can use multiple emoji separated by commas.":
 		"用于标识日期的表情符号。您可以使用逗号分隔的多个表情符号。",

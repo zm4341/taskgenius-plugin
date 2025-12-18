@@ -988,7 +988,7 @@ export class FluentActionHandlers extends Component {
 			case "scheduledDate":
 				return "⏳";
 			case "startDate":
-				return "🚀";
+				return "🛫";
 			case "dueDate":
 			default:
 				return "📅";

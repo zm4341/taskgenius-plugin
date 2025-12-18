@@ -346,7 +346,7 @@ function determineDateOperations(
 		return operations;
 	}
 
-	// Remove old status date if it exists and is managed (but never remove start date)
+	// Remove old status date if it exists and is managed
 	if (settings.manageCompletedDate && oldStatusType === "completed") {
 		operations.push({
 			type: "remove",
@@ -357,6 +357,13 @@ function determineDateOperations(
 		operations.push({
 			type: "remove",
 			dateType: "cancelled",
+		});
+	}
+	// Remove start date when changing from inProgress to another status
+	if (settings.manageStartDate && oldStatusType === "inProgress" && newStatusType !== "inProgress") {
+		operations.push({
+			type: "remove",
+			dateType: "start",
 		});
 	}
 
@@ -504,22 +511,12 @@ function applyDateOperations(
 				dateText = ` ${dateMarker} ${dateString}`;
 			}
 
-			// Find the appropriate insert position based on date type
-			let insertPosition: number;
-			if (operation.dateType === "completed") {
-				// Completed date goes at the end (before block reference ID)
-				insertPosition = findCompletedDateInsertPosition(
-					lineText,
-					plugin,
-				);
-			} else {
-				// Start date and cancelled date go after existing metadata but before completed date
-				insertPosition = findMetadataInsertPosition(
-					lineText,
-					plugin,
-					operation.dateType,
-				);
-			}
+			// All date types are inserted at the end of the line (before block reference)
+			// This ensures consistent date placement
+			const insertPosition = findCompletedDateInsertPosition(
+				lineText,
+				plugin,
+			);
 
 			const absolutePosition = line.from + insertPosition;
 
@@ -761,7 +758,7 @@ function getDateMarker(
 			if (useDataviewFormat) {
 				return "[start::";
 			}
-			return settings.startDateMarker || "🚀";
+			return settings.startDateMarker || "🛫";
 		case "cancelled":
 			if (useDataviewFormat) {
 				return "[cancelled::";
@@ -851,7 +848,7 @@ function findMetadataInsertPosition(
 		}
 
 		// Check for date emojis (these are metadata markers)
-		const dateEmojis = ["📅", "🚀", "✅", "❌", "🛫", "▶️", "⏰", "🏁"];
+		const dateEmojis = ["📅", "✅", "❌", "🛫", "▶️", "⏰", "🏁"];
 		if (dateEmojis.includes(char)) {
 			// Check if this is followed by a date pattern
 			const afterEmoji = remainingText.slice(i + 1);
@@ -898,8 +895,8 @@ function findMetadataInsertPosition(
 
 			// If not found, look for any common start date emoji patterns
 			if (!startDateMatch) {
-				// Common start date emojis: 🚀, 🛫, ▶️, ⏰, 🏁
-				const commonStartEmojis = ["🚀", "🛫", "▶️", "⏰", "🏁"];
+				// Common start date emojis: 🛫, ▶️, ⏰, 🏁
+				const commonStartEmojis = ["🛫", "▶️", "⏰", "🏁"];
 				for (const emoji of commonStartEmojis) {
 					const pattern = new RegExp(
 						`${escapeRegex(

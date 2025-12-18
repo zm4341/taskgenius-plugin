@@ -167,6 +167,11 @@ const translations = {
 	"Enable date picker": "日付ピッカーを有効化",
 	"Toggle this to enable date picker for tasks. This will add a calendar icon near your tasks which you can click to select a date.":
 		"タスクの日付ピッカーを有効にするにはこれを切り替えてください。これにより、タスクの近くにカレンダーアイコンが追加され、クリックして日付を選択できます。",
+	"Date write format": "日付書き込み形式",
+	"Choose the format for writing dates to files. Date only (YYYY-MM-DD) or Date with time (YYYY-MM-DD HH:mm).":
+		"ファイルに日付を書き込む形式を選択します。日付のみ (YYYY-MM-DD) または日付と時刻 (YYYY-MM-DD HH:mm)。",
+	"Date only (YYYY-MM-DD)": "日付のみ (YYYY-MM-DD)",
+	"Date with time (YYYY-MM-DD HH:mm)": "日付と時刻 (YYYY-MM-DD HH:mm)",
 	"Date mark": "日付マーク",
 	"Emoji mark to identify dates. You can use multiple emoji separated by commas.":
 		"日付を識別する絵文字マーク。カンマで区切って複数の絵文字を使用できます。",

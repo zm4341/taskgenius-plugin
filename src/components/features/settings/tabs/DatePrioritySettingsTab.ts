@@ -69,6 +69,27 @@ export function renderDatePrioritySettingsTab(
 				})
 		);
 
+	// Date write format setting
+	new Setting(containerEl)
+		.setName(t("Date write format"))
+		.setDesc(
+			t(
+				"Choose the format for writing dates to files. Date only (YYYY-MM-DD) or Date with time (YYYY-MM-DD HH:mm)."
+			)
+		)
+		.addDropdown((dropdown) =>
+			dropdown
+				.addOption("date-only", t("Date only (YYYY-MM-DD)"))
+				.addOption("date-time", t("Date with time (YYYY-MM-DD HH:mm)"))
+				.setValue(
+					settingTab.plugin.settings.dateWriteFormat || "date-only"
+				)
+				.onChange(async (value: "date-only" | "date-time") => {
+					settingTab.plugin.settings.dateWriteFormat = value;
+					settingTab.applySettingsUpdate();
+				})
+		);
+
 	// Recurrence date base setting
 	new Setting(containerEl)
 		.setName(t("Recurrence date calculation"))

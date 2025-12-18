@@ -11,12 +11,13 @@ import { syntaxTree } from "@codemirror/language";
  * Whitelist of date emoji markers to prevent false positives
  */
 export const DATE_EMOJI_WHITELIST = [
-	"📅", // Calendar
-	"🚀", // Rocket (start date)
+	"📅", // Calendar (due date)
+	"🛫", // Airplane departure (start date)
 	"✅", // Check mark (completed)
 	"❌", // Cross mark (cancelled)
-	"🛫", // Airplane departure (scheduled)
-	"⏰", // Alarm clock (due)
+	"⏳", // Hourglass (scheduled)
+	"➕", // Plus (created)
+	"⏰", // Alarm clock
 	"🏁", // Checkered flag (deadline)
 	"▶️", // Play button (start)
 ];

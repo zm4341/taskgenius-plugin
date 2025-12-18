@@ -870,6 +870,9 @@ export interface TaskProgressBarSettings {
 	enableCustomDateFormats: boolean;
 	recurrenceDateBase: "due" | "scheduled" | "current"; // Base date for calculating next recurrence
 
+	// Date Write Settings
+	dateWriteFormat: "date-only" | "date-time"; // Format for writing dates to files (default: date-only)
+
 	// Task Filter Settings
 	taskFilter: TaskFilterSettings;
 
@@ -1666,7 +1669,7 @@ export const DEFAULT_SETTINGS: TaskProgressBarSettings = {
 		startDateFormat: "YYYY-MM-DD",
 		cancelledDateFormat: "YYYY-MM-DD",
 		completedDateMarker: "✅",
-		startDateMarker: "🚀",
+		startDateMarker: "🛫",
 		cancelledDateMarker: "❌",
 	},
 
@@ -1812,6 +1815,9 @@ export const DEFAULT_SETTINGS: TaskProgressBarSettings = {
 	// Custom Date Format Defaults
 	enableCustomDateFormats: false,
 	customDateFormats: [],
+
+	// Date Write Format
+	dateWriteFormat: "date-only",
 
 	// Experimental Defaults
 

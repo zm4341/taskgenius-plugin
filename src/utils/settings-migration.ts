@@ -46,6 +46,22 @@ export function migrateToMultiCycle(settings: TaskProgressBarSettings): void {
 }
 
 /**
+ * Migrates old startDateMarker emoji from 🚀 to 🛫
+ *
+ * The Tasks plugin uses 🛫 as the standard start date emoji. We want to
+ * unify on this emoji to ensure consistency between the auto date manager
+ * and the task parser.
+ *
+ * @param settings - The plugin settings object
+ */
+export function migrateStartDateMarker(settings: TaskProgressBarSettings): void {
+	if (settings.autoDateManager?.startDateMarker === "🚀") {
+		settings.autoDateManager.startDateMarker = "🛫";
+		console.log("[Task Genius] Migrated startDateMarker from 🚀 to 🛫 for consistency with Tasks plugin");
+	}
+}
+
+/**
  * Main migration function that runs all necessary migrations
  *
  * @param settings - The plugin settings object
@@ -53,6 +69,9 @@ export function migrateToMultiCycle(settings: TaskProgressBarSettings): void {
 export function migrateSettings(settings: TaskProgressBarSettings): void {
 	// Run multi-cycle migration
 	migrateToMultiCycle(settings);
+
+	// Migrate startDateMarker from 🚀 to 🛫
+	migrateStartDateMarker(settings);
 
 	// Future migrations can be added here
 	// e.g., migrateToNewFeature(settings);

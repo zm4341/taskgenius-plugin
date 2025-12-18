@@ -1948,13 +1948,20 @@ export default class TaskProgressBarPlugin extends Plugin {
 		} catch {}
 
 		// Migrate settings to new formats
+		const settingsBeforeMigration = JSON.stringify(this.settings);
 		migrateSettings(this.settings);
+		const settingsAfterMigration = JSON.stringify(this.settings);
 
 		// Repair and validate status cycles
 		if (this.settings.statusCycles) {
 			this.settings.statusCycles = repairStatusCycles(
 				this.settings.statusCycles,
 			);
+		}
+
+		// Save settings if any migration occurred
+		if (settingsBeforeMigration !== settingsAfterMigration) {
+			this.saveSettings();
 		}
 
 		// Migrate old inheritance settings to new structure

@@ -2063,7 +2063,11 @@ export class WriteAPI {
 	private formatDateForWrite(
 		timestamp: number | string | Date | undefined | null,
 	): string {
-		return formatDateSmart(timestamp, { includeSeconds: false });
+		const dateWriteFormat = this.plugin.settings.dateWriteFormat || "date-only";
+		return formatDateSmart(timestamp, {
+			forceFormat: dateWriteFormat,
+			includeSeconds: false,
+		});
 	}
 
 	/**
@@ -2623,6 +2627,8 @@ export class WriteAPI {
 
 	/**
 	 * Insert date metadata at the correct position in the task line
+	 * All date types are inserted at the end of the line (before block reference if present)
+	 * This ensures consistent date placement regardless of date type
 	 */
 	private insertDateAtCorrectPosition(
 		taskLine: string,
@@ -2633,72 +2639,33 @@ export class WriteAPI {
 		const blockRefPattern = /\s*(\^[a-zA-Z0-9-]+)$/;
 		const blockRefMatch = taskLine.match(blockRefPattern);
 
+		// Ensure there's a space before the date metadata
+		const ensureSpace = (before: string, after: string): string => {
+			// If 'before' ends with a space or is empty, don't add extra space
+			if (before.length === 0 || before.endsWith(" ")) {
+				return before + dateMetadata + after;
+			}
+			return before + " " + dateMetadata + after;
+		};
+
 		if (blockRefMatch && blockRefMatch.index !== undefined) {
 			// Insert before block reference
 			const insertPos = blockRefMatch.index;
-			return (
-				taskLine.slice(0, insertPos) +
-				" " +
-				dateMetadata +
-				taskLine.slice(insertPos)
+			// Remove trailing spaces before block reference to avoid double spaces
+			let adjustedPos = insertPos;
+			while (adjustedPos > 0 && taskLine[adjustedPos - 1] === " ") {
+				adjustedPos--;
+			}
+			return ensureSpace(
+				taskLine.slice(0, adjustedPos),
+				" " + taskLine.slice(insertPos).trimStart(),
 			);
 		}
 
-		// For completion date, add at the very end
-		if (dateType === "completed") {
-			return taskLine + " " + dateMetadata;
-		}
-
-		// For cancelled and start dates, insert after task content but before other metadata
-		// Find where metadata starts (tags, dates, etc)
-		// Detect strict trailing metadata (recognized keys) on full line
-		const sanitizedFull = taskLine
-			.replace(/\[\[[^\]]*\]\]/g, (m) => "x".repeat(m.length))
-			.replace(/\[[^\]]*\]\([^\)]*\)/g, (m) => "x".repeat(m.length))
-			.replace(/`[^`]*`/g, (m) => "x".repeat(m.length));
-		const escD = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-		const projectKeyD =
-			this.plugin.settings.projectTagPrefix?.dataview || "project";
-		const contextKeyD =
-			this.plugin.settings.contextTagPrefix?.dataview || "context";
-	const dvKeysGroupD = [
-		"tags",
-		escD(projectKeyD),
-		escD(contextKeyD),
-		"priority",
-		"repeat",
-		"start",
-		"scheduled",
-		"due",
-		"created",
-		"completion",
-		"cancelled",
-		"onCompletion",
-		"dependsOn",
-		"id",
-	].join("|");
-	const baseEmojiD = "(🔺|⏫|🔼|🔽|⏬|🛫|⏳|📅|✅|🔁|➕)";
-		const dvFieldTokenD = `\\[(?:${dvKeysGroupD})\\s*::[^\\]]*\\]`;
-		const tagTokenD = "#[A-Za-z][\\w/-]*";
-		const atTokenD = "@[A-Za-z][\\w/-]*";
-		const plusTokenD = "\\+[A-Za-z][\\w/-]*";
-		const emojiSegD = `(?:${baseEmojiD}[^\\n]*)`;
-		const tokenD = `(?:${emojiSegD}|${dvFieldTokenD}|${tagTokenD}|${atTokenD}|${plusTokenD})`;
-		const trailingD = new RegExp(`(?:\\s+${tokenD})+$`);
-		const tmD = sanitizedFull.match(trailingD);
-
-		if (tmD) {
-			const insertPos = taskLine.length - (tmD[0]?.length || 0);
-			return (
-				taskLine.slice(0, insertPos) +
-				" " +
-				dateMetadata +
-				taskLine.slice(insertPos)
-			);
-		}
-
-		// No metadata found, add at the end
-		return taskLine + " " + dateMetadata;
+		// All date types: add at the very end
+		// Trim trailing spaces to avoid double spaces
+		const trimmedLine = taskLine.trimEnd();
+		return ensureSpace(trimmedLine, "");
 	}
 
 	/**

@@ -137,8 +137,7 @@ export function createDefaultParserConfig(): TaskParserConfig {
 		"📍": "location",
 		"🔁": "recurrence",
 
-		// Status and marker emojis
-		"🚀": "status",
+		// Status and marker emojis (🚀 is now used as startDate marker)
 		"⚡": "energy",
 		"🎯": "goal",
 		"💰": "cost",

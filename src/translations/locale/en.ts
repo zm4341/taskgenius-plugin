@@ -169,6 +169,11 @@ const translations = {
 	"Enable date picker": "Enable date picker",
 	"Toggle this to enable date picker for tasks. This will add a calendar icon near your tasks which you can click to select a date.":
 		"Toggle this to enable date picker for tasks. This will add a calendar icon near your tasks which you can click to select a date.",
+	"Date write format": "Date write format",
+	"Choose the format for writing dates to files. Date only (YYYY-MM-DD) or Date with time (YYYY-MM-DD HH:mm).":
+		"Choose the format for writing dates to files. Date only (YYYY-MM-DD) or Date with time (YYYY-MM-DD HH:mm).",
+	"Date only (YYYY-MM-DD)": "Date only (YYYY-MM-DD)",
+	"Date with time (YYYY-MM-DD HH:mm)": "Date with time (YYYY-MM-DD HH:mm)",
 	"Date mark": "Date mark",
 	"Emoji mark to identify dates. You can use multiple emoji separated by commas.":
 		"Emoji mark to identify dates. You can use multiple emoji separated by commas.",
