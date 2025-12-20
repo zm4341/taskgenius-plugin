@@ -14,7 +14,7 @@ import {
 	getEffectiveProject,
 	isProjectReadonly,
 } from "@/utils/task/task-operations";
-import { getAllStatusMarks } from "@/utils/status-cycle-resolver";
+import { getAllStatusMarks, getAllStatusNames } from "@/utils/status-cycle-resolver";
 
 // Cache for autocomplete data to avoid repeated expensive operations
 interface AutoCompleteCache {
@@ -841,41 +841,87 @@ export class TableRenderer extends Component {
 
 		const menu = new Menu();
 
-		// Get unique statuses from configuration (mark -> status)
-		const uniqueStatuses = getAllStatusMarks(this.plugin.settings);
+		// Check if multi-cycle mode is enabled (same logic as right-click menu)
+		if (
+			this.plugin.settings.statusCycles &&
+			this.plugin.settings.statusCycles.length > 0
+		) {
+			// Multi-cycle mode: use getAllStatusNames to get all unique status names
+			const allStatusNames = getAllStatusNames(
+				this.plugin.settings.statusCycles
+			);
 
-		// Create menu items from unique statuses (getAllStatusMarks returns mark -> status)
-		for (const [mark, status] of uniqueStatuses) {
-			menu.addItem((item) => {
-				item.titleEl.createEl(
-					"span",
-					{
-						cls: "status-option-checkbox",
-					},
-					(el) => {
-						const checkbox = el.createEl("input", {
-							cls: "task-list-item-checkbox",
-							type: "checkbox",
-						});
-						checkbox.dataset.task = mark;
-						if (mark !== " ") {
-							checkbox.checked = true;
-						}
-					},
-				);
-				item.titleEl.createEl("span", {
-					cls: "status-option",
-					text: status,
-				});
-				item.onClick(() => {
-					if (this.onCellChange) {
-						// Also update completed status if needed
-						const isCompleted = mark.toLowerCase() === "x";
-						this.onCellChange(rowId, cell.columnId, mark);
-						// Note: completion status should be handled by the parent component
+			for (const statusName of Array.from(allStatusNames)) {
+				// Find the mark for this status (only from enabled cycles)
+				let mark = " ";
+				for (const cycle of this.plugin.settings.statusCycles) {
+					if (cycle.enabled && statusName in cycle.marks) {
+						mark = cycle.marks[statusName];
+						break;
 					}
+				}
+
+				menu.addItem((item) => {
+					item.titleEl.createEl(
+						"span",
+						{
+							cls: "status-option-checkbox",
+						},
+						(el) => {
+							const checkbox = el.createEl("input", {
+								cls: "task-list-item-checkbox",
+								type: "checkbox",
+							});
+							checkbox.dataset.task = mark;
+							if (mark !== " ") {
+								checkbox.checked = true;
+							}
+						},
+					);
+					item.titleEl.createEl("span", {
+						cls: "status-option",
+						text: statusName,
+					});
+					item.onClick(() => {
+						if (this.onCellChange) {
+							this.onCellChange(rowId, cell.columnId, mark);
+						}
+					});
 				});
-			});
+			}
+		} else {
+			// Legacy mode: use getAllStatusMarks
+			const uniqueStatuses = getAllStatusMarks(this.plugin.settings);
+
+			for (const [mark, status] of uniqueStatuses) {
+				menu.addItem((item) => {
+					item.titleEl.createEl(
+						"span",
+						{
+							cls: "status-option-checkbox",
+						},
+						(el) => {
+							const checkbox = el.createEl("input", {
+								cls: "task-list-item-checkbox",
+								type: "checkbox",
+							});
+							checkbox.dataset.task = mark;
+							if (mark !== " ") {
+								checkbox.checked = true;
+							}
+						},
+					);
+					item.titleEl.createEl("span", {
+						cls: "status-option",
+						text: status,
+					});
+					item.onClick(() => {
+						if (this.onCellChange) {
+							this.onCellChange(rowId, cell.columnId, mark);
+						}
+					});
+				});
+			}
 		}
 
 		const rect = cellEl.getBoundingClientRect();

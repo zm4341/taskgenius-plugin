@@ -1997,6 +1997,23 @@ export default class TaskProgressBarPlugin extends Plugin {
 				this.settings?.fileMetadataInheritance,
 			);
 		} catch {}
+		
+		// Clean up orphaned marks in statusCycles before saving
+		// This fixes a bug where deleted status names leave orphaned entries in the marks object
+		if (this.settings.statusCycles && this.settings.statusCycles.length > 0) {
+			for (const cycle of this.settings.statusCycles) {
+				if (cycle.marks && cycle.cycle) {
+					const validMarks: Record<string, string> = {};
+					for (const statusName of cycle.cycle) {
+						if (cycle.marks[statusName] !== undefined) {
+							validMarks[statusName] = cycle.marks[statusName];
+						}
+					}
+					cycle.marks = validMarks;
+				}
+			}
+		}
+		
 		await this.saveData(this.settings);
 	}
 

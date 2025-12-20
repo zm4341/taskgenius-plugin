@@ -1563,7 +1563,7 @@ export class TableView extends Component {
 	/**
 	 * Handle cell change from inline editing
 	 */
-	private handleCellChange(rowId: string, columnId: string, newValue: any) {
+	private async handleCellChange(rowId: string, columnId: string, newValue: any) {
 		const taskIndex = this.allTasks.findIndex((t) => t.id === rowId);
 		if (taskIndex === -1) {
 			return;
@@ -1571,6 +1571,29 @@ export class TableView extends Component {
 
 		const task = this.allTasks[taskIndex];
 
+		// For status changes, use updateTaskStatus API to properly handle date management
+		if (columnId === "status" && this.plugin.writeAPI) {
+			const newStatusMark = newValue as string;
+			const isCompleted = newStatusMark.toLowerCase() === "x";
+			
+			// Call updateTaskStatus which handles date management correctly
+			const result = await this.plugin.writeAPI.updateTaskStatus({
+				taskId: task.id,
+				status: newStatusMark,
+				completed: isCompleted,
+			});
+
+			if (!result.success) {
+				console.error("Failed to update task status:", result.error);
+			}
+
+			// Re-apply filters and sorting
+			this.applyFiltersAndSort();
+			this.refreshDisplay();
+			return;
+		}
+
+		// For other columns, use the standard update flow
 		// Update task property directly on the original task object
 		this.updateTaskProperty(task, columnId, newValue);
 
