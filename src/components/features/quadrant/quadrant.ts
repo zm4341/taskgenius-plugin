@@ -578,19 +578,22 @@ export class QuadrantComponent extends Component {
 				await this.params.onTaskUpdated(updatedTask);
 			}
 
-			// Update the task in our local array
+			// Update the task in both local arrays (tasks and allTasks)
 			const taskIndex = this.tasks.findIndex((t) => t.id === taskId);
 			if (taskIndex !== -1) {
 				this.tasks[taskIndex] = updatedTask;
+			}
+			const allTaskIndex = this.allTasks.findIndex((t) => t.id === taskId);
+			if (allTaskIndex !== -1) {
+				this.allTasks[allTaskIndex] = updatedTask;
 			}
 
 			// Show success feedback
 			this.showUpdateFeedback(task, quadrant);
 
-			// Refresh the view after a short delay to show the feedback
-			setTimeout(() => {
-				this.refresh();
-			}, 500);
+			// Force refresh immediately after drag operation
+			// Use forceRefreshAll to ensure all columns are updated
+			this.forceRefreshAll();
 		} catch (error) {
 			console.error("Failed to update task quadrant:", error);
 			this.showErrorFeedback(task, error);
@@ -630,6 +633,13 @@ export class QuadrantComponent extends Component {
 	}
 
 	private determineTaskQuadrant(task: Task): string {
+		// First, check if user has manually set the quadrant via drag-and-drop
+		// If so, respect their choice (stored in customFields.quadrant)
+		const manualQuadrant = (task.metadata as any)?.customFields?.quadrant;
+		if (manualQuadrant && QUADRANT_DEFINITIONS.some(q => q.id === manualQuadrant)) {
+			return manualQuadrant;
+		}
+
 		let isUrgent = false;
 		let isImportant = false;
 
@@ -644,27 +654,22 @@ export class QuadrantComponent extends Component {
 			isUrgent = priority >= urgentThreshold;
 			isImportant = priority >= importantThreshold;
 		} else {
-			// Use tag-based classification
+			// Use tag-based classification (only check tags, not priority/due date)
+			// This ensures that when user drags a task, the new tags determine the quadrant
 			const content = task.content.toLowerCase();
-			const tags = task.metadata?.tags || [];
+			const tags = (task.metadata?.tags || []).map((t: string) => t.toLowerCase());
 
-			// Check urgency: explicit tags, priority level (4-5), or due date
+			// Check urgency: only by explicit tags
 			const urgentTag = (
 				this.quadrantConfig.urgentTag || "#urgent"
 			).toLowerCase();
-			const isUrgentByTag =
-				content.includes(urgentTag) || tags.includes(urgentTag);
-			const isUrgentByOtherCriteria = this.isTaskUrgent(task);
-			isUrgent = isUrgentByTag || isUrgentByOtherCriteria;
+			isUrgent = content.includes(urgentTag) || tags.includes(urgentTag);
 
-			// Check importance: explicit tags, priority level (3-5), or important keywords
+			// Check importance: only by explicit tags
 			const importantTag = (
 				this.quadrantConfig.importantTag || "#important"
 			).toLowerCase();
-			const isImportantByTag =
-				content.includes(importantTag) || tags.includes(importantTag);
-			const isImportantByOtherCriteria = this.isTaskImportant(task);
-			isImportant = isImportantByTag || isImportantByOtherCriteria;
+			isImportant = content.includes(importantTag) || tags.includes(importantTag);
 		}
 
 		if (isUrgent && isImportant) {
@@ -742,7 +747,8 @@ export class QuadrantComponent extends Component {
 	}
 
 	/**
-	 * Selective refresh - only update columns that have changed tasks
+	 * Refresh all columns with categorized tasks
+	 * Always updates all columns to ensure correct display after filter changes
 	 */
 	private refreshSelectively() {
 		if (!this.columns.length) return;
@@ -750,41 +756,34 @@ export class QuadrantComponent extends Component {
 		// Categorize tasks by quadrant
 		const newQuadrantTasks = this.categorizeTasksByQuadrant(this.tasks);
 
-		// Compare with previous state and only update changed columns
+		// Always update all columns to ensure correct display
+		// The previous optimization was causing issues when switching between projects
 		this.columns.forEach((column) => {
 			const quadrantId = column.getQuadrantId();
 			const newTasks = newQuadrantTasks.get(quadrantId) || [];
-			const currentTasks = column.getTasks();
 
-			// Check if tasks have actually changed for this column
-			if (this.hasTasksChanged(currentTasks, newTasks)) {
-				console.log(
-					`Tasks changed for quadrant ${quadrantId}, updating...`
-				);
+			console.log(
+				`Updating quadrant ${quadrantId} with ${newTasks.length} tasks`
+			);
 
-				// Sort tasks within each quadrant
-				const sortedTasks = this.sortTasks(newTasks);
+			// Sort tasks within each quadrant
+			const sortedTasks = this.sortTasks(newTasks);
 
-				// Set tasks for the column
-				column.setTasks(sortedTasks);
+			// Set tasks for the column
+			column.setTasks(sortedTasks);
 
-				// Update visibility
-				if (this.hideEmptyColumns && column.isEmpty()) {
-					column.setVisibility(false);
-				} else {
-					column.setVisibility(true);
-				}
-
-				// Force load content only for this specific column if needed
-				if (!column.isEmpty() && !column.isLoaded()) {
-					setTimeout(() => {
-						column.forceLoadContent();
-					}, 50);
-				}
+			// Update visibility
+			if (this.hideEmptyColumns && column.isEmpty()) {
+				column.setVisibility(false);
 			} else {
-				console.log(
-					`No changes for quadrant ${quadrantId}, skipping update`
-				);
+				column.setVisibility(true);
+			}
+
+			// Force load content only for this specific column if needed
+			if (!column.isEmpty() && !column.isLoaded()) {
+				setTimeout(() => {
+					column.forceLoadContent();
+				}, 50);
 			}
 		});
 	}

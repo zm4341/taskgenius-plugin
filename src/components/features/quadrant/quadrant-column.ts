@@ -414,14 +414,8 @@ export class QuadrantColumnComponent extends Component {
 			`setTasks called for ${this.quadrant.id} with ${tasks.length} tasks`
 		);
 
-		// Check if tasks have actually changed to avoid unnecessary re-renders
-		if (this.areTasksEqual(this.tasks, tasks)) {
-			console.log(
-				`Tasks unchanged for ${this.quadrant.id}, skipping setTasks`
-			);
-			return;
-		}
-
+		// Always update tasks to ensure correct display after project filter changes
+		// The optimization check was causing issues when switching between projects
 		this.tasks = tasks;
 		this.updateCount();
 
@@ -459,8 +453,10 @@ export class QuadrantColumnComponent extends Component {
 				}
 			}
 		} else {
-			// Handle empty state
+			// Handle empty state - force re-render to clear old tasks
 			if (this.isContentLoaded) {
+				this.cleanup();
+				this.contentEl.empty();
 				this.showEmptyState();
 			}
 		}
