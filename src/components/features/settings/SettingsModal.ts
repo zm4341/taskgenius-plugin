@@ -285,6 +285,16 @@ export class SettingsModal extends Modal {
 		this.debouncedApplyNotifications();
 	}
 
+	/**
+	 * Refresh the current tab content.
+	 * This method is called by settings tabs that need to re-render themselves.
+	 */
+	display() {
+		if (this.currentTab && this.modalContentEl) {
+			this.renderContent();
+		}
+	}
+
 	onOpen() {
 		const { modalEl, contentEl } = this;
 		modalEl.toggleClass(["mod-settings", "mod-sidebar-layout"], true);

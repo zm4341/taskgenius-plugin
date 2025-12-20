@@ -184,6 +184,11 @@ export class WriteAPI {
 			const isStarting =
 				(markToWrite === ">" || markToWrite === "/") &&
 				(previousMark === " " || previousMark === "?");
+			// Check if stopping (leaving In Progress state)
+			const isStopping =
+				(previousMark === ">" || previousMark === "/") &&
+				markToWrite !== ">" &&
+				markToWrite !== "/";
 
 			// Add completion date if completing and not already present
 			if (isCompleting) {
@@ -246,6 +251,17 @@ export class WriteAPI {
 						"start",
 					);
 				}
+			}
+
+			// Remove start date if stopping (leaving In Progress state)
+			if (
+				isStopping &&
+				this.plugin.settings.autoDateManager?.manageStartDate
+			) {
+				// Remove emoji format: 🛫 YYYY-MM-DD or 🚀 YYYY-MM-DD (use alternation instead of character class for emoji)
+				taskLine = taskLine.replace(/\s*(?:🛫|🚀)\s*\d{4}-\d{2}-\d{2}/g, "");
+				// Remove dataview format: [start:: YYYY-MM-DD]
+				taskLine = taskLine.replace(/\s*\[start::\s*\d{4}-\d{2}-\d{2}\]/g, "");
 			}
 
 			lines[task.line] = taskLine;
@@ -393,6 +409,11 @@ export class WriteAPI {
 			const isStarting =
 				(newStatus === ">" || newStatus === "/") &&
 				(previousStatus === " " || previousStatus === "?");
+			// Check if stopping (leaving In Progress state)
+			const isStopping =
+				(previousStatus === ">" || previousStatus === "/") &&
+				newStatus !== ">" &&
+				newStatus !== "/";
 
 			// Add completion date if completing
 			if (isCompleting && !args.updates.metadata?.completedDate) {
@@ -455,6 +476,17 @@ export class WriteAPI {
 						"start",
 					);
 				}
+			}
+
+			// Remove start date if stopping (leaving In Progress state)
+			if (
+				isStopping &&
+				this.plugin.settings.autoDateManager?.manageStartDate
+			) {
+				// Remove emoji format: 🛫 YYYY-MM-DD or 🚀 YYYY-MM-DD (use alternation instead of character class for emoji)
+				taskLine = taskLine.replace(/\s*(?:🛫|🚀)\s*\d{4}-\d{2}-\d{2}/g, "");
+				// Remove dataview format: [start:: YYYY-MM-DD]
+				taskLine = taskLine.replace(/\s*\[start::\s*\d{4}-\d{2}-\d{2}\]/g, "");
 			}
 
 			// Update content if changed (but prevent clearing content)

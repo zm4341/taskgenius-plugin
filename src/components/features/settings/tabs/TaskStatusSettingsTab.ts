@@ -1138,12 +1138,22 @@ function renderMultiCycleManagement(
 			cls: "status-list-container",
 		});
 
-		// Render each status in the cycle
-		cycle.cycle.forEach((statusName, statusIndex) => {
-			const statusRow = statusListContainer.createDiv({
-				cls: "status-row",
-			});
+		// Helper function to render a status row
+		const renderStatusRow = (
+			statusName: string,
+			statusIndex: number,
+			container: HTMLElement,
+			insertBefore?: HTMLElement,
+		): HTMLElement => {
+			const statusRow = document.createElement("div");
+			statusRow.className = "status-row";
 			statusRow.setAttribute("data-status-name", statusName);
+
+			if (insertBefore) {
+				container.insertBefore(statusRow, insertBefore);
+			} else {
+				container.appendChild(statusRow);
+			}
 
 			// Add drag handle for status
 			const statusDragHandle = statusRow.createDiv({
@@ -1176,7 +1186,10 @@ function renderMultiCycleManagement(
 					text.setValue(cycle.marks[statusName] || " ")
 						.setPlaceholder(t("Mark"))
 						.onChange((value) => {
-							cycle.marks[statusName] = value.charAt(0) || " ";
+							// Use cycle.cycle[statusIndex] to get the current status name
+							// instead of the captured statusName variable which might be stale
+							const currentStatusName = cycle.cycle[statusIndex];
+							cycle.marks[currentStatusName] = value.charAt(0) || " ";
 							settingTab.applySettingsUpdate();
 						});
 					text.inputEl.style.width = "50px";
@@ -1187,12 +1200,21 @@ function renderMultiCycleManagement(
 						.setIcon("trash")
 						.setTooltip(t("Remove this status"))
 						.onClick(() => {
+							// Use cycle.cycle[statusIndex] to get the current status name
+							const currentStatusName = cycle.cycle[statusIndex];
 							cycle.cycle.splice(statusIndex, 1);
-							delete cycle.marks[statusName];
+							delete cycle.marks[currentStatusName];
 							settingTab.applySettingsUpdate();
 							setTimeout(() => settingTab.display(), 200);
 						});
 				});
+
+			return statusRow;
+		};
+
+		// Render each status in the cycle
+		cycle.cycle.forEach((statusName, statusIndex) => {
+			renderStatusRow(statusName, statusIndex, statusListContainer);
 		});
 
 		// Initialize Sortable.js for status reordering
@@ -1216,14 +1238,36 @@ function renderMultiCycleManagement(
 			},
 		});
 
-		// Add status button
-		new Setting(statusListContainer).addButton((button) => {
+		// Add status button - store reference to find it later
+		const addButtonSetting = new Setting(statusListContainer);
+		addButtonSetting.addButton((button) => {
 			button.setButtonText(t("+ Add Status")).onClick(() => {
-				const newStatus = `STATUS_${cycle.cycle.length + 1}`;
+				const newStatusIndex = cycle.cycle.length;
+				const newStatus = `STATUS_${newStatusIndex + 1}`;
 				cycle.cycle.push(newStatus);
 				cycle.marks[newStatus] = " ";
+
+				// Dynamically add new status row before the add button
+				const addButtonEl = addButtonSetting.settingEl;
+				const newRow = renderStatusRow(
+					newStatus,
+					newStatusIndex,
+					statusListContainer,
+					addButtonEl,
+				);
+
+				// Focus the mark input so user can immediately edit
+				const markInput = newRow.querySelector(
+					'input[type="text"]:last-of-type',
+				) as HTMLInputElement;
+				if (markInput) {
+					setTimeout(() => {
+						markInput.focus();
+						markInput.select();
+					}, 50);
+				}
+
 				settingTab.applySettingsUpdate();
-				setTimeout(() => settingTab.display(), 200);
 			});
 		});
 	});

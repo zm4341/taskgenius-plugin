@@ -310,28 +310,10 @@ export class FluentActionHandlers extends Component {
 									text: `${priorityIndicator}${cycle.name}: → ${nextStatusResult.statusName}`,
 								});
 								subItem.onClick(async () => {
-									const willComplete = this.isCompletedMark(
-										nextStatusResult.mark
-									);
-									const updatedTask = {
-										...task,
-										status: nextStatusResult.mark,
-										completed: willComplete,
-									};
-
-									if (!task.completed && willComplete) {
-										updatedTask.metadata.completedDate =
-											Date.now();
-									} else if (
-										task.completed &&
-										!willComplete
-									) {
-										updatedTask.metadata.completedDate =
-											undefined;
-									}
-
+									// Pass original task, not updatedTask, because handleKanbanTaskStatusUpdate
+									// will construct the updated task internally
 									await this.handleKanbanTaskStatusUpdate(
-										updatedTask,
+										task,
 										nextStatusResult.mark
 									);
 								});
@@ -375,21 +357,10 @@ export class FluentActionHandlers extends Component {
 							text: statusName,
 						});
 						subItem.onClick(async () => {
-							const willComplete = this.isCompletedMark(mark);
-							const updatedTask = {
-								...task,
-								status: mark,
-								completed: willComplete,
-							};
-
-							if (!task.completed && willComplete) {
-								updatedTask.metadata.completedDate = Date.now();
-							} else if (task.completed && !willComplete) {
-								updatedTask.metadata.completedDate = undefined;
-							}
-
+							// Pass original task, not updatedTask, because handleKanbanTaskStatusUpdate
+							// will construct the updated task internally
 							await this.handleKanbanTaskStatusUpdate(
-								updatedTask,
+								task,
 								mark
 							);
 						});
