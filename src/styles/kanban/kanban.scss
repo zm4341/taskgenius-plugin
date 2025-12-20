@@ -80,6 +80,39 @@
 	background-color: var(--background-modifier-active-hover);
 }
 
+/* Hidden columns button styles */
+.tg-kanban-hidden-columns-container {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.tg-kanban-hidden-columns-button {
+	padding: 4px 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background-color: var(--background-secondary);
+	color: var(--text-muted);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: var(--font-ui-small);
+	transition:
+		background-color 0.2s ease,
+		border-color 0.2s ease;
+}
+
+.tg-kanban-hidden-columns-button:hover {
+	background-color: var(--background-modifier-hover);
+	border-color: var(--background-modifier-border-hover);
+	color: var(--text-normal);
+}
+
+.tg-kanban-hidden-columns-button:active {
+	background-color: var(--background-modifier-active-hover);
+}
+
 .tg-kanban-toggle-container {
 	display: flex;
 	align-items: center;

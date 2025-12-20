@@ -282,6 +282,106 @@ export class KanbanComponent extends Component {
 
 		// Cycle selector (only for status grouping)
 		this.renderCycleSelector(controlsContainer);
+
+		// Hidden columns restore button
+		this.renderHiddenColumnsButton(controlsContainer);
+	}
+
+	private renderHiddenColumnsButton(container: HTMLElement): void {
+		const kanbanConfig = this.getEffectiveKanbanConfig();
+		const hiddenColumns = kanbanConfig?.hiddenColumns || [];
+
+		// Only show if there are hidden columns
+		if (hiddenColumns.length === 0) {
+			return;
+		}
+
+		const hiddenContainer = container.createDiv({
+			cls: "tg-kanban-hidden-columns-container",
+		});
+
+		const hiddenButton = hiddenContainer.createEl(
+			"button",
+			{
+				cls: "tg-kanban-hidden-columns-button",
+				attr: {
+					"aria-label": t("Show hidden columns"),
+				},
+			},
+			(el) => {
+				setIcon(el, "eye-off");
+				el.createSpan({ text: ` ${hiddenColumns.length}` });
+			},
+		);
+
+		this.registerDomEvent(hiddenButton, "click", (event: MouseEvent) => {
+			const menu = new Menu();
+
+			menu.addItem((item) => {
+				item.setTitle(t("Show all hidden columns"))
+					.setIcon("eye")
+					.onClick(() => {
+						this.restoreAllHiddenColumns();
+					});
+			});
+
+			menu.addSeparator();
+
+			// List each hidden column
+			hiddenColumns.forEach((colTitle) => {
+				menu.addItem((item) => {
+					item.setTitle(colTitle)
+						.setIcon("eye")
+						.onClick(() => {
+							this.restoreHiddenColumn(colTitle);
+						});
+				});
+			});
+
+			menu.showAtMouseEvent(event);
+		});
+	}
+
+	private restoreHiddenColumn(colTitle: string): void {
+		const viewConfig = this.plugin.settings.viewConfiguration.find(
+			(v) => v.id === this.currentViewId,
+		);
+		if (viewConfig && viewConfig.specificConfig?.viewType === "kanban") {
+			const kanbanConfig =
+				viewConfig.specificConfig as KanbanSpecificConfig;
+			if (kanbanConfig.hiddenColumns) {
+				const index = kanbanConfig.hiddenColumns.indexOf(colTitle);
+				if (index > -1) {
+					kanbanConfig.hiddenColumns.splice(index, 1);
+					this.plugin.saveSettings();
+					this.refreshView();
+				}
+			}
+		}
+	}
+
+	private restoreAllHiddenColumns(): void {
+		const viewConfig = this.plugin.settings.viewConfiguration.find(
+			(v) => v.id === this.currentViewId,
+		);
+		if (viewConfig && viewConfig.specificConfig?.viewType === "kanban") {
+			const kanbanConfig =
+				viewConfig.specificConfig as KanbanSpecificConfig;
+			kanbanConfig.hiddenColumns = [];
+			this.plugin.saveSettings();
+			this.refreshView();
+		}
+	}
+
+	private refreshView(): void {
+		// Clear and re-render the filter/controls area
+		if (this.filterContainerEl) {
+			this.filterContainerEl.empty();
+			this.renderFilterControls(this.filterContainerEl);
+			this.renderControls(this.filterContainerEl);
+		}
+		// Re-render columns
+		this.renderColumns();
 	}
 
 	private renderCycleSelector(container: HTMLElement): void {
@@ -298,7 +398,7 @@ export class KanbanComponent extends Component {
 		const cycleButton = cycleContainer.createEl(
 			"button",
 			{
-				cls: "tg-kanban-cycle-button clickable-icon",
+				cls: "tg-kanban-cycle-button",
 				attr: {
 					"aria-label": t("kanban.cycleSelector"),
 				},
@@ -518,7 +618,7 @@ export class KanbanComponent extends Component {
 		const set = new Set(
 			raw
 				.split("|")
-				.map((ch: string) => ch.trim())
+				// Don't trim - space character " " is a valid mark for "Not Started"
 				.filter((ch: string) => ch.length === 1),
 		);
 		return set.size > 0 ? set : null;
@@ -1009,10 +1109,25 @@ export class KanbanComponent extends Component {
 				allowedMarks = new Set();
 			}
 		} else {
-			// Use multi-cycle logic (existing behavior)
+			// Use multi-cycle logic: combine marks from taskStatuses and current cycle config
 			const allowed = this.getAllowedMarksForStatusName(statusName);
-			const statusMark = this.resolveStatusMark(statusName) ?? " ";
-			allowedMarks = allowed || new Set([statusMark]);
+			const statusMark = this.resolveStatusMark(statusName);
+			
+			// Build allowedMarks set from all available sources
+			allowedMarks = new Set<string>();
+			
+			// Add marks from taskStatuses (global config)
+			if (allowed) {
+				allowed.forEach(mark => allowedMarks.add(mark));
+			}
+			
+			// Add mark from current cycle config
+			if (statusMark) {
+				allowedMarks.add(statusMark);
+			}
+			
+			// If still empty, this status name doesn't have any configured marks
+			// Don't default to space - this prevents mixing unrelated statuses
 		}
 
 		// Filter from the already filtered list
