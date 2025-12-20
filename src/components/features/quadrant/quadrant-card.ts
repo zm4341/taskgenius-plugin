@@ -107,6 +107,17 @@ export class QuadrantCardComponent extends Component {
 			}
 		});
 
+		// Task title/content - in the same row as checkbox
+		const titleEl = headerEl.createDiv("tg-quadrant-card-title");
+		const contentRenderer = new MarkdownRendererComponent(
+			this.app,
+			titleEl,
+			this.task.filePath,
+			true, // hideMarks = true
+		);
+		this.addChild(contentRenderer);
+		contentRenderer.render(this.task.content, true);
+
 		// Actions menu
 		const actionsEl = headerEl.createDiv("tg-quadrant-card-actions");
 		const moreBtn = actionsEl.createEl("button", {
@@ -122,29 +133,10 @@ export class QuadrantCardComponent extends Component {
 	}
 
 	private createContent() {
-		this.contentEl = this.containerEl.createDiv("tg-quadrant-card-content");
-
-		// Task title/content - use markdown renderer
-		const titleEl = this.contentEl.createDiv("tg-quadrant-card-title");
-
-		// Create a new markdown renderer for this specific content
-		const contentRenderer = new MarkdownRendererComponent(
-			this.app,
-			titleEl,
-			this.task.filePath,
-			true, // hideMarks = true
-		);
-		this.addChild(contentRenderer);
-
-		// Render the task content
-		contentRenderer.render(this.task.content, true);
-
-		// Priority indicator (use the logic from listItem.ts for numeric priority)
-		// See @file_context_0 for reference
-
-		// Tags
+		// Tags section (title is now in header)
 		const tags = this.extractTags();
 		if (tags.length > 0) {
+			this.contentEl = this.containerEl.createDiv("tg-quadrant-card-content");
 			const tagsEl = this.contentEl.createDiv("tg-quadrant-card-tags");
 			tags.forEach((tag) => {
 				const tagEl = tagsEl.createSpan("tg-quadrant-card-tag");

@@ -258,14 +258,27 @@
 .tg-quadrant-card-header {
 	display: flex;
 	align-items: flex-start;
-	justify-content: space-between;
-	margin-bottom: var(--size-2-2);
 	gap: var(--size-2-2);
 }
 
 .tg-quadrant-card-checkbox {
 	flex-shrink: 0;
 	margin-top: 2px;
+}
+
+.tg-quadrant-card-title {
+	flex: 1;
+	min-width: 0;
+	font-size: var(--font-ui-small);
+	line-height: 1.4;
+	color: var(--text-normal);
+	word-wrap: break-word;
+	font-weight: var(--font-normal);
+	overflow: hidden;
+}
+
+.tg-quadrant-card-title p {
+	margin: 0;
 }
 
 .tg-quadrant-card-actions {
@@ -298,18 +311,10 @@
 	color: var(--text-normal);
 }
 
-/* Card Content */
+/* Card Content (tags only, title moved to header) */
 .tg-quadrant-card-content {
-	margin-bottom: var(--size-2-2);
-}
-
-.tg-quadrant-card-title {
-	font-size: var(--font-ui-small);
-	line-height: 1.4;
-	color: var(--text-normal);
-	margin-bottom: var(--size-2-1);
-	word-wrap: break-word;
-	font-weight: var(--font-normal);
+	margin-top: var(--size-2-2);
+	margin-left: calc(var(--checkbox-size, 18px) + var(--size-2-2));
 }
 
 .tg-quadrant-card-priority {
