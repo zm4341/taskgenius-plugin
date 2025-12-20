@@ -653,14 +653,6 @@ export default class TaskProgressBarPlugin extends Plugin {
 			addIcon("planned", getStatusIcon("planned"));
 			addIcon("abandoned", getStatusIcon("abandoned"));
 			addIcon("notStarted", getStatusIcon("notStarted"));
-
-			this.addRibbonIcon(
-				"task-genius",
-				t("Open Task Genius view"),
-				() => {
-					this.activateTaskView();
-				},
-			);
 		};
 
 		const idle = (window as any)?.requestIdleCallback;
