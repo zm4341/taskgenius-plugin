@@ -1463,7 +1463,7 @@ export const DEFAULT_SETTINGS: TaskProgressBarSettings = {
 		},
 		{
 			id: "kanban",
-			name: t("Status"),
+			name: t("Kanban"),
 			icon: "kanban",
 			type: "default",
 			visible: true,

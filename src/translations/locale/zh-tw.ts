@@ -591,6 +591,7 @@ const translations = {
 	"Enable task genius view": "啟用 Task Genius 視圖",
 	"Select a task to view details": "選擇一個任務以查看詳情",
 	Status: "狀態",
+	Kanban: "看板",
 	"Comma separated": "逗號分隔",
 	Focus: "專注",
 	"Loading more...": "加載更多...",

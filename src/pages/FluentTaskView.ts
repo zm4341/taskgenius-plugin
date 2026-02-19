@@ -1,4 +1,4 @@
-import { debounce, ItemView, Scope, WorkspaceLeaf, setIcon } from "obsidian";
+import { debounce, ItemView, Notice, Scope, WorkspaceLeaf, setIcon } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { Task } from "@/types/task";
 import "@/styles/fluent/fluent-main.scss";
@@ -902,35 +902,25 @@ export class FluentTaskView extends ItemView {
 				onTaskContextMenu: (event, task) => {
 					this.actionHandlers.handleTaskContextMenu(event, task);
 				},
-				onKanbanTaskStatusUpdate: (taskId, newStatusMark) => {
-					console.log(
-						`[FluentTaskView] Kanban status update callback received: taskId=${taskId}, mark=${newStatusMark}`
-					);
-					console.log(
-						`[FluentTaskView] Current task list size: ${this.tasks.length}`
-					);
-
-					const task = this.tasks.find((t) => t.id === taskId);
-					if (task) {
-						console.log(
-							"[FluentTaskView] Task found, delegating to action handler"
-						);
-						this.actionHandlers.handleKanbanTaskStatusUpdate(
-							task,
-							newStatusMark
-						);
-					} else {
-						console.error(
-							`[FluentTaskView] CRITICAL: Task ${taskId} not found in local task list`
-						);
-						console.error(
-							"[FluentTaskView] Available task IDs:",
-							this.tasks.slice(0, 5).map((t) => t.id)
-						);
-						console.error(
-							"[FluentTaskView] This indicates a synchronization issue between kanban and main view"
-						);
+				onKanbanTaskStatusUpdate: async (taskId, newStatusMark, taskFromKanban) => {
+					const task = taskFromKanban ?? this.tasks.find((t) => t.id === taskId);
+					if (!task) {
+						console.warn("[Task Genius] Kanban status update: task not found", { taskId, newStatusMark });
+						new Notice(t("Task not found; cannot update status"));
+						return;
 					}
+					// Kanban already wrote via WriteAPI and passed the updated task — only refresh
+					if (task.status === newStatusMark) {
+						const idx = this.tasks.findIndex((t) => t.id === taskId);
+						if (idx >= 0) this.tasks[idx] = task;
+						this.filteredTasks = this.dataManager.applyFilters(this.tasks);
+						this.updateView();
+						return;
+					}
+					await this.actionHandlers.handleKanbanTaskStatusUpdate(
+						task,
+						newStatusMark
+					);
 				},
 			},
 			this.selectionManager

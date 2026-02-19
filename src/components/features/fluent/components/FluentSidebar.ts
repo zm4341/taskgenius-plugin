@@ -53,6 +53,11 @@ export class FluentSidebar extends Component {
 		flagged: { icon: "flag", label: () => t("Flagged") },
 	};
 
+	// Other views with fixed translated labels (overrides saved name)
+	private readonly OTHER_VIEW_LABELS: Record<string, () => string> = {
+		kanban: () => t("Kanban"),
+	};
+
 	private otherItems: FluentTaskNavigationItem[] = [];
 
 	constructor(
@@ -173,10 +178,12 @@ export class FluentSidebar extends Component {
 				);
 			})
 			.map((v) => {
-				// Use translated label for system views
+				// Use translated label for system views and other views with fixed labels
 				let label = v.name;
 				if (this.SYSTEM_VIEWS[v.id]) {
 					label = this.SYSTEM_VIEWS[v.id].label();
+				} else if (this.OTHER_VIEW_LABELS[v.id]) {
+					label = this.OTHER_VIEW_LABELS[v.id]();
 				}
 				return {
 					id: v.id,

@@ -108,10 +108,12 @@ export class WriteAPI {
 	}
 
 	/**
-	 * Update a task's status or completion state
+	 * Update a task's status or completion state.
+	 * When task is provided, use it directly (avoids index lookup); otherwise resolve by taskId.
 	 */
 	async updateTaskStatus(args: {
 		taskId: string;
+		task?: Task;
 		status?: string;
 		completed?: boolean;
 	}): Promise<{ success: boolean; task?: Task; error?: string }> {
@@ -120,11 +122,13 @@ export class WriteAPI {
 
 	private async performUpdateTaskStatus(args: {
 		taskId: string;
+		task?: Task;
 		status?: string;
 		completed?: boolean;
 	}): Promise<{ success: boolean; task?: Task; error?: string }> {
 		try {
-			const task = await Promise.resolve(this.getTaskById(args.taskId));
+			let task: Task | null =
+				args.task ?? (await Promise.resolve(this.getTaskById(args.taskId)));
 			if (!task) {
 				return { success: false, error: "Task not found" };
 			}

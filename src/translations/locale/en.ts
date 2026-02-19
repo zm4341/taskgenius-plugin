@@ -606,6 +606,7 @@ const translations = {
 	"Active Rules": "Active Rules",
 	"Cache Size": "Cache Size",
 	Status: "Status",
+	Kanban: "Kanban",
 	Enabled: "Enabled",
 	Disabled: "Disabled",
 	"Task status cycle and marks": "Task status cycle and marks",

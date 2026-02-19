@@ -617,6 +617,7 @@ const translations = {
 	"Enable task genius view": "Task Geniusビューを有効にする",
 	"Select a task to view details": "タスクを選択して詳細を表示",
 	Status: "ステータス",
+	Kanban: "カンバン",
 	"Comma separated": "カンマ区切り",
 	Focus: "集中",
 	"Loading more...": "読み込み中...",

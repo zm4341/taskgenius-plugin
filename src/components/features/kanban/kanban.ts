@@ -56,6 +56,7 @@ export class KanbanComponent extends Component {
 		onTaskStatusUpdate?: (
 			taskId: string,
 			newStatusMark: string,
+			task?: Task,
 		) => Promise<void>;
 		onTaskSelected?: (task: Task) => void;
 		onTaskCompleted?: (task: Task) => void;
@@ -83,6 +84,7 @@ export class KanbanComponent extends Component {
 			onTaskStatusUpdate?: (
 				taskId: string,
 				newStatusMark: string,
+				task?: Task,
 			) => Promise<void>;
 			onTaskSelected?: (task: Task) => void;
 			onTaskCompleted?: (task: Task) => void;
@@ -1240,22 +1242,23 @@ export class KanbanComponent extends Component {
 		const sourceColumnContent = event.from;
 
 		if (taskId && dropTargetColumnContent) {
-			// Get target column information
+			// Get target column: use data-status-name first (exact value from cycle), fallback to title text
 			const targetColumnEl =
 				dropTargetColumnContent.closest(".tg-kanban-column");
 			const targetColumnTitle = targetColumnEl
-				? (targetColumnEl as HTMLElement).querySelector(
+				? (targetColumnEl.getAttribute("data-status-name") ??
+					(targetColumnEl as HTMLElement).querySelector(
 						".tg-kanban-column-title",
-					)?.textContent
+					)?.textContent?.trim())
 				: null;
 
-			// Get source column information
 			const sourceColumnEl =
 				sourceColumnContent.closest(".tg-kanban-column");
 			const sourceColumnTitle = sourceColumnEl
-				? (sourceColumnEl as HTMLElement).querySelector(
+				? (sourceColumnEl.getAttribute("data-status-name") ??
+					(sourceColumnEl as HTMLElement).querySelector(
 						".tg-kanban-column-title",
-					)?.textContent
+					)?.textContent?.trim())
 				: null;
 
 			if (targetColumnTitle && sourceColumnTitle) {
@@ -1408,19 +1411,37 @@ export class KanbanComponent extends Component {
 			return null;
 		}
 
+		const trimmed = columnTitle.trim();
+		if (!trimmed) return undefined;
+
 		if (this.selectedCycleId) {
 			// Use selected cycle's marks mapping
 			const selectedCycle = (
 				this.plugin.settings.statusCycles || []
 			).find((c) => c.id === this.selectedCycleId);
 
-			if (selectedCycle) {
-				return selectedCycle.marks[columnTitle] || undefined;
+			if (selectedCycle && selectedCycle.marks) {
+				// Exact match first
+				const exact = selectedCycle.marks[trimmed];
+				if (exact !== undefined && exact !== null) return exact;
+				// Case-insensitive match (column may show "NOT STARTED" while cycle has "Not Started")
+				for (const [statusName, mark] of Object.entries(
+					selectedCycle.marks,
+				)) {
+					if (
+						statusName.trim().toLowerCase() === trimmed.toLowerCase()
+					) {
+						return mark as string;
+					}
+				}
+				// Fallback: resolve from global/first-cycle config (e.g. "NOT STARTED" -> " ")
+				const fallback = this.resolveStatusMark(trimmed);
+				if (fallback !== undefined) return fallback;
 			}
 		}
 
 		// Fallback to existing logic for multi-cycle or no cycle selected
-		return this.resolveStatusMark(columnTitle);
+		return this.resolveStatusMark(trimmed);
 	}
 
 	private resolveStatusMark(titleOrMark: string): string | undefined {
@@ -1452,30 +1473,45 @@ export class KanbanComponent extends Component {
 		taskId: string,
 		newStatusMark: string,
 	): Promise<void> {
-		console.log(
-			`[Kanban] handleStatusUpdate called: taskId=${taskId}, mark=${newStatusMark}`,
-		);
-		console.log(
-			"[Kanban] onTaskStatusUpdate callback exists:",
-			!!this.params.onTaskStatusUpdate,
-		);
+		const task = this.allTasks.find((t) => t.id === taskId) ?? this.tasks.find((t) => t.id === taskId);
+		if (!task) {
+			console.warn("[Kanban] handleStatusUpdate: task not found", taskId);
+			return;
+		}
 
-		if (this.params.onTaskStatusUpdate) {
+		const completedMark = (this.plugin.settings.taskStatuses?.completed || "x").split("|")[0]?.trim() || "x";
+		const isCompleted = newStatusMark === completedMark || newStatusMark.toLowerCase() === completedMark.toLowerCase();
+
+		if (this.plugin.writeAPI) {
 			try {
-				console.log("[Kanban] Calling onTaskStatusUpdate callback...");
-				await this.params.onTaskStatusUpdate(taskId, newStatusMark);
-				console.log(
-					"[Kanban] onTaskStatusUpdate callback completed successfully",
-				);
-			} catch (error) {
-				console.error("[Kanban] Failed to update task status:", error);
-				console.error("[Kanban] Error details:", error.stack);
+				const result = await this.plugin.writeAPI.updateTaskStatus({
+					taskId: task.id,
+					task,
+					status: newStatusMark,
+					completed: isCompleted,
+				});
+				if (result.success) {
+					const updatedTask: Task = {
+						...task,
+						status: newStatusMark,
+						completed: isCompleted,
+						metadata: {
+							...task.metadata,
+							completedDate: isCompleted ? Date.now() : undefined,
+						},
+					};
+					this.params.onTaskStatusUpdate?.(taskId, newStatusMark, updatedTask);
+					return;
+				}
+			} catch (e) {
+				console.error("[Kanban] WriteAPI.updateTaskStatus failed:", e);
 			}
-		} else {
-			console.error(
-				"[Kanban] CRITICAL: onTaskStatusUpdate callback is not defined!",
-			);
-			console.error("[Kanban] this.params:", this.params);
+		}
+
+		try {
+			await this.params.onTaskStatusUpdate?.(taskId, newStatusMark, task);
+		} catch (error) {
+			console.error("[Kanban] onTaskStatusUpdate callback failed:", error);
 		}
 	}
 

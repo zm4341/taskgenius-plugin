@@ -209,39 +209,51 @@ export class FluentActionHandlers extends Component {
 
 	/**
 	 * Handle kanban task status update
+	 * Uses writeAPI.updateTaskStatus directly (same as TableView) for consistent
+	 * status updates and date management. Then notifies onTaskUpdated so the
+	 * Kanban view refreshes with the new task data.
 	 */
 	async handleKanbanTaskStatusUpdate(
 		task: Task,
 		newStatusMark: string
 	): Promise<void> {
-		console.log(
-			`[FluentActionHandlers] Processing kanban status update for task ${task.id}`
-		);
-		console.log(
-			`[FluentActionHandlers] Status change: ${task.status} -> ${newStatusMark}`
-		);
+		if (!this.plugin.writeAPI) {
+			new Notice(t("WriteAPI not available"));
+			return;
+		}
 
 		const isCompleted = this.isCompletedMark(newStatusMark);
-		const completedDate = isCompleted ? Date.now() : undefined;
 
-		if (task.status !== newStatusMark || task.completed !== isCompleted) {
-			console.log(
-				"[FluentActionHandlers] Status change detected, calling handleTaskUpdate..."
-			);
-			await this.handleTaskUpdate(task, {
+		if (task.status === newStatusMark && task.completed === isCompleted) {
+			return;
+		}
+
+		try {
+			const result = await this.plugin.writeAPI.updateTaskStatus({
+				taskId: task.id,
+				task,
+				status: newStatusMark,
+				completed: isCompleted,
+			});
+
+			if (!result.success) {
+				throw new Error(result.error || "Failed to update task status");
+			}
+
+			const updatedTask: Task = {
 				...task,
 				status: newStatusMark,
 				completed: isCompleted,
 				metadata: {
 					...task.metadata,
-					completedDate: completedDate,
+					completedDate: isCompleted ? Date.now() : undefined,
 				},
-			});
-			console.log("[FluentActionHandlers] handleTaskUpdate completed");
-		} else {
-			console.log(
-				"[FluentActionHandlers] No status change needed, skipping update"
-			);
+			};
+
+			this.onTaskUpdated?.(task.id, updatedTask);
+		} catch (error) {
+			console.error("[FluentActionHandlers] Kanban status update failed:", error);
+			new Notice(t("Failed to update task"));
 		}
 	}
 

@@ -110,8 +110,9 @@ export class FluentComponentManager extends Component {
 		onTaskContextMenu: (event: MouseEvent, task: Task) => void;
 		onKanbanTaskStatusUpdate: (
 			taskId: string,
-			newStatusMark: string
-		) => void;
+			newStatusMark: string,
+			task?: Task
+		) => void | Promise<void>;
 	};
 
 	constructor(
@@ -129,8 +130,9 @@ export class FluentComponentManager extends Component {
 			onTaskContextMenu: (event: MouseEvent, task: Task) => void;
 			onKanbanTaskStatusUpdate: (
 				taskId: string,
-				newStatusMark: string
-			) => void;
+				newStatusMark: string,
+				task?: Task
+			) => void | Promise<void>;
 		},
 		private selectionManager?: TaskSelectionManager
 	) {
@@ -348,10 +350,11 @@ export class FluentComponentManager extends Component {
 			this.contentArea,
 			[], // tasks will be set later
 			{
-				onTaskStatusUpdate: async (taskId, newStatusMark) => {
-					this.viewHandlers.onKanbanTaskStatusUpdate(
+				onTaskStatusUpdate: async (taskId, newStatusMark, task) => {
+					await this.viewHandlers.onKanbanTaskStatusUpdate(
 						taskId,
-						newStatusMark
+						newStatusMark,
+						task
 					);
 				},
 				onTaskSelected: (task) => {
