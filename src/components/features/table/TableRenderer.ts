@@ -285,6 +285,13 @@ export class TableRenderer extends Component {
 			// Set text alignment
 			if (column.align) {
 				th.style.textAlign = column.align;
+				// The header content is a flex row, which text-align doesn't move
+				headerContent.style.justifyContent =
+					column.align === "center"
+						? "center"
+						: column.align === "right"
+							? "flex-end"
+							: "";
 			}
 		});
 	}

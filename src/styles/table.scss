@@ -284,8 +284,8 @@
 	color: var(--text-normal);
 }
 
+/* Alignment follows the column's align (row numbers are centered) */
 .task-table-number {
-	text-align: right;
 	color: var(--text-muted);
 	font-variant-numeric: tabular-nums;
 }

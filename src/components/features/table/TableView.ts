@@ -108,10 +108,11 @@ export class TableView extends Component {
 			{
 				id: "rowNumber",
 				title: t("No."),
-				width: 60,
+				width: this.config.columnWidths.rowNumber || 60,
 				sortable: false,
-				resizable: false,
+				resizable: this.config.resizableColumns,
 				type: "number",
+				align: "center",
 				visible: this.config.showRowNumbers,
 			},
 			{

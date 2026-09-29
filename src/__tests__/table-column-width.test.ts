@@ -76,6 +76,25 @@ describe("TableView saves column widths", () => {
 	});
 });
 
+describe("TableView row number column", () => {
+	function rowNumberColumn(columnWidths: Record<string, number>) {
+		const view = new TableView({} as any, makePlugin([]), document.createElement("div"), makeTableConfig(columnWidths), {}, "table");
+		return (view as any).columns.find((c: any) => c.id === "rowNumber");
+	}
+
+	it("is resizable and centered, using the saved width", () => {
+		expect(rowNumberColumn({ rowNumber: 72 })).toMatchObject({
+			width: 72,
+			resizable: true,
+			align: "center",
+		});
+	});
+
+	it("falls back to the default width when none is saved", () => {
+		expect(rowNumberColumn({}).width).toBe(60);
+	});
+});
+
 describe("TableRenderer reports finished column resizes", () => {
 	function makeRenderer() {
 		const tableEl = { addClass: jest.fn(), removeClass: jest.fn() } as any;
