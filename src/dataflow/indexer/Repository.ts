@@ -5,7 +5,7 @@ import type {
 	SortingCriteria,
 	TaskIndexer as TaskIndexerInterface,
 } from "../../types/task";
-import type { App, Vault, MetadataCache, TFile } from "obsidian";
+import { TFile, type App, type Vault, type MetadataCache } from "obsidian";
 import { TaskIndexer } from "@/core/task-indexer";
 import { Storage } from "@/dataflow/persistence/Storage";
 import { emit, Events, Seq } from "@/dataflow/events/Events";
@@ -255,6 +255,10 @@ export class Repository {
 		// Clear storage for this file
 		await this.storage.clearFile(filePath);
 
+		// Persist the removal too, otherwise the file's tasks come back from
+		// the consolidated snapshot on next startup
+		this.schedulePersist(filePath);
+
 		// Emit update event
 		this.lastSequence = Seq.next();
 		emit(this.app, Events.TASK_CACHE_UPDATED, {
@@ -266,6 +270,60 @@ export class Repository {
 			timestamp: Date.now(),
 			seq: this.lastSequence,
 		});
+	}
+
+	/**
+	 * Remove tasks of files that no longer exist in the vault.
+	 * Files deleted while Obsidian was closed never reach removeFile, so without
+	 * this their tasks are restored from the snapshot on every startup and can't
+	 * be deleted from any view. Call only after the vault has finished loading.
+	 * @returns Paths whose tasks were removed
+	 */
+	async pruneMissingFiles(): Promise<string[]> {
+		const isMissing = (path: string) =>
+			!(this.vault.getAbstractFileByPath(path) instanceof TFile);
+		const missingPaths = new Set<string>();
+
+		for (const filePath of await this.getIndexedFilePaths()) {
+			if (isMissing(filePath)) {
+				await this.indexer.removeTasksFromFile(filePath);
+				missingPaths.add(filePath);
+			}
+		}
+
+		// Tasks the files map lost track of
+		for (const task of await this.indexer.getAllTasks()) {
+			if (isMissing(task.filePath)) {
+				await this.indexer.removeTask(task.id);
+				missingPaths.add(task.filePath);
+			}
+		}
+
+		for (const filePath of Array.from(this.fileTasks.keys())) {
+			if (isMissing(filePath)) {
+				this.fileTasks.delete(filePath);
+				missingPaths.add(filePath);
+			}
+		}
+
+		if (missingPaths.size === 0) {
+			return [];
+		}
+
+		await this.persist();
+
+		this.lastSequence = Seq.next();
+		emit(this.app, Events.TASK_CACHE_UPDATED, {
+			changedFiles: Array.from(missingPaths),
+			stats: {
+				total: await this.getTotalTaskCount(),
+				changed: 0,
+			},
+			timestamp: Date.now(),
+			seq: this.lastSequence,
+		});
+
+		return Array.from(missingPaths);
 	}
 
 	/**
@@ -507,8 +565,10 @@ export class Repository {
 		if (this.persistQueue.size > 0) {
 			const queueSize = this.persistQueue.size;
 			console.log(`[Repository] Persisting after ${queueSize} changes`);
-			await this.persist();
+			// Clear before awaiting: changes queued while this write is in
+			// flight must stay queued for the next persist
 			this.persistQueue.clear();
+			await this.persist();
 			this.lastPersistTime = Date.now();
 		}
 	}

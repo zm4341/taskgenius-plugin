@@ -1424,16 +1424,24 @@ export class WriteAPI {
 				return { success: false, error: "Task not found" };
 			}
 
-			// Check if this is a Canvas task
-			if (CanvasTaskUpdater.isCanvasTask(task)) {
-				return this.deleteCanvasTask(args);
-			}
-
 			const file = this.vault.getAbstractFileByPath(
 				task.filePath,
 			) as TFile;
 			if (!file) {
-				return { success: false, error: "File not found" };
+				// The file is already gone, so this is a stale index entry.
+				// Drop the file's tasks from the index instead of failing,
+				// otherwise the task can never be removed from any view.
+				emit(this.app, Events.FILE_UPDATED, {
+					path: task.filePath,
+					reason: "delete",
+					timestamp: Date.now(),
+				});
+				return { success: true };
+			}
+
+			// Check if this is a Canvas task
+			if (CanvasTaskUpdater.isCanvasTask(task)) {
+				return this.deleteCanvasTask(args);
 			}
 
 			const content = await this.vault.read(file);

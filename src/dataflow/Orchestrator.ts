@@ -307,6 +307,16 @@ export class DataflowOrchestrator {
 			}
 			await this.queryAPI.initialize();
 
+			// The restored snapshot may still hold tasks of files deleted while
+			// Obsidian was closed. We run after layout ready, so the vault file
+			// tree is complete and anything missing from it is really gone.
+			const prunedPaths = await this.repository.pruneMissingFiles();
+			if (prunedPaths.length > 0) {
+				console.log(
+					`[DataflowOrchestrator] Pruned ${prunedPaths.length} deleted files from the restored index`,
+				);
+			}
+
 			// Load persisted suppressed file sets for cross-restart restore
 			try {
 				const supInline = await this.storage.loadMeta<string[]>(
@@ -461,6 +471,13 @@ export class DataflowOrchestrator {
 				);
 
 				if (reason === "delete") {
+					// Drop a pending debounced parse, it would re-add the tasks
+					const pending = this.processingQueue.get(path);
+					if (pending) {
+						clearTimeout(pending);
+						this.processingQueue.delete(path);
+					}
+
 					// Remove file from index
 					await this.repository.removeFile(path);
 				} else {
@@ -642,6 +659,12 @@ export class DataflowOrchestrator {
 	): Promise<void> {
 		const filePath = file.path;
 
+		// Skip files deleted since this parse was scheduled: cachedRead still
+		// returns their old content, which would re-add their tasks
+		if (!(this.vault.getAbstractFileByPath(filePath) instanceof TFile)) {
+			return;
+		}
+
 		try {
 			// Step 1: Get file modification time
 			const fileStat = await this.vault.adapter.stat(filePath);
@@ -820,6 +843,12 @@ export class DataflowOrchestrator {
 					tasks: rawTasks,
 				};
 				augmentedTasks = await this.augmentor.merge(augmentContext);
+			}
+
+			// Deleted while we were parsing: removeFile() already ran, so
+			// updating now would bring the file's tasks back
+			if (!(this.vault.getAbstractFileByPath(filePath) instanceof TFile)) {
+				return;
 			}
 
 			// Step 3: Update repository (index + storage + events)
