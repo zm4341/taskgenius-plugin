@@ -2323,6 +2323,7 @@ const translations = {
 		"智能定位任务元数据。启用时，元数据会与短任务显示在同一行，长任务则显示在下方。禁用时，元数据总是显示在任务内容下方。",
 	"Toggle tree/list view": "切换树状/列表视图",
 	"Drag to resize, double-click to reset": "拖动调整高度，双击恢复默认",
+	"Drag to resize, double-click to fit content": "拖动调整列宽，双击按内容自适应",
 	"Clear date": "清除日期",
 	"Clear priority": "清除优先级",
 	"Clear all tags": "清除所有标签",

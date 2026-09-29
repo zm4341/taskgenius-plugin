@@ -79,7 +79,8 @@ export class TableView extends Component {
 		private plugin: TaskProgressBarPlugin,
 		private parentEl: HTMLElement,
 		private config: TableSpecificConfig,
-		private callbacks: TableViewCallbacks = {}
+		private callbacks: TableViewCallbacks = {},
+		private viewId: string = "table"
 	) {
 		super();
 		this.setupCallbacks();
@@ -319,6 +320,11 @@ export class TableView extends Component {
 			newValue: any
 		) => {
 			this.handleCellChange(rowId, columnId, newValue);
+		};
+
+		// Remember column widths the user sets
+		this.renderer.onColumnResize = (columnId: string, width: number) => {
+			this.saveColumnWidth(columnId, width);
 		};
 
 		// Initialize editor if inline editing is enabled
@@ -1377,27 +1383,48 @@ export class TableView extends Component {
 	}
 
 	/**
+	 * This view's table config as stored in plugin settings, if saved there
+	 */
+	private getSavedTableConfig(): TableSpecificConfig | null {
+		const specificConfig = this.plugin?.settings?.viewConfiguration?.find(
+			(view) => view.id === this.viewId
+		)?.specificConfig;
+		return specificConfig?.viewType === "table" ? specificConfig : null;
+	}
+
+	/**
 	 * Save column configuration to plugin settings
 	 */
 	private saveColumnConfiguration() {
-		if (this.plugin && this.plugin.settings) {
-			// Find the table view configuration
-			const tableViewConfig = this.plugin.settings.viewConfiguration.find(
-				(view) => view.id === "table"
-			);
+		const tableConfig = this.getSavedTableConfig();
+		if (tableConfig) {
+			// Update the visible columns in the plugin settings
+			tableConfig.visibleColumns = [...this.config.visibleColumns];
 
-			if (tableViewConfig && tableViewConfig.specificConfig) {
-				const tableConfig = tableViewConfig.specificConfig as any;
-				if (tableConfig.viewType === "table") {
-					// Update the visible columns in the plugin settings
-					tableConfig.visibleColumns = [
-						...this.config.visibleColumns,
-					];
+			// Save settings
+			this.plugin.saveSettings();
+		}
+	}
 
-					// Save settings
-					this.plugin.saveSettings();
-				}
-			}
+	/**
+	 * Save a column width set by dragging or double-click fit
+	 */
+	private saveColumnWidth(columnId: string, width: number) {
+		// Replace rather than edit the widths object: this.config is a shallow
+		// merge, so its columnWidths may be the saved settings' object or the
+		// one in DEFAULT_SETTINGS
+		this.config.columnWidths = {
+			...this.config.columnWidths,
+			[columnId]: width,
+		};
+
+		const tableConfig = this.getSavedTableConfig();
+		if (tableConfig) {
+			tableConfig.columnWidths = {
+				...tableConfig.columnWidths,
+				[columnId]: width,
+			};
+			this.plugin.saveSettings();
 		}
 	}
 

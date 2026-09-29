@@ -155,6 +155,30 @@
 	background-color: var(--text-accent);
 }
 
+/* Hidden copy used to measure a column for double-click fit */
+.task-table.task-table-measure {
+	position: absolute;
+	top: 0;
+	left: 0;
+	visibility: hidden;
+	pointer-events: none;
+	width: auto;
+	min-width: 0;
+	table-layout: auto;
+}
+
+.task-table.task-table-measure th,
+.task-table.task-table-measure td {
+	width: auto !important;
+	min-width: 0 !important;
+	max-width: none !important;
+}
+
+.task-table.task-table-measure input {
+	field-sizing: content;
+	width: auto !important;
+}
+
 /* Body Styles */
 .task-table-body {
 	background-color: var(--background-primary);

@@ -2491,6 +2491,8 @@ const translations = {
 	"Toggle tree/list view": "Toggle tree/list view",
 	"Drag to resize, double-click to reset":
 		"Drag to resize, double-click to reset",
+	"Drag to resize, double-click to fit content":
+		"Drag to resize, double-click to fit content",
 	"Clear date": "Clear date",
 	"Clear priority": "Clear priority",
 	"Clear all tags": "Clear all tags",

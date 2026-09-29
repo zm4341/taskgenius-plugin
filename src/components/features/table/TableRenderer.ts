@@ -64,6 +64,9 @@ export class TableRenderer extends Component {
 		newValue: any,
 	) => void;
 
+	// Callback when the user changes a column width (drag or double-click fit)
+	public onColumnResize?: (columnId: string, width: number) => void;
+
 	constructor(
 		private tableEl: HTMLElement,
 		private headerEl: HTMLElement,
@@ -265,8 +268,17 @@ export class TableRenderer extends Component {
 			// Add resize handle if resizable
 			if (column.resizable && this.config.resizableColumns) {
 				const resizeHandle = th.createDiv("task-table-resize-handle");
+				resizeHandle.setAttribute(
+					"aria-label",
+					t("Drag to resize, double-click to fit content"),
+				);
 				this.registerDomEvent(resizeHandle, "mousedown", (e) => {
 					this.startResize(e, column.id, column.width);
+				});
+				this.registerDomEvent(resizeHandle, "dblclick", (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					this.autoFitColumn(column.id);
 				});
 			}
 
@@ -1543,10 +1555,63 @@ export class TableRenderer extends Component {
 	private handleMouseUp() {
 		if (!this.isResizing) return;
 
+		const columnId = this.resizeColumn;
 		this.isResizing = false;
 		this.resizeColumn = "";
 		document.body.style.cursor = "";
 		this.tableEl.removeClass("resizing");
+
+		// A plain click (e.g. half of a double-click) doesn't change the width
+		const width = this.columns.find((c) => c.id === columnId)?.width;
+		if (width !== undefined && width !== this.resizeStartWidth) {
+			this.onColumnResize?.(columnId, width);
+		}
+	}
+
+	/**
+	 * Size a column to fit its header and rendered cells
+	 */
+	private autoFitColumn(columnId: string) {
+		const fitWidth = this.measureColumnFitWidth(columnId);
+		if (fitWidth === null) return;
+
+		// Don't let one long column push the rest out of the visible area
+		const visibleWidth = this.tableEl.parentElement?.clientWidth || fitWidth;
+		const width = Math.max(50, Math.min(fitWidth, visibleWidth));
+
+		this.updateColumnWidth(columnId, width);
+		this.onColumnResize?.(columnId, width);
+	}
+
+	/**
+	 * Measure on a hidden copy of the table laid out with table-layout: auto,
+	 * so the browser sizes the column to its widest cell whatever the cell
+	 * holds (text, icons, inputs). The copy sits next to the real table so the
+	 * same styles apply, and is removed before the next paint.
+	 */
+	private measureColumnFitWidth(columnId: string): number | null {
+		const host = this.tableEl.parentElement;
+		if (!host) return null;
+
+		const measureTable = this.tableEl.cloneNode(false) as HTMLElement;
+		measureTable.addClass("task-table-measure");
+		const measureBody = this.bodyEl.cloneNode(true) as HTMLElement;
+		measureTable.append(this.headerEl.cloneNode(true), measureBody);
+
+		// cloneNode copies the value attribute, not what was typed since
+		const liveInputs = this.bodyEl.querySelectorAll("input");
+		measureBody.querySelectorAll("input").forEach((input, i) => {
+			input.value = liveInputs[i]?.value ?? input.value;
+		});
+
+		host.appendChild(measureTable);
+		const th = measureTable.querySelector(
+			`th[data-column-id="${columnId}"]`,
+		);
+		const width = th ? Math.ceil(th.getBoundingClientRect().width) : null;
+		measureTable.remove();
+
+		return width;
 	}
 
 	/**
