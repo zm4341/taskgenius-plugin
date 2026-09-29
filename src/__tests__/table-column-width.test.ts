@@ -97,7 +97,9 @@ describe("TableView row number column", () => {
 
 describe("TableRenderer reports finished column resizes", () => {
 	function makeRenderer() {
-		const tableEl = { addClass: jest.fn(), removeClass: jest.fn() } as any;
+		const tableEl = document.createElement("table") as any;
+		tableEl.addClass = (cls: string) => tableEl.classList.add(cls);
+		tableEl.removeClass = (cls: string) => tableEl.classList.remove(cls);
 		const columns = [{ id: "status", width: 80 }] as any[];
 		const renderer = new TableRenderer(
 			tableEl,
@@ -110,8 +112,20 @@ describe("TableRenderer reports finished column resizes", () => {
 		);
 		const onColumnResize = jest.fn();
 		renderer.onColumnResize = onColumnResize;
-		return { renderer: renderer as any, onColumnResize };
+		return { renderer: renderer as any, onColumnResize, tableEl };
 	}
+
+	it("stays marked as resizing until the click that ends a drag is handled", async () => {
+		const { renderer, tableEl } = makeRenderer();
+		renderer.startResize(new MouseEvent("mousedown", { clientX: 100 }), "status", 80);
+		renderer.handleMouseMove(new MouseEvent("mousemove", { clientX: 70 }));
+		renderer.handleMouseUp();
+
+		// The header's click handler skips sorting while this class is set
+		expect(tableEl.classList.contains("resizing")).toBe(true);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(tableEl.classList.contains("resizing")).toBe(false);
+	});
 
 	it("reports the new width when a drag ends", () => {
 		const { renderer, onColumnResize } = makeRenderer();

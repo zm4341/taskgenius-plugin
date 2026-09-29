@@ -1566,7 +1566,10 @@ export class TableRenderer extends Component {
 		this.isResizing = false;
 		this.resizeColumn = "";
 		document.body.style.cursor = "";
-		this.tableEl.removeClass("resizing");
+		// A drag that ends inside the header cell is followed by a click on
+		// that cell; keep the class until it is handled so the header's click
+		// handler doesn't take it as a sort click
+		window.setTimeout(() => this.tableEl.removeClass("resizing"), 0);
 
 		// A plain click (e.g. half of a double-click) doesn't change the width
 		const width = this.columns.find((c) => c.id === columnId)?.width;
