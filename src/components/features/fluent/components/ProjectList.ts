@@ -32,6 +32,7 @@ interface ProjectTreeNode {
 	expanded: boolean;
 	path: string[];
 	fullPath: string;
+	totalCount: number; // Tasks of this project plus all its descendants
 }
 
 type SortOption =
@@ -314,6 +315,7 @@ export class ProjectList extends Component {
 						path: segments.slice(0, i + 1),
 						fullPath: currentPath,
 						parent: parentNode,
+						totalCount: 0,
 					};
 
 					nodeMap.set(currentPath, node);
@@ -334,12 +336,12 @@ export class ProjectList extends Component {
 			}
 		});
 
+		// Totals first, so sorting by task count sees them
+		this.computeTotalCounts(rootNodes);
+
 		// Sort tree nodes recursively
 		this.sortTreeNodes(rootNodes);
 		this.treeNodes = rootNodes;
-
-		// Update task counts for parent nodes
-		this.updateParentTaskCounts(rootNodes);
 	}
 
 	private parseProjectPath(projectName: string): string[] {
@@ -398,9 +400,9 @@ export class ProjectList extends Component {
 						a.project.displayName || a.project.name,
 					);
 				case "tasks-asc":
-					return a.project.taskCount - b.project.taskCount;
+					return a.totalCount - b.totalCount;
 				case "tasks-desc":
-					return b.project.taskCount - a.project.taskCount;
+					return b.totalCount - a.totalCount;
 				case "created-asc":
 					return (
 						(a.project.createdAt || 0) - (b.project.createdAt || 0)
@@ -415,24 +417,16 @@ export class ProjectList extends Component {
 		});
 	}
 
-	private updateParentTaskCounts(nodes: ProjectTreeNode[]) {
+	private computeTotalCounts(nodes: ProjectTreeNode[]) {
 		nodes.forEach((node) => {
-			if (node.children.length > 0) {
-				this.updateParentTaskCounts(node.children);
-				// Sum up child task counts
-				const childTotal = node.children.reduce(
-					(sum, child) => sum + child.project.taskCount,
-					0,
-				);
-				// For virtual nodes, set count to child total
-				// For real nodes, add child total to existing count
-				if (node.project.isVirtual) {
-					node.project.taskCount = childTotal;
-				} else {
-					node.project.taskCount =
-						node.project.taskCount + childTotal;
-				}
-			}
+			this.computeTotalCounts(node.children);
+			// Don't add into project.taskCount: real nodes share their Project
+			// with this.projects and the tree is rebuilt on every render, so
+			// children got counted again each time. Virtual nodes start at 0.
+			node.totalCount = node.children.reduce(
+				(sum, child) => sum + child.totalCount,
+				node.project.taskCount,
+			);
 		});
 	}
 
@@ -628,7 +622,7 @@ export class ProjectList extends Component {
 
 		const projectCount = projectItem.createSpan({
 			cls: "fluent-project-count",
-			text: String(project.taskCount),
+			text: String(treeNode ? treeNode.totalCount : project.taskCount),
 		});
 
 		this.registerDomEvent(projectItem, "click", (e: MouseEvent) => {
