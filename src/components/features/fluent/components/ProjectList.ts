@@ -53,6 +53,9 @@ export class ProjectList extends Component {
 	private currentSort: SortOption = "name-asc";
 	private readonly STORAGE_KEY = "task-genius-project-sort";
 	private readonly EXPANDED_KEY = "task-genius-project-expanded";
+	private readonly HEIGHT_KEY = "task-genius-project-list-height";
+	private readonly MIN_LIST_HEIGHT = 60;
+	private listHeight: number | null = null; // null: default max-height from CSS
 	private collator: Intl.Collator;
 	private isTreeView = false;
 	private expandedNodes: Set<string> = new Set();
@@ -81,6 +84,7 @@ export class ProjectList extends Component {
 	async onload() {
 		await this.loadSortPreference();
 		await this.loadExpandedNodes();
+		await this.loadListHeight();
 		await this.loadProjects();
 		this.render();
 
@@ -231,6 +235,11 @@ export class ProjectList extends Component {
 			this.EXPANDED_KEY,
 			Array.from(this.expandedNodes),
 		);
+	}
+
+	private async loadListHeight() {
+		const saved = await this.plugin.app.loadLocalStorage(this.HEIGHT_KEY);
+		this.listHeight = typeof saved === "number" && saved > 0 ? saved : null;
 	}
 
 	public setViewMode(isTreeView: boolean) {
@@ -472,6 +481,9 @@ export class ProjectList extends Component {
 		const scrollArea = this.containerEl.createDiv({
 			cls: "fluent-project-scroll",
 		});
+		if (this.listHeight !== null) {
+			scrollArea.style.maxHeight = `${this.listHeight}px`;
+		}
 
 		if (this.isTreeView) {
 			// Build tree structure first
@@ -484,6 +496,8 @@ export class ProjectList extends Component {
 				this.renderProjectItem(scrollArea, project, 0, false);
 			});
 		}
+
+		this.renderResizeHandle(scrollArea);
 
 		// Add new project button
 		const addProjectBtn = this.containerEl.createDiv({
@@ -502,6 +516,61 @@ export class ProjectList extends Component {
 
 		this.registerDomEvent(addProjectBtn, "click", () => {
 			this.handleAddProject(addProjectBtn);
+		});
+	}
+
+	/**
+	 * Handle under the list: drag to set how tall the list gets before it
+	 * scrolls, double-click to go back to the default height
+	 */
+	private renderResizeHandle(scrollArea: HTMLElement) {
+		const handle = this.containerEl.createDiv({
+			cls: "fluent-project-resize-handle",
+			attr: { "aria-label": t("Drag to resize, double-click to reset") },
+		});
+
+		let dragging = false;
+		let startY = 0;
+		let startHeight = 0;
+
+		this.registerDomEvent(handle, "pointerdown", (e: PointerEvent) => {
+			if (e.button !== 0) return;
+			e.preventDefault();
+			dragging = true;
+			startY = e.clientY;
+			startHeight = scrollArea.getBoundingClientRect().height;
+			handle.setPointerCapture(e.pointerId);
+			handle.addClass("is-dragging");
+		});
+
+		this.registerDomEvent(handle, "pointermove", (e: PointerEvent) => {
+			if (!dragging) return;
+			// Stop at the full list height: there is nothing more to show below
+			// it, and the handle stays under the pointer when dragging back up
+			const maxHeight = Math.max(
+				scrollArea.scrollHeight,
+				this.MIN_LIST_HEIGHT,
+			);
+			const height = startHeight + e.clientY - startY;
+			this.listHeight = Math.round(
+				Math.min(maxHeight, Math.max(this.MIN_LIST_HEIGHT, height)),
+			);
+			scrollArea.style.maxHeight = `${this.listHeight}px`;
+		});
+
+		const endDrag = () => {
+			if (!dragging) return;
+			dragging = false;
+			handle.removeClass("is-dragging");
+			this.plugin.app.saveLocalStorage(this.HEIGHT_KEY, this.listHeight);
+		};
+		this.registerDomEvent(handle, "pointerup", endDrag);
+		this.registerDomEvent(handle, "pointercancel", endDrag);
+
+		this.registerDomEvent(handle, "dblclick", () => {
+			this.listHeight = null;
+			scrollArea.style.removeProperty("max-height");
+			this.plugin.app.saveLocalStorage(this.HEIGHT_KEY, null);
 		});
 	}
 

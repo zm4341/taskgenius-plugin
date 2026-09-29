@@ -2489,6 +2489,8 @@ const translations = {
 	"Intelligently position task metadata. When enabled, metadata appears on the same line as short tasks and below long tasks. When disabled, metadata always appears below the task content.":
 		"Intelligently position task metadata. When enabled, metadata appears on the same line as short tasks and below long tasks. When disabled, metadata always appears below the task content.",
 	"Toggle tree/list view": "Toggle tree/list view",
+	"Drag to resize, double-click to reset":
+		"Drag to resize, double-click to reset",
 	"Clear date": "Clear date",
 	"Clear priority": "Clear priority",
 	"Clear all tags": "Clear all tags",

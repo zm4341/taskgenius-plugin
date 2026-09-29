@@ -2276,6 +2276,7 @@ const translations = {
 	"Intelligently position task metadata. When enabled, metadata appears on the same line as short tasks and below long tasks. When disabled, metadata always appears below the task content.":
 		"智慧定位任務中繼資料。啟用時，中繼資料會與短任務顯示在同一行，長任務則顯示在下方。停用時，中繼資料總是顯示在任務內容下方。",
 	"Toggle tree/list view": "切換樹狀/清單視圖",
+	"Drag to resize, double-click to reset": "拖曳調整高度，按兩下恢復預設",
 	"Clear date": "清除日期",
 	"Clear priority": "清除優先級",
 	"Clear all tags": "清除所有標籤",

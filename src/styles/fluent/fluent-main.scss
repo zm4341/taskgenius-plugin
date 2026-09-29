@@ -253,6 +253,37 @@ button.fluent-new-task-btn:hover {
 	padding: 0 8px;
 }
 
+/* Drag handle under the project list for changing its height */
+.fluent-project-resize-handle {
+	position: relative;
+	height: 8px;
+	margin: 2px 16px;
+	cursor: row-resize;
+	touch-action: none;
+	user-select: none;
+}
+
+.fluent-project-resize-handle::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 3px;
+	height: 2px;
+	border-radius: 1px;
+	background-color: transparent;
+	transition: background-color 0.15s;
+}
+
+.fluent-project-list:hover .fluent-project-resize-handle::after {
+	background-color: var(--background-modifier-border);
+}
+
+.fluent-project-list .fluent-project-resize-handle:hover::after,
+.fluent-project-resize-handle.is-dragging::after {
+	background-color: var(--interactive-accent);
+}
+
 .fluent-project-item {
 	display: flex;
 	align-items: center;

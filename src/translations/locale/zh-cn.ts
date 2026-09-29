@@ -2322,6 +2322,7 @@ const translations = {
 	"Intelligently position task metadata. When enabled, metadata appears on the same line as short tasks and below long tasks. When disabled, metadata always appears below the task content.":
 		"智能定位任务元数据。启用时，元数据会与短任务显示在同一行，长任务则显示在下方。禁用时，元数据总是显示在任务内容下方。",
 	"Toggle tree/list view": "切换树状/列表视图",
+	"Drag to resize, double-click to reset": "拖动调整高度，双击恢复默认",
 	"Clear date": "清除日期",
 	"Clear priority": "清除优先级",
 	"Clear all tags": "清除所有标签",
