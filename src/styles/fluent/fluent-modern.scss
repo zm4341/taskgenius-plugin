@@ -121,7 +121,9 @@
 		height: var(--header-height);
 		display: flex;
 		z-index: 1;
-		position: relative;
+		/* Encore 等主题的 fancy headers 会把标题栏改成悬浮的 absolute，
+		   只给它认识的视图补顶部留白，本视图的顶栏会被盖住，所以强制留在文档流里 */
+		position: relative !important;
 		gap: var(--size-4-2);
 		padding: 0 var(--size-4-3);
 	}

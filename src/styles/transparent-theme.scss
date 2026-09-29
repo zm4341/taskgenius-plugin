@@ -374,6 +374,11 @@ body.enable-transparent-theme {
 		background-color: transparent !important;
 	}
 
+	/* 表格只保留两层模糊：吸顶表头一层，所有行共用一层。
+	   原先每行、每个表头单元格各开一层，层数随行数增长，
+	   表头单元格还会在已模糊的表头上再模糊一次；
+	   背景一动，每一层每帧都要重新模糊 */
+
 	/* 表格头部 - 使用固定透明度和模糊效果 */
 	.task-table thead {
 		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
@@ -385,21 +390,23 @@ body.enable-transparent-theme {
 	.task-table-header-cell {
 		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
 		background-color: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
-		backdrop-filter: blur(var(--tg-blur-px, 8px)) !important;
-		-webkit-backdrop-filter: blur(var(--tg-blur-px, 8px)) !important;
 		border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 60%, transparent) !important;
 	}
-	
+
 	/* 表格头部行 */
 	.task-table thead tr {
 		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
 	}
-	
+
 	.task-table th,
 	.task-table-header {
 		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
-		backdrop-filter: blur(var(--tg-blur-px, 8px)) !important;
-		-webkit-backdrop-filter: blur(var(--tg-blur-px, 8px)) !important;
+	}
+
+	/* 所有行共用的玻璃模糊 */
+	.task-table tbody {
+		backdrop-filter: blur(var(--tg-blur-px, 6px)) !important;
+		-webkit-backdrop-filter: blur(var(--tg-blur-px, 6px)) !important;
 	}
 
 	/* 表格行 - 半透明玻璃效果 */
@@ -407,8 +414,6 @@ body.enable-transparent-theme {
 	.task-table-row {
 		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 50%), transparent) !important;
 		background-color: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 50%), transparent) !important;
-		backdrop-filter: blur(var(--tg-blur-px, 6px)) !important;
-		-webkit-backdrop-filter: blur(var(--tg-blur-px, 6px)) !important;
 		border-bottom: 1px solid color-mix(in srgb, var(--background-modifier-border) 30%, transparent) !important;
 	}
 
