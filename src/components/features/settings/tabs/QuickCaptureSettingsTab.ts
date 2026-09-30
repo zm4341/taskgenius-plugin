@@ -1,13 +1,66 @@
 import { Setting, Notice, TFile, TFolder } from "obsidian";
 import { TaskProgressBarSettingTab } from "@/setting";
 import { t } from "@/translations/helper";
-import { FolderSuggest } from "@/components/ui/inputs/AutoComplete";
+import {
+	FolderSuggest,
+	SimpleFileSuggest,
+} from "@/components/ui/inputs/AutoComplete";
 import type { QuickCaptureTemplateDefinition } from "@/common/setting-definition";
 
 export function renderQuickCaptureSettingsTab(
 	settingTab: TaskProgressBarSettingTab,
 	containerEl: HTMLElement,
 ) {
+	// The New Task button in the Fluent view creates one note per task
+	new Setting(containerEl).setName(t("New Task button")).setHeading();
+
+	const taskNote = (settingTab.plugin.settings.quickCapture.taskNote ||= {
+		folder: "",
+		templateFile: "",
+	});
+
+	new Setting(containerEl)
+		.setName(t("Task notes folder"))
+		.setDesc(
+			t(
+				"Each task gets its own note in this folder or a subfolder. A subfolder is a project: its path is written to the note's project property. Leave empty for the vault root.",
+			),
+		)
+		.addText((text) => {
+			text.setPlaceholder("Tasks/Projects")
+				.setValue(taskNote.folder)
+				.onChange((value) => {
+					taskNote.folder = value.trim();
+					settingTab.applySettingsUpdate();
+				});
+			new FolderSuggest(
+				settingTab.app,
+				text.inputEl,
+				settingTab.plugin,
+				"single",
+			);
+		});
+
+	new Setting(containerEl)
+		.setName(t("Task note template"))
+		.setDesc(
+			t(
+				"New task notes start from this note's properties and content. Empty created and updated times are filled in.",
+			),
+		)
+		.addText((text) => {
+			text.setPlaceholder("Templates/Task.md")
+				.setValue(taskNote.templateFile)
+				.onChange((value) => {
+					taskNote.templateFile = value.trim();
+					settingTab.applySettingsUpdate();
+				});
+			new SimpleFileSuggest(text.inputEl, settingTab.plugin, (file) => {
+				taskNote.templateFile = file.path;
+				settingTab.applySettingsUpdate();
+			});
+		});
+
 	new Setting(containerEl).setName(t("Quick capture")).setHeading();
 
 	new Setting(containerEl)

@@ -1,0 +1,38 @@
+/* New Task modal: one note per task */
+.tg-new-task-note-modal {
+	.setting-item-control {
+		flex: 1 1 60%;
+	}
+
+	.setting-item-control input[type="text"],
+	.setting-item-control textarea {
+		width: 100%;
+	}
+
+	.setting-item-control textarea {
+		min-height: 4.5em;
+		resize: vertical;
+	}
+}
+
+.tg-new-task-note-hint {
+	margin-top: 4px;
+	color: var(--text-accent);
+}
+
+.tg-new-task-note-summary {
+	padding-top: 8px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	word-break: break-all;
+}
+
+.tg-new-task-note-error {
+	padding-top: 4px;
+	color: var(--text-error);
+	font-size: var(--font-ui-small);
+
+	&:empty {
+		display: none;
+	}
+}

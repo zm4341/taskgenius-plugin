@@ -432,6 +432,11 @@ export interface QuickCaptureSettings {
 	};
 	// Timer integration settings
 	autoStartTimer?: boolean; // Whether to auto-start timer when creating task (default false)
+	// New Task button: one note per task
+	taskNote?: {
+		folder: string; // Root folder of task notes; subfolders are projects
+		templateFile: string; // Note that new task notes start from
+	};
 }
 
 /** Define the structure for task gutter settings */
@@ -1202,6 +1207,10 @@ export const DEFAULT_SETTINGS: TaskProgressBarSettings = {
 		},
 		// Timer integration
 		autoStartTimer: false,
+		taskNote: {
+			folder: "",
+			templateFile: "",
+		},
 	},
 
 	// Workflow Defaults

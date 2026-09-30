@@ -1,7 +1,7 @@
 import { App, Component, Menu, Notice, TFile } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { StandardTaskMetadata, Task } from "@/types/task";
-import { QuickCaptureModal } from "@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch";
+import { NewTaskNoteModal } from "@/components/features/quick-capture/modals/NewTaskNoteModal";
 import { ConfirmModal } from "@/components/ui/modals/ConfirmModal";
 import { createTaskCheckbox } from "@/components/features/task/view/details";
 import { emitTaskSelected } from "@/components/features/fluent/events/ui-event";
@@ -1113,10 +1113,13 @@ export class FluentActionHandlers extends Component {
 
 	/**
 	 * Handle navigation to a view or create new task
+	 * @param selectedProject - Sidebar project, whose folder new tasks go to
 	 */
-	handleNavigate(viewId: string): void {
+	handleNavigate(viewId: string, selectedProject?: string | null): void {
 		if (viewId === "new-task") {
-			new QuickCaptureModal(this.app, this.plugin).open();
+			new NewTaskNoteModal(this.app, this.plugin, {
+				project: selectedProject,
+			}).open();
 		} else {
 			console.log(`[FluentAction] handleNavigate to ${viewId}`);
 			this.onNavigateToView?.(viewId);

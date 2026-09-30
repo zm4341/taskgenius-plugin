@@ -822,7 +822,10 @@ export class FluentTaskView extends ItemView {
 			() => this.filteredTasks.length
 		);
 		this.layoutManager.setOnSidebarNavigate((viewId) => {
-			this.actionHandlers.handleNavigate(viewId);
+			this.actionHandlers.handleNavigate(
+				viewId,
+				this.viewState.selectedProject
+			);
 		});
 		this.layoutManager.setOnProjectSelect((projectId) => {
 			this.actionHandlers.handleProjectSelect(projectId);

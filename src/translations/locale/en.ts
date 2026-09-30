@@ -2498,6 +2498,47 @@ const translations = {
 	Archived: "Archived",
 	"Configure symbols that represent archived tasks in square brackets. Archived tasks are hidden, except in the table view when its status column is filtered to them":
 		"Configure symbols that represent archived tasks in square brackets. Archived tasks are hidden, except in the table view when its status column is filtered to them",
+	"What needs to be done?": "What needs to be done?",
+	"Optional, written below the task": "Optional, written below the task",
+	"Pick a folder, or type a new path to create it":
+		"Pick a folder, or type a new path to create it",
+	"Root folder": "Root folder",
+	Note: "Note",
+	"Create a note for the task": "Create a note for the task",
+	"Use an existing note": "Use an existing note",
+	"Existing note": "Existing note",
+	"A note without tasks; the task goes above its content":
+		"A note without tasks; the task goes above its content",
+	"Search notes": "Search notes",
+	"Move it to the folder": "Move it to the folder",
+	Create: "Create",
+	"No project, so the task goes to the Inbox":
+		"No project, so the task goes to the Inbox",
+	"Project: {{project}}": "Project: {{project}}",
+	"Creates the folder, a new project: {{path}}":
+		"Creates the folder, a new project: {{path}}",
+	"Creates {{path}}": "Creates {{path}}",
+	"Pick the note that becomes the task's note":
+		"Pick the note that becomes the task's note",
+	"Adds the task to {{note}} and moves it to {{folder}}":
+		"Adds the task to {{note}} and moves it to {{folder}}",
+	"Adds the task to {{note}}": "Adds the task to {{note}}",
+	"Enter the task first": "Enter the task first",
+	"Task created: {{task}}": "Task created: {{task}}",
+	"A note with this name already exists: {{path}}":
+		"A note with this name already exists: {{path}}",
+	"This note already has a task: {{path}}":
+		"This note already has a task: {{path}}",
+	"Task note template not found: {{path}}":
+		"Task note template not found: {{path}}",
+	"Not a folder: {{path}}": "Not a folder: {{path}}",
+	"New Task button": "New Task button",
+	"Task notes folder": "Task notes folder",
+	"Each task gets its own note in this folder or a subfolder. A subfolder is a project: its path is written to the note's project property. Leave empty for the vault root.":
+		"Each task gets its own note in this folder or a subfolder. A subfolder is a project: its path is written to the note's project property. Leave empty for the vault root.",
+	"Task note template": "Task note template",
+	"New task notes start from this note's properties and content. Empty created and updated times are filled in.":
+		"New task notes start from this note's properties and content. Empty created and updated times are filled in.",
 	"Clear date": "Clear date",
 	"Clear priority": "Clear priority",
 	"Clear all tags": "Clear all tags",
