@@ -78,7 +78,26 @@ settings:
                 label: Very Strong (20px)
                 label.zh: 非常强烈 (20px)
                 value: tg-blur-very-strong
-    - 
+    -
+        id: table-view-heading
+        title: Table View
+        title.zh: 表格视图
+        type: heading
+        level: 1
+        collapsed: false
+    -
+        id: tg-table-font-size
+        title: Table Font Size
+        title.zh: 表格字号
+        description: Size of the text in the table view. Defaults to the size of the sidebar navigation
+        description.zh: 表格文字的大小，默认与侧栏导航一致
+        type: variable-number-slider
+        default: 15
+        min: 12
+        max: 20
+        step: 1
+        format: px
+    -
         id: task-colors-heading
         title: Checkbox Status Colors
         type: heading

@@ -21,7 +21,8 @@
 	width: 100%;
 	border-collapse: collapse;
 	table-layout: fixed;
-	font-size: var(--font-ui-small);
+	/* Same size as the sidebar navigation; adjustable in Style Settings */
+	font-size: var(--tg-table-font-size, var(--font-ui-medium));
 	flex: 1;
 	min-height: 0;
 	/* Ensure table takes full width even with many columns */
@@ -395,13 +396,13 @@
 	background-color: var(--background-modifier-hover);
 }
 
+/* Dates follow the table's font size */
 .task-table-date-text {
-	font-size: var(--font-ui-small);
 	color: var(--text-normal);
 }
 
 .task-table-date-relative {
-	font-size: var(--font-ui-smaller);
+	font-size: 0.9em;
 	font-weight: 500;
 }
 
@@ -470,6 +471,12 @@
 	background-color: var(--background-modifier-form-field) !important;
 	border-radius: 3px !important;
 	padding: 2px 4px !important;
+}
+
+/* Obsidian sizes inputs and dropdowns on its own; editors match the table */
+.task-table-cell.editing input,
+.task-table-cell.editing select {
+	font-size: inherit;
 }
 
 /* Task Count Icon */
@@ -675,8 +682,9 @@
 
 /* Responsive improvements */
 @media (max-width: 768px) {
+	/* A bit smaller on narrow screens, still following the chosen size */
 	.task-table {
-		font-size: 0.9em;
+		font-size: calc(var(--tg-table-font-size, var(--font-ui-medium)) * 0.9);
 	}
 
 	th[data-column-id="rowNumber"] {
