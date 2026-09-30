@@ -2549,6 +2549,8 @@ const translations = {
 	"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.":
 		"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.",
 	"{{count}} tasks created": "{{count}} tasks created",
+	"Other Views": "Other Views",
+	"More views": "More views",
 	"Clear date": "Clear date",
 	"Clear priority": "Clear priority",
 	"Clear all tags": "Clear all tags",

@@ -2327,6 +2327,8 @@ const translations = {
 	"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.":
 		"時間軸最多顯示多少項，超出時保留離現在最近的。",
 	"{{count}} tasks created": "已建立 {{count}} 個任務",
+	"Other Views": "其他視圖",
+	"More views": "更多視圖",
 	"Clear date": "清除日期",
 	"Clear priority": "清除優先級",
 	"Clear all tags": "清除所有標籤",

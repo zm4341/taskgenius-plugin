@@ -36,6 +36,10 @@ export class FluentSidebar extends Component {
 	private currentWorkspaceId: string;
 	private isTreeView = false;
 	private otherViewsSection: HTMLElement | null = null;
+	// View lists, redrawn on their own when views change in settings
+	private topSectionEl: HTMLElement | null = null;
+	private bottomSectionEl: HTMLElement | null = null;
+	private activeViewId: string | null = null;
 	private railEl: HTMLElement | null = null;
 	private sortables: Sortable[] = [];
 	private filterResetBtn: HTMLElement | null = null;
@@ -197,6 +201,8 @@ export class FluentSidebar extends Component {
 	private render() {
 		this.containerEl.empty();
 		this.destroySortables();
+		this.topSectionEl = null;
+		this.bottomSectionEl = null;
 		this.containerEl.addClass("fluent-sidebar");
 		this.containerEl.toggleClass("is-collapsed", this.collapsed);
 
@@ -207,6 +213,9 @@ export class FluentSidebar extends Component {
 				cls: "fluent-sidebar-rail",
 			});
 			this.renderRailMode();
+			if (this.activeViewId) {
+				this.setActiveItem(this.activeViewId);
+			}
 			return;
 		}
 
@@ -244,14 +253,11 @@ export class FluentSidebar extends Component {
 		});
 
 		// Top navigation section (system views like Inbox, Today, etc.)
-		const topItems = this.getViewItems("top");
-		if (topItems.length > 0) {
-			const topSection = content.createDiv({
-				cls: "fluent-sidebar-section primary",
-				attr: { "data-region": "top" },
-			});
-			this.renderSortableSection(topSection, topItems, "top");
-		}
+		this.topSectionEl = content.createDiv({
+			cls: "fluent-sidebar-section primary",
+			attr: { "data-region": "top" },
+		});
+		this.renderTopViews(this.topSectionEl);
 
 		// Projects section
 		const isProjectsHidden =
@@ -346,36 +352,78 @@ export class FluentSidebar extends Component {
 			);
 
 		if (!isOtherViewsHidden) {
-			const allBottomItems = this.getViewItems("bottom");
-			const visibleCount =
-				this.plugin?.settings?.fluentView?.fluentConfig
-					?.maxOtherViewsBeforeOverflow ?? 5;
-			const displayedItems = allBottomItems.slice(0, visibleCount);
-			const overflowItems = allBottomItems.slice(visibleCount);
-
-			const bottomSection = content.createDiv({
+			this.bottomSectionEl = content.createDiv({
 				cls: "fluent-sidebar-section other-views",
 				attr: { "data-region": "bottom" },
 			});
+			this.renderBottomViews(this.bottomSectionEl);
+		}
 
-			// Header for "Other Views" with overflow menu
-			const otherHeader = bottomSection.createDiv({
-				cls: "fluent-section-header",
+		if (this.activeViewId) {
+			this.setActiveItem(this.activeViewId);
+		}
+	}
+
+	/** Fills the top section with its views; hidden when none are shown */
+	private renderTopViews(section: HTMLElement) {
+		section.empty();
+		const items = this.getViewItems("top");
+		section.toggle(items.length > 0);
+		if (items.length > 0) {
+			this.renderSortableSection(section, items, "top");
+		}
+	}
+
+	/** Fills the "Other Views" section; hidden when none are shown */
+	private renderBottomViews(section: HTMLElement) {
+		section.empty();
+		const allBottomItems = this.getViewItems("bottom");
+		section.toggle(allBottomItems.length > 0);
+		if (allBottomItems.length === 0) return;
+
+		const visibleCount =
+			this.plugin?.settings?.fluentView?.fluentConfig
+				?.maxOtherViewsBeforeOverflow ?? 5;
+		const displayedItems = allBottomItems.slice(0, visibleCount);
+		const overflowItems = allBottomItems.slice(visibleCount);
+
+		// Header for "Other Views" with overflow menu
+		const otherHeader = section.createDiv({
+			cls: "fluent-section-header",
+		});
+		otherHeader.createSpan({ text: t("Other Views") });
+
+		if (overflowItems.length > 0) {
+			const moreBtn = otherHeader.createDiv({
+				cls: "fluent-section-action",
+				attr: { "aria-label": t("More views") },
 			});
-			otherHeader.createSpan({ text: t("Other Views") });
+			setIcon(moreBtn, "more-horizontal");
+			this.registerDomEvent(moreBtn, "click", (e) =>
+				this.showOtherViewsMenu(e as MouseEvent, overflowItems),
+			);
+		}
 
-			if (overflowItems.length > 0) {
-				const moreBtn = otherHeader.createDiv({
-					cls: "fluent-section-action",
-					attr: { "aria-label": t("More views") },
-				});
-				setIcon(moreBtn, "more-horizontal");
-				this.registerDomEvent(moreBtn, "click", (e) =>
-					this.showOtherViewsMenu(e as MouseEvent, overflowItems),
-				);
+		this.renderSortableSection(section, displayedItems, "bottom");
+	}
+
+	/**
+	 * Redraws the view lists after views are shown, hidden, renamed or
+	 * reordered elsewhere, such as in settings. The project list is left as
+	 * it is, so its selection stays.
+	 */
+	private refreshViews() {
+		this.destroySortables();
+		if (this.collapsed && !Platform.isPhone) {
+			this.renderRailMode();
+		} else {
+			if (this.topSectionEl) this.renderTopViews(this.topSectionEl);
+			if (this.bottomSectionEl) {
+				this.renderBottomViews(this.bottomSectionEl);
 			}
-
-			this.renderSortableSection(bottomSection, displayedItems, "bottom");
+		}
+		if (this.activeViewId) {
+			this.setActiveItem(this.activeViewId);
 		}
 	}
 
@@ -623,6 +671,14 @@ export class FluentSidebar extends Component {
 		} else {
 			this.render();
 		}
+
+		// Views shown, hidden, renamed or reordered in settings
+		this.registerEvent(
+			this.plugin.app.workspace.on(
+				"task-genius:view-config-changed",
+				() => this.refreshViews(),
+			),
+		);
 
 		// Subscribe to workspace events
 		if (this.plugin.workspaceManager) {
@@ -1049,6 +1105,8 @@ export class FluentSidebar extends Component {
 	}
 
 	public setActiveItem(viewId: string) {
+		// Kept so the highlight comes back when the view lists are redrawn
+		this.activeViewId = viewId;
 		// Clear active state from both full navigation items and rail buttons
 		this.containerEl
 			.querySelectorAll(

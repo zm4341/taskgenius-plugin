@@ -2373,6 +2373,8 @@ const translations = {
 	"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.":
 		"时间轴最多显示多少项，超出时保留离现在最近的。",
 	"{{count}} tasks created": "已创建 {{count}} 个任务",
+	"Other Views": "其他视图",
+	"More views": "更多视图",
 	"Clear date": "清除日期",
 	"Clear priority": "清除优先级",
 	"Clear all tags": "清除所有标签",
