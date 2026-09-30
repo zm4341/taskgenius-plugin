@@ -72,22 +72,28 @@ div[data-type^="tg-timeline-sidebar-view"] .timeline-content {
 	position: relative;
 }
 
+/* Focus mode shows only today */
 div[data-type^="tg-timeline-sidebar-view"]
 .timeline-content.focus-mode
 .timeline-date-group:not(.is-today) {
-	opacity: 0.3;
-	pointer-events: none;
+	display: none;
 }
 
-div[data-type^="tg-timeline-sidebar-view"] .timeline-empty {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	height: 100%;
+div[data-type^="tg-timeline-sidebar-view"] .timeline-refresh-btn.is-loading svg {
+	animation: tg-timeline-spin 0.8s linear infinite;
+}
+
+@keyframes tg-timeline-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Today without events */
+div[data-type^="tg-timeline-sidebar-view"] .timeline-empty-day {
+	padding: var(--size-4-2) var(--size-4-4);
 	color: var(--text-muted);
-	font-style: italic;
-	text-align: center;
-	padding: var(--size-4-8);
+	font-size: var(--font-ui-small);
 }
 
 /* Date Groups */
@@ -105,6 +111,21 @@ div[data-type^="tg-timeline-sidebar-view"] .timeline-date-group.is-today {
 	padding: var(--size-4-2);
 	box-shadow: var(--shadow-s);
 	border: 1px solid var(--interactive-accent);
+}
+
+/* "Go to today" pulses today, which may already be in view */
+div[data-type^="tg-timeline-sidebar-view"] .timeline-date-group.is-today.is-flashing {
+	animation: tg-timeline-today-flash 1.2s ease-out;
+}
+
+@keyframes tg-timeline-today-flash {
+	0%,
+	40% {
+		box-shadow: 0 0 0 3px var(--interactive-accent);
+	}
+	100% {
+		box-shadow: var(--shadow-s);
+	}
 }
 
 div[data-type^="tg-timeline-sidebar-view"] .timeline-date-header {
@@ -169,12 +190,16 @@ div[data-type^="tg-timeline-sidebar-view"]
 	transform: none;
 }
 
-div[data-type^="tg-timeline-sidebar-view"] .timeline-event.is-completed {
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event.is-completed,
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event.is-abandoned {
 	opacity: 0.6;
 }
 
 div[data-type^="tg-timeline-sidebar-view"]
 .timeline-event.is-completed
+.timeline-event-text,
+div[data-type^="tg-timeline-sidebar-view"]
+.timeline-event.is-abandoned
 .timeline-event-text {
 	text-decoration: line-through;
 	color: var(--text-muted);
@@ -735,36 +760,6 @@ div[data-type^="tg-timeline-sidebar-view"]
 	50% {
 		box-shadow: 0 0 0 4px rgba(var(--interactive-accent-rgb), 0.1);
 	}
-}
-
-/* Focus Mode */
-div[data-type^="tg-timeline-sidebar-view"] .timeline-content.focus-mode {
-	position: relative;
-}
-
-div[data-type^="tg-timeline-sidebar-view"]
-.timeline-content.focus-mode::before {
-	content: "";
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background: linear-gradient(
-		to bottom,
-		rgba(var(--background-primary-rgb), 0.9) 0%,
-		rgba(var(--background-primary-rgb), 0.7) 50%,
-		rgba(var(--background-primary-rgb), 0.9) 100%
-	);
-	pointer-events: none;
-	z-index: 0;
-}
-
-div[data-type^="tg-timeline-sidebar-view"]
-.timeline-content.focus-mode
-.timeline-date-group.is-today {
-	position: relative;
-	z-index: 1;
 }
 
 /* Markdown renderer styles in timeline events */

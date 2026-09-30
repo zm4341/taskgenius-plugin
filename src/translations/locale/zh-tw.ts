@@ -2317,6 +2317,15 @@ const translations = {
 	"Task note template": "任務筆記範本",
 	"New task notes start from this note's properties and content. Empty created and updated times are filled in.":
 		"新建立的任務筆記沿用這篇筆記的屬性和內文，空白的建立時間和更新時間會自動填上。",
+	"Nothing planned for today": "今天沒有安排",
+	"All day": "全天",
+	"1 all-day event": "1 項全天任務",
+	"{{count}} all-day events": "{{count}} 項全天任務",
+	"{{count}} events": "{{count}} 項",
+	"Open the timeline showing only today. The focus button in its header switches this any time.":
+		"時間軸開啟時只顯示今天，隨時可以用頂部的聚焦按鈕切換。",
+	"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.":
+		"時間軸最多顯示多少項，超出時保留離現在最近的。",
 	"Clear date": "清除日期",
 	"Clear priority": "清除優先級",
 	"Clear all tags": "清除所有標籤",

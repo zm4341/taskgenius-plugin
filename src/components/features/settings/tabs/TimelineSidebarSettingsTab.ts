@@ -79,7 +79,7 @@ export function renderTimelineSidebarSettingsTab(
 		.setName(t("Focus mode by default"))
 		.setDesc(
 			t(
-				"Enable focus mode by default, which highlights today's events and dims past/future events."
+				"Open the timeline showing only today. The focus button in its header switches this any time."
 			)
 		)
 		.addToggle((toggle) =>
@@ -99,7 +99,7 @@ export function renderTimelineSidebarSettingsTab(
 		.setName(t("Maximum events to show"))
 		.setDesc(
 			t(
-				"Maximum number of events to display in the timeline. Higher numbers may affect performance."
+				"Maximum number of events in the timeline. When there are more, the ones closest to now are kept."
 			)
 		)
 		.addSlider((slider) =>

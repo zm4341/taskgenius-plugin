@@ -23,6 +23,7 @@ import "@/styles/timeline-sidebar.scss";
 import { createTaskCheckbox } from "@/components/features/task/view/details";
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
 import { withoutArchivedTasks } from "@/utils/task/archived-status";
+import { Events, on } from "@/dataflow/events/Events";
 
 export const TIMELINE_SIDEBAR_VIEW_TYPE = "tg-timeline-sidebar-view";
 
@@ -73,6 +74,13 @@ export class TimelineSidebarView extends ItemView {
 	private events: EnhancedTimelineEvent[] = [];
 	private isAutoScrolling: boolean = false;
 
+	// Header buttons with a state to show
+	private refreshBtn: HTMLElement | null = null;
+	private focusBtn: HTMLElement | null = null;
+	private isFocusMode = false;
+	// "Focus mode by default" as last applied, to follow changes in settings
+	private appliedFocusDefault: boolean | null = null;
+
 	// Collapse state management
 	private isInputCollapsed: boolean = false;
 	private tempEditorContent: string = "";
@@ -115,6 +123,7 @@ export class TimelineSidebarView extends ItemView {
 		this.createHeader();
 		this.createTimelineArea();
 		this.createQuickInputArea();
+		this.applyFocusDefault();
 
 		// Load initial data
 		await this.loadEvents();
@@ -140,6 +149,13 @@ export class TimelineSidebarView extends ItemView {
 					this.debouncedRender();
 				}
 			)
+		);
+
+		// On startup the index finishes loading after the view has opened
+		this.registerEvent(
+			on(this.plugin.app, Events.CACHE_READY, () => {
+				this.debouncedRender();
+			})
 		);
 	}
 
@@ -168,28 +184,29 @@ export class TimelineSidebarView extends ItemView {
 		setIcon(todayBtn, "calendar");
 		todayBtn.setAttribute("aria-label", t("Go to today"));
 		this.registerDomEvent(todayBtn, "click", () => {
-			this.scrollToToday();
+			this.scrollToToday(true);
 		});
 
 		// Refresh button
 		const refreshBtn = controlsEl.createDiv(
 			"timeline-btn timeline-refresh-btn"
 		);
+		this.refreshBtn = refreshBtn;
 		setIcon(refreshBtn, "refresh-cw");
 		refreshBtn.setAttribute("aria-label", t("Refresh"));
 		this.registerDomEvent(refreshBtn, "click", () => {
-			this.loadEvents();
-			this.renderTimeline();
+			void this.refreshFromButton();
 		});
 
 		// Focus mode toggle
 		const focusBtn = controlsEl.createDiv(
 			"timeline-btn timeline-focus-btn"
 		);
+		this.focusBtn = focusBtn;
 		setIcon(focusBtn, "focus");
 		focusBtn.setAttribute("aria-label", t("Focus on today"));
 		this.registerDomEvent(focusBtn, "click", () => {
-			this.toggleFocusMode();
+			this.setFocusMode(!this.isFocusMode);
 		});
 	}
 
@@ -364,6 +381,17 @@ export class TimelineSidebarView extends ItemView {
 				this.events.push(event);
 			});
 		});
+
+		// Past the limit, keep the events closest to now
+		const maxEvents = this.plugin.settings.timelineSidebar.maxEventsToShow;
+		if (maxEvents > 0 && this.events.length > maxEvents) {
+			const now = Date.now();
+			const distance = (event: EnhancedTimelineEvent) =>
+				Math.abs(event.time.getTime() - now);
+			this.events = this.events
+				.sort((a, b) => distance(a) - distance(b))
+				.slice(0, maxEvents);
+		}
 
 		// Sort events by time (newest first for timeline display)
 		this.events.sort((a, b) => b.time.getTime() - a.time.getTime());
@@ -604,13 +632,6 @@ export class TimelineSidebarView extends ItemView {
 	private renderTimeline(): void {
 		this.timelineContainerEl.empty();
 
-		if (this.events.length === 0) {
-			const emptyEl =
-				this.timelineContainerEl.createDiv("timeline-empty");
-			emptyEl.setText(t("No events to display"));
-			return;
-		}
-
 		// Group events by date
 		const eventsByDate = this.groupEventsByDate();
 
@@ -620,17 +641,29 @@ export class TimelineSidebarView extends ItemView {
 		}
 	}
 
+	/**
+	 * Groups events by day, latest day first. Today always has a group, so
+	 * "Go to today" and focus mode have somewhere to land.
+	 */
 	private groupEventsByDate(): Map<string, EnhancedTimelineEvent[]> {
 		const grouped = new Map<string, EnhancedTimelineEvent[]>();
+		const todayKey = moment().format("YYYY-MM-DD");
 
 		this.events.forEach((event) => {
 			const dateKey = moment(event.time).format("YYYY-MM-DD");
+			// Today goes right before the first earlier day
+			if (dateKey < todayKey && !grouped.has(todayKey)) {
+				grouped.set(todayKey, []);
+			}
 			if (!grouped.has(dateKey)) {
 				grouped.set(dateKey, []);
 			}
 			grouped.get(dateKey)!.push(event);
 		});
 
+		if (!grouped.has(todayKey)) {
+			grouped.set(todayKey, []);
+		}
 		return grouped;
 	}
 
@@ -672,6 +705,15 @@ export class TimelineSidebarView extends ItemView {
 
 		// Events list
 		const eventsListEl = dateGroupEl.createDiv("timeline-events-list");
+
+		// Only today shows up without events
+		if (events.length === 0) {
+			eventsListEl.createDiv({
+				cls: "timeline-empty-day",
+				text: t("Nothing planned for today"),
+			});
+			return;
+		}
 
 		// Sort events by time within the day for chronological ordering
 		const sortedEvents = this.sortEventsByTime(events);
@@ -898,7 +940,9 @@ export class TimelineSidebarView extends ItemView {
 		timeEl.addClass("timeline-event-time-group");
 
 		const countEl = groupHeaderEl.createDiv("timeline-time-group-count");
-		countEl.setText(`${events.length} events`);
+		countEl.setText(
+			t("{{count}} events", { interpolation: { count: events.length } })
+		);
 
 		// Events in the group
 		const groupEventsEl = groupEl.createDiv("timeline-time-group-events");
@@ -906,10 +950,7 @@ export class TimelineSidebarView extends ItemView {
 		events.forEach((event) => {
 			const eventEl = groupEventsEl.createDiv("timeline-event timeline-event-grouped");
 			eventEl.setAttribute("data-event-id", event.id);
-
-			if (event.task?.completed) {
-				eventEl.addClass("is-completed");
-			}
+			this.markFinishedEvent(eventEl, event.task);
 
 			// Event content (no time display since it's in the group header)
 			const contentEl = eventEl.createDiv("timeline-event-content");
@@ -1013,10 +1054,16 @@ export class TimelineSidebarView extends ItemView {
 
 		const sectionHeaderEl = dateOnlySection.createDiv("timeline-date-only-header");
 		const headerTimeEl = sectionHeaderEl.createDiv("timeline-event-time timeline-event-time-date-only");
-		headerTimeEl.setText("All day");
+		headerTimeEl.setText(t("All day"));
 
 		const headerTextEl = sectionHeaderEl.createDiv("timeline-date-only-title");
-		headerTextEl.setText(`${events.length} all-day event${events.length > 1 ? 's' : ''}`);
+		headerTextEl.setText(
+			events.length === 1
+				? t("1 all-day event")
+				: t("{{count}} all-day events", {
+						interpolation: { count: events.length },
+					})
+		);
 
 		// Render each date-only event (hide individual time labels)
 		events.forEach((event) => {
@@ -1027,10 +1074,7 @@ export class TimelineSidebarView extends ItemView {
 	private renderEvent(containerEl: HTMLElement, event: EnhancedTimelineEvent, showTime: boolean = true): void {
 		const eventEl = containerEl.createDiv("timeline-event");
 		eventEl.setAttribute("data-event-id", event.id);
-
-		if (event.task?.completed) {
-			eventEl.addClass("is-completed");
-		}
+		this.markFinishedEvent(eventEl, event.task);
 
 		// Event time - use enhanced time information if available
 		if (showTime) {
@@ -1193,8 +1237,9 @@ export class TimelineSidebarView extends ItemView {
 		}
 	}
 
-	private scrollToToday(): void {
-		const todayEl = this.timelineContainerEl.querySelector(
+	/** Scrolls to today; `flash` pulses it, since it may already be in view */
+	private scrollToToday(flash = false): void {
+		const todayEl = this.timelineContainerEl.querySelector<HTMLElement>(
 			".timeline-date-group.is-today"
 		);
 		if (todayEl) {
@@ -1203,16 +1248,60 @@ export class TimelineSidebarView extends ItemView {
 			setTimeout(() => {
 				this.isAutoScrolling = false;
 			}, 1000);
+
+			if (flash) {
+				todayEl.removeClass("is-flashing");
+				// Reflow so the pulse restarts on repeated clicks
+				void todayEl.offsetWidth;
+				todayEl.addClass("is-flashing");
+			}
 		}
 	}
 
-	private toggleFocusMode(): void {
-		this.timelineContainerEl.toggleClass(
-			"focus-mode",
-			!this.timelineContainerEl.hasClass("focus-mode")
-		);
-		// In focus mode, only show today's events
-		// Implementation depends on specific requirements
+	/** Focus mode shows only today's events */
+	private setFocusMode(on: boolean): void {
+		this.isFocusMode = on;
+		this.timelineContainerEl.toggleClass("focus-mode", on);
+		this.focusBtn?.toggleClass("is-active", on);
+		this.focusBtn?.setAttribute("aria-pressed", String(on));
+	}
+
+	/** Starts with, and follows changes to, "Focus mode by default" */
+	private applyFocusDefault(): void {
+		const focusDefault =
+			this.plugin.settings.timelineSidebar.focusModeByDefault;
+		if (focusDefault === this.appliedFocusDefault) return;
+		this.appliedFocusDefault = focusDefault;
+		this.setFocusMode(focusDefault);
+	}
+
+	/** Reloads and redraws, spinning the icon meanwhile */
+	private async refreshFromButton(): Promise<void> {
+		const button = this.refreshBtn;
+		if (!button || button.hasClass("is-loading")) return;
+		button.addClass("is-loading");
+		try {
+			// A short minimum keeps the spin visible when loading is instant
+			await Promise.all([
+				this.refreshTimeline(),
+				new Promise((resolve) => window.setTimeout(resolve, 500)),
+			]);
+		} finally {
+			button.removeClass("is-loading");
+		}
+	}
+
+	/** Completed and abandoned tasks both look finished */
+	private markFinishedEvent(eventEl: HTMLElement, task?: Task): void {
+		if (!task) return;
+		const abandonedMarks = (this.plugin.settings.taskStatuses.abandoned || "")
+			.split("|")
+			.filter((mark) => mark !== "");
+		if (task.completed) {
+			eventEl.addClass("is-completed");
+		} else if (abandonedMarks.includes(task.status)) {
+			eventEl.addClass("is-abandoned");
+		}
 	}
 
 	private handleScroll(): void {
@@ -1339,6 +1428,7 @@ export class TimelineSidebarView extends ItemView {
 
 	// Method to trigger view update (called when settings change)
 	public async triggerViewUpdate(): Promise<void> {
+		this.applyFocusDefault();
 		await this.loadEvents();
 		this.renderTimeline();
 	}

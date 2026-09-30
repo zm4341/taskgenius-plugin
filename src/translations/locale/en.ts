@@ -2539,6 +2539,15 @@ const translations = {
 	"Task note template": "Task note template",
 	"New task notes start from this note's properties and content. Empty created and updated times are filled in.":
 		"New task notes start from this note's properties and content. Empty created and updated times are filled in.",
+	"Nothing planned for today": "Nothing planned for today",
+	"All day": "All day",
+	"1 all-day event": "1 all-day event",
+	"{{count}} all-day events": "{{count}} all-day events",
+	"{{count}} events": "{{count}} events",
+	"Open the timeline showing only today. The focus button in its header switches this any time.":
+		"Open the timeline showing only today. The focus button in its header switches this any time.",
+	"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.":
+		"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.",
 	"Clear date": "Clear date",
 	"Clear priority": "Clear priority",
 	"Clear all tags": "Clear all tags",
