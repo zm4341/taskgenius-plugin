@@ -2548,6 +2548,7 @@ const translations = {
 		"Open the timeline showing only today. The focus button in its header switches this any time.",
 	"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.":
 		"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.",
+	"{{count}} tasks created": "{{count}} tasks created",
 	"Clear date": "Clear date",
 	"Clear priority": "Clear priority",
 	"Clear all tags": "Clear all tags",

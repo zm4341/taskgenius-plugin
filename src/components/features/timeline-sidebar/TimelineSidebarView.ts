@@ -6,6 +6,7 @@ import {
 	Component,
 	debounce,
 	ButtonComponent,
+	Notice,
 	Platform,
 	TFile,
 } from "obsidian";
@@ -13,12 +14,20 @@ import { Task } from "@/types/task";
 import { TimeComponent } from "@/types/time-parsing";
 import { t } from "@/translations/helper";
 import TaskProgressBarPlugin from "@/index";
-import { QuickCaptureModal } from "@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch";
+import { NewTaskNoteModal } from "@/components/features/quick-capture/modals/NewTaskNoteModal";
 import {
 	createEmbeddableMarkdownEditor,
 	EmbeddableMarkdownEditor,
 } from "../../../editor-extensions/core/markdown-editor";
-import { saveCapture } from "@/utils/file/file-operations";
+import {
+	DEFAULT_TIME_PARSING_CONFIG,
+	TimeParsingService,
+} from "@/services/time-parsing-service";
+import { createTaskNote, getTaskNoteSettings } from "@/utils/file/task-note";
+import {
+	readCapturedDraft,
+	readCapturedTasks,
+} from "@/utils/file/task-capture";
 import "@/styles/timeline-sidebar.scss";
 import { createTaskCheckbox } from "@/components/features/task/view/details";
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
@@ -80,6 +89,10 @@ export class TimelineSidebarView extends ItemView {
 	private isFocusMode = false;
 	// "Focus mode by default" as last applied, to follow changes in settings
 	private appliedFocusDefault: boolean | null = null;
+
+	// Quick capture
+	private targetInfoEl: HTMLElement | null = null;
+	private isCapturing = false;
 
 	// Collapse state management
 	private isInputCollapsed: boolean = false;
@@ -248,8 +261,8 @@ export class TimelineSidebarView extends ItemView {
 		const headerTitle = headerLeft.createDiv("quick-input-title");
 		headerTitle.setText(t("Quick Capture"));
 
-		const targetInfo = this.quickInputHeaderEl.createDiv("quick-input-target-info");
-		this.updateTargetInfo(targetInfo);
+		this.targetInfoEl = this.quickInputHeaderEl.createDiv("quick-input-target-info");
+		this.updateTargetInfo(this.targetInfoEl);
 
 		// Editor container
 		const editorContainer =
@@ -306,7 +319,7 @@ export class TimelineSidebarView extends ItemView {
 			text: t("More options"),
 		});
 		this.registerDomEvent(fullModalBtn, "click", () => {
-			new QuickCaptureModal(this.app, this.plugin, {}, true).open();
+			this.openNewTaskWindow();
 		});
 
 		// Apply initial collapsed state
@@ -1207,34 +1220,89 @@ export class TimelineSidebarView extends ItemView {
 		this.app.workspace.setActiveLeaf(leafToUse, {focus: true});
 	}
 
+	/**
+	 * Creates a task note in the Inbox for each line typed. Lines whose task
+	 * can't be created stay in the input.
+	 */
 	private async handleQuickCapture(): Promise<void> {
-		if (!this.markdownEditor) return;
+		const editor = this.markdownEditor;
+		if (!editor || this.isCapturing) return;
 
-		const content = this.markdownEditor.value.trim();
-		if (!content) return;
+		const tasks = readCapturedTasks(editor.value, this.createTimeParser());
+		if (tasks.length === 0) return;
 
+		this.isCapturing = true;
+		const settings = getTaskNoteSettings(this.plugin.settings);
+		const created: string[] = [];
+		const failedLines: string[] = [];
 		try {
-			// Use the plugin's quick capture settings
-			const captureOptions = this.plugin.settings.quickCapture;
-			await saveCapture(this.app, content, captureOptions);
-
-			// Clear the input
-			this.markdownEditor.set("", false);
-
-			// Refresh timeline
-			await this.loadEvents();
-			this.renderTimeline();
-
-			// Check if we should collapse after capture
-			if (this.plugin.settings.timelineSidebar.quickInputCollapseOnCapture) {
-				this.toggleInputCollapse();
-			} else {
-				// Focus back to input
-				this.markdownEditor.editor?.focus();
+			for (const task of tasks) {
+				try {
+					// The root folder is the Inbox: no project
+					await createTaskNote(this.app, settings, {
+						title: task.title,
+						folder: "",
+						dates: task.dates,
+					});
+					created.push(task.title);
+				} catch (error) {
+					failedLines.push(task.line);
+					new Notice(
+						error instanceof Error ? error.message : String(error)
+					);
+				}
 			}
-		} catch (error) {
-			console.error("Failed to capture:", error);
+		} finally {
+			this.isCapturing = false;
 		}
+
+		if (created.length === 1) {
+			new Notice(
+				t("Task created: {{task}}", {
+					interpolation: { task: created[0] },
+				})
+			);
+		} else if (created.length > 1) {
+			new Notice(
+				t("{{count}} tasks created", {
+					interpolation: { count: created.length },
+				})
+			);
+		}
+		editor.set(failedLines.join("\n"), false);
+
+		// Refresh timeline
+		await this.loadEvents();
+		this.renderTimeline();
+
+		// Check if we should collapse after capture
+		if (
+			failedLines.length === 0 &&
+			this.plugin.settings.timelineSidebar.quickInputCollapseOnCapture
+		) {
+			this.toggleInputCollapse();
+		} else {
+			// Focus back to input
+			editor.editor?.focus();
+		}
+	}
+
+	/** The New Task window, filled in with what was typed here */
+	private openNewTaskWindow(): void {
+		const draft = readCapturedDraft(
+			this.markdownEditor?.value ?? "",
+			this.createTimeParser()
+		);
+		new NewTaskNoteModal(this.app, this.plugin, {
+			draft,
+			onCreated: () => this.markdownEditor?.set("", false),
+		}).open();
+	}
+
+	private createTimeParser(): TimeParsingService {
+		return new TimeParsingService(
+			this.plugin.settings.timeParsing || DEFAULT_TIME_PARSING_CONFIG
+		);
 	}
 
 	/** Scrolls to today; `flash` pulses it, since it may already be in view */
@@ -1394,41 +1462,18 @@ export class TimelineSidebarView extends ItemView {
 	}
 
 	private updateTargetInfo(targetInfoEl: HTMLElement): void {
-		targetInfoEl.empty();
-
-		const settings = this.plugin.settings.quickCapture;
-		let fileName = "";
-		let fullPath = "";
-
-		if (settings.targetType === "daily-note") {
-			const dateStr = moment().format(settings.dailyNoteSettings.format);
-			fileName = `${dateStr}.md`;
-			fullPath = settings.dailyNoteSettings.folder
-				? `${settings.dailyNoteSettings.folder}/${fileName}`
-				: fileName;
-		} else {
-			const targetFile = settings.targetFile || "Quick Capture.md";
-			// Extract just the filename from the path
-			fileName = targetFile.split("/").pop() || targetFile;
-			fullPath = targetFile;
-		}
-
-		// Display only filename, show full path in tooltip
-		let displayText = `${t("to")} ${fileName}`;
-		let tooltipText = `${t("to")} ${fullPath}`;
-
-		if (settings.targetHeading) {
-			displayText += ` → ${settings.targetHeading}`;
-			tooltipText += ` → ${settings.targetHeading}`;
-		}
-
-		targetInfoEl.setText(displayText);
-		targetInfoEl.setAttribute("title", tooltipText);
+		// Captured tasks become notes in the task notes folder itself: the Inbox
+		const folder = getTaskNoteSettings(this.plugin.settings).folder || "/";
+		targetInfoEl.setText(`${t("to")} ${t("Inbox")}`);
+		targetInfoEl.setAttribute("title", `${t("to")} ${folder}`);
 	}
 
 	// Method to trigger view update (called when settings change)
 	public async triggerViewUpdate(): Promise<void> {
 		this.applyFocusDefault();
+		if (this.targetInfoEl) {
+			this.updateTargetInfo(this.targetInfoEl);
+		}
 		await this.loadEvents();
 		this.renderTimeline();
 	}
@@ -1478,7 +1523,7 @@ export class TimelineSidebarView extends ItemView {
 			setIcon(moreOptionsBtn, "more-horizontal");
 			moreOptionsBtn.setAttribute("aria-label", t("More options"));
 			this.registerDomEvent(moreOptionsBtn, "click", () => {
-				new QuickCaptureModal(this.app, this.plugin, {}, true).open();
+				this.openNewTaskWindow();
 			});
 		}
 	}

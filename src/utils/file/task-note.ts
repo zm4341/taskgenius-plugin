@@ -10,6 +10,14 @@ export interface TaskNoteSettings {
 	templateFile: string;
 	/** Frontmatter key that holds a note's project */
 	projectKey: string;
+	/** How dates are written on the task line; Tasks emoji by default */
+	metadataFormat?: "tasks" | "dataview";
+}
+
+export interface TaskNoteDates {
+	start?: Date;
+	scheduled?: Date;
+	due?: Date;
 }
 
 export interface TaskNoteInput {
@@ -17,6 +25,8 @@ export interface TaskNoteInput {
 	description?: string;
 	/** Folder relative to the root, e.g. "Development/AKG"; created if missing */
 	folder: string;
+	/** Dates written on the task line */
+	dates?: TaskNoteDates;
 }
 
 const TIMESTAMP_FORMAT = "YYYY-MM-DD HH:mm:ss";
@@ -34,7 +44,34 @@ export function getTaskNoteSettings(
 		templateFile: saved?.templateFile ?? "",
 		projectKey:
 			settings.projectConfig?.metadataConfig?.metadataKey || "project",
+		metadataFormat:
+			settings.preferMetadataFormat === "dataview" ? "dataview" : "tasks",
 	};
+}
+
+/** Dates as the task line carries them: Tasks emoji, or Dataview fields */
+export function formatTaskDates(
+	dates: TaskNoteDates | undefined,
+	format: "tasks" | "dataview" = "tasks",
+): string {
+	if (!dates) return "";
+	const two = (n: number) => ("0" + n).slice(-2);
+	const day = (date: Date) =>
+		`${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`;
+	// In the order the Tasks plugin writes them
+	const fields: Array<[Date | undefined, string, string]> = [
+		[dates.start, "🛫", "start"],
+		[dates.scheduled, "⏳", "scheduled"],
+		[dates.due, "📅", "due"],
+	];
+	return fields
+		.filter(([date]) => date)
+		.map(([date, emoji, key]) =>
+			format === "dataview"
+				? `[${key}:: ${day(date!)}]`
+				: `${emoji} ${day(date!)}`,
+		)
+		.join(" ");
 }
 
 /** Replaces characters that break file names or links */
@@ -138,7 +175,7 @@ export async function createTaskNote(
 	await ensureFolder(app, folderPath);
 	const file = await app.vault.create(
 		path,
-		withTaskAtTop(template, taskBlock(input)),
+		withTaskAtTop(template, taskBlock(input, settings)),
 	);
 	await applyTaskNoteProperties(app, settings, file, input.folder);
 	return file;
@@ -182,15 +219,17 @@ export async function convertToTaskNote(
 	}
 
 	await app.vault.process(file, (content) =>
-		withTaskAtTop(content, taskBlock(input)),
+		withTaskAtTop(content, taskBlock(input, settings)),
 	);
 	await applyTaskNoteProperties(app, settings, file, input.folder);
 	return file;
 }
 
-function taskBlock(input: TaskNoteInput): string {
+function taskBlock(input: TaskNoteInput, settings: TaskNoteSettings): string {
 	const description = input.description?.trim();
-	return `- [ ] ${input.title.trim()}\n${description ? description + "\n" : ""}`;
+	const dates = formatTaskDates(input.dates, settings.metadataFormat);
+	const taskLine = `- [ ] ${input.title.trim()}${dates ? " " + dates : ""}`;
+	return `${taskLine}\n${description ? description + "\n" : ""}`;
 }
 
 /** Puts the task first in the body; the rest follows after a blank line */

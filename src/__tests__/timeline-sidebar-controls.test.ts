@@ -1,14 +1,18 @@
 /**
- * The timeline's header buttons and day groups.
+ * The timeline sidebar: header buttons, day groups and quick capture.
  *
  * Regressions: refresh redrew before the tasks had loaded, so it showed the
  * old list; focus only dimmed other days and never lit its button; with
  * nothing due today there was no today group for "Go to today" to reach.
+ * Quick capture wrote the typed text as is to one file, so no task was made.
  */
 
+import { Notice } from "obsidian";
 import { TimelineSidebarView } from "@/components/features/timeline-sidebar/TimelineSidebarView";
+import { NewTaskNoteModal } from "@/components/features/quick-capture/modals/NewTaskNoteModal";
 import { translationManager } from "@/translations/manager";
 import type { Task } from "@/types/task";
+import { createTaskNote } from "@/utils/file/task-note";
 
 jest.mock("obsidian", () => {
 	const actual = jest.requireActual("obsidian");
@@ -57,21 +61,42 @@ jest.mock("obsidian", () => {
 	}
 	// Base of suggest inputs that modules on the import path extend
 	class AbstractInputSuggest {}
-	return { ...actual, moment, ItemView, AbstractInputSuggest };
+	// Keeps the messages shown
+	class Notice {
+		static messages: string[] = [];
+		constructor(message: string) {
+			Notice.messages.push(message);
+		}
+	}
+	return { ...actual, moment, ItemView, AbstractInputSuggest, Notice };
 });
 
 jest.mock(
-	"@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch",
-	() => ({ QuickCaptureModal: class {} }),
+	"@/components/features/quick-capture/modals/NewTaskNoteModal",
+	() => ({
+		NewTaskNoteModal: jest.fn().mockImplementation(() => ({
+			open: jest.fn(),
+		})),
+	}),
 );
 
-jest.mock("@/editor-extensions/core/markdown-editor", () => ({
-	createEmbeddableMarkdownEditor: () => ({
-		value: "",
-		set: jest.fn(),
-		editor: { focus: jest.fn() },
-		destroy: jest.fn(),
+jest.mock("@/utils/file/task-note", () => ({
+	...jest.requireActual("@/utils/file/task-note"),
+	createTaskNote: jest.fn(),
+}));
+
+// The quick capture input
+const mockEditor = {
+	value: "",
+	set: jest.fn((value: string) => {
+		mockEditor.value = value;
 	}),
+	editor: { focus: jest.fn() },
+	destroy: jest.fn(),
+};
+
+jest.mock("@/editor-extensions/core/markdown-editor", () => ({
+	createEmbeddableMarkdownEditor: () => mockEditor,
 }));
 
 jest.mock("@/components/features/task/view/details", () => ({
@@ -378,5 +403,107 @@ describe("Timeline header buttons", () => {
 		plugin.settings.timelineSidebar.focusModeByDefault = true;
 		await view.triggerViewUpdate();
 		expect(isOn()).toBe(true);
+	});
+});
+
+describe("Timeline quick capture", () => {
+	const messages = (Notice as any).messages as string[];
+	const dayOf = (date?: Date | number) =>
+		date === undefined ? undefined : new Date(date).toDateString();
+	// The input is set up just after the view opens
+	const inputReady = () => new Promise((resolve) => setTimeout(resolve, 60));
+	const captured = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+	beforeEach(() => {
+		(createTaskNote as any).mockReset();
+		(NewTaskNoteModal as any).mockClear();
+		messages.length = 0;
+		mockEditor.value = "";
+	});
+
+	it("turns each line into a task note in the Inbox, dated by its words", async () => {
+		const { el } = await openTimeline([]);
+		await inputReady();
+		mockEditor.value = "- 买牛奶 明天\n\n整理书架";
+
+		(el.querySelector(".quick-capture-btn") as HTMLElement).click();
+		await captured();
+
+		const notes = (createTaskNote as any).mock.calls.map(
+			([, settings, input]: any[]) => ({
+				root: settings.folder,
+				folder: input.folder,
+				title: input.title,
+				due: dayOf(input.dates.due),
+				scheduled: dayOf(input.dates.scheduled),
+			}),
+		);
+		expect(notes).toEqual([
+			{
+				root: "Tasks",
+				folder: "",
+				title: "买牛奶",
+				due: dayOf(day(1)),
+				scheduled: undefined,
+			},
+			{
+				root: "Tasks",
+				folder: "",
+				title: "整理书架",
+				due: undefined,
+				scheduled: dayOf(day(0)),
+			},
+		]);
+		expect(messages).toEqual(["2 tasks created"]);
+		expect(mockEditor.value).toBe("");
+	});
+
+	it("keeps the lines it could not create, and says why", async () => {
+		(createTaskNote as any).mockImplementation(
+			async (_app: unknown, _settings: unknown, input: any) => {
+				if (input.title === "整理书架") {
+					throw new Error("A note with this name already exists");
+				}
+			},
+		);
+		const { el } = await openTimeline([]);
+		await inputReady();
+		mockEditor.value = "买牛奶\n整理书架";
+
+		(el.querySelector(".quick-capture-btn") as HTMLElement).click();
+		await captured();
+
+		expect(mockEditor.value).toBe("整理书架");
+		expect(messages).toEqual([
+			"A note with this name already exists",
+			"Task created: 买牛奶",
+		]);
+	});
+
+	it("opens New Task with the typed task from More options", async () => {
+		const { el } = await openTimeline([]);
+		await inputReady();
+		mockEditor.value = "买牛奶 明天\n带两瓶";
+
+		(el.querySelector(".quick-modal-btn") as HTMLElement).click();
+
+		const [, , options] = (NewTaskNoteModal as any).mock.calls[0];
+		expect({
+			title: options.draft.title,
+			description: options.draft.description,
+			due: dayOf(options.draft.dates.due),
+		}).toEqual({ title: "买牛奶", description: "带两瓶", due: dayOf(day(1)) });
+
+		// The input empties once New Task has made the task
+		options.onCreated();
+		expect(mockEditor.value).toBe("");
+	});
+
+	it("says captured tasks go to the Inbox", async () => {
+		const { el } = await openTimeline([]);
+		const target = el.querySelector(".quick-input-target-info")!;
+
+		expect(target.textContent).toBe("to Inbox");
+		expect(target.getAttribute("title")).toBe("to Tasks");
 	});
 });

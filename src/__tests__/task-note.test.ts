@@ -245,6 +245,33 @@ describe("New task notes", () => {
 		);
 	});
 
+	it("carry dates on the task line, in the format set for metadata", async () => {
+		const { app, add, read } = createApp();
+		await add({ "Templates/Task.md": TEMPLATE, "Tasks/Projects/": "" });
+		const dates = {
+			scheduled: new Date(2026, 9, 1),
+			due: new Date(2026, 9, 5),
+		};
+
+		await createTaskNote(app, settings, {
+			title: "Buy milk",
+			folder: "",
+			dates,
+		});
+		await createTaskNote(
+			app,
+			{ ...settings, metadataFormat: "dataview" },
+			{ title: "Call Bob", folder: "", dates },
+		);
+
+		expect(read("Tasks/Projects/Buy milk.md")).toContain(
+			"\n- [ ] Buy milk ⏳ 2026-10-01 📅 2026-10-05\n",
+		);
+		expect(read("Tasks/Projects/Call Bob.md")).toContain(
+			"\n- [ ] Call Bob [scheduled:: 2026-10-01] [due:: 2026-10-05]\n",
+		);
+	});
+
 	it("never replace a note with the same name", async () => {
 		const { app, add, read } = createApp();
 		await add({

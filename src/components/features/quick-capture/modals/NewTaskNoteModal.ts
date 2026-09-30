@@ -21,11 +21,20 @@ import {
 	resolveTaskNoteFolder,
 	sanitizeName,
 	taskNoteFolderOf,
+	type TaskNoteDates,
 	type TaskNoteSettings,
 } from "@/utils/file/task-note";
 import "@/styles/new-task-note.scss";
 
 const LAST_FOLDER_KEY = "task-genius-new-task-folder";
+
+type DateType = keyof TaskNoteDates;
+
+/** A date input's value, YYYY-MM-DD */
+function toDateValue(date: Date): string {
+	const two = (n: number) => ("0" + n).slice(-2);
+	return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`;
+}
 
 /** Suggests folders under the task notes root by their path relative to it */
 class TaskNoteFolderSuggest extends AbstractInputSuggest<string> {
@@ -58,6 +67,14 @@ class TaskNoteFolderSuggest extends AbstractInputSuggest<string> {
 export interface NewTaskNoteOptions {
 	/** Project selected in the sidebar; its folder is used by default */
 	project?: string | null;
+	/** Task already typed elsewhere, such as the timeline's quick capture */
+	draft?: {
+		title?: string;
+		description?: string;
+		dates?: TaskNoteDates;
+	};
+	/** Called once the task is created */
+	onCreated?: () => void;
 }
 
 /**
@@ -69,13 +86,18 @@ export class NewTaskNoteModal extends Modal {
 	private readonly folders: string[];
 	private title = "";
 	private description = "";
+	private dateType: DateType = "scheduled";
+	/** YYYY-MM-DD, or empty for no date */
+	private dateValue = "";
 	private folder: string;
 	private useExistingNote = false;
 	private existingNote: TFile | null = null;
 	private moveNote = true;
 	private submitting = false;
+	private readonly onCreated?: () => void;
 
 	private titleInput: TextComponent | null = null;
+	private dateInput: TextComponent | null = null;
 	private folderInput: TextComponent | null = null;
 	private folderHintEl: HTMLElement | null = null;
 	private existingNoteSetting: Setting | null = null;
@@ -92,6 +114,20 @@ export class NewTaskNoteModal extends Modal {
 		this.settings = getTaskNoteSettings(plugin.settings);
 		this.folders = listTaskNoteFolders(app, this.settings);
 		this.folder = this.defaultFolder(options.project);
+		this.onCreated = options.onCreated;
+
+		const { draft } = options;
+		this.title = draft?.title ?? "";
+		this.description = draft?.description ?? "";
+		// The window holds one date; the timeline shows due first, then scheduled
+		const dates = draft?.dates ?? {};
+		const dateType = (["due", "scheduled", "start"] as DateType[]).find(
+			(type) => dates[type],
+		);
+		if (dateType) {
+			this.dateType = dateType;
+			this.dateValue = toDateValue(dates[dateType]!);
+		}
 	}
 
 	onOpen(): void {
@@ -102,12 +138,12 @@ export class NewTaskNoteModal extends Modal {
 
 		new Setting(contentEl).setName(t("Task")).addText((text) => {
 			this.titleInput = text;
-			text.setPlaceholder(t("What needs to be done?")).onChange(
-				(value) => {
+			text.setPlaceholder(t("What needs to be done?"))
+				.setValue(this.title)
+				.onChange((value) => {
 					this.title = value;
 					this.refresh();
-				},
-			);
+				});
 			text.inputEl.addEventListener("keydown", (event) => {
 				// Enter also confirms IME candidates, which must not submit
 				if (event.key === "Enter" && !event.isComposing) {
@@ -121,9 +157,38 @@ export class NewTaskNoteModal extends Modal {
 			.setName(t("Description"))
 			.addTextArea((text) => {
 				text.setPlaceholder(t("Optional, written below the task"));
-				text.onChange((value) => {
+				text.setValue(this.description).onChange((value) => {
 					this.description = value;
 				});
+			});
+
+		new Setting(contentEl)
+			.setName(t("Date"))
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption("scheduled", t("Scheduled"))
+					.addOption("due", t("Due"))
+					.addOption("start", t("Start"))
+					.setValue(this.dateType)
+					.onChange((value) => {
+						this.dateType = value as DateType;
+					});
+			})
+			.addText((text) => {
+				this.dateInput = text;
+				text.inputEl.type = "date";
+				text.setValue(this.dateValue).onChange((value) => {
+					this.dateValue = value;
+				});
+			})
+			.addExtraButton((button) => {
+				button
+					.setIcon("x")
+					.setTooltip(t("Clear date"))
+					.onClick(() => {
+						this.dateValue = "";
+						this.dateInput?.setValue("");
+					});
 			});
 
 		const folderSetting = new Setting(contentEl)
@@ -284,6 +349,18 @@ export class NewTaskNoteModal extends Modal {
 		this.errorEl?.setText(message);
 	}
 
+	/** The date picked in the window, as the task's dates */
+	private selectedDates(): TaskNoteDates | undefined {
+		const match = this.dateValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+		if (!match) return undefined;
+		const date = new Date(
+			Number(match[1]),
+			Number(match[2]) - 1,
+			Number(match[3]),
+		);
+		return { [this.dateType]: date };
+	}
+
 	private async submit(): Promise<void> {
 		if (this.submitting) return;
 		const title = this.title.trim();
@@ -297,7 +374,12 @@ export class NewTaskNoteModal extends Modal {
 		}
 
 		const folder = cleanFolderInput(this.folder);
-		const input = { title, description: this.description, folder };
+		const input = {
+			title,
+			description: this.description,
+			folder,
+			dates: this.selectedDates(),
+		};
 		this.submitting = true;
 		try {
 			if (this.useExistingNote && this.existingNote) {
@@ -313,6 +395,7 @@ export class NewTaskNoteModal extends Modal {
 			new Notice(
 				t("Task created: {{task}}", { interpolation: { task: title } }),
 			);
+			this.onCreated?.();
 			this.close();
 		} catch (error) {
 			this.showError(
