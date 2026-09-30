@@ -303,6 +303,8 @@ export interface TaskStatusConfig extends Record<string, string> {
 	abandoned: string;
 	planned: string;
 	notStarted: string;
+	// Also "archived": marks of tasks hidden from views (added by migration
+	// for older settings, see utils/task/archived-status)
 }
 
 /** Define the structure for task filter presets */
@@ -1049,6 +1051,7 @@ export const DEFAULT_SETTINGS: TaskProgressBarSettings = {
 		abandoned: "-",
 		planned: "?",
 		notStarted: " ",
+		archived: "a",
 	},
 	countOtherStatusesAs: "notStarted",
 	excludeTaskMarks: "",

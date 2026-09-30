@@ -62,6 +62,22 @@ export function migrateStartDateMarker(settings: TaskProgressBarSettings): void 
 }
 
 /**
+ * Adds the archived status to settings saved before it existed.
+ * Its default mark "a" is left out when another status already uses it.
+ *
+ * @param settings - The plugin settings object
+ */
+export function migrateArchivedStatus(settings: TaskProgressBarSettings): void {
+	const statuses = settings.taskStatuses;
+	if (!statuses || statuses.archived !== undefined) {
+		return;
+	}
+
+	const usedMarks = Object.values(statuses).join("|").split("|");
+	statuses.archived = usedMarks.includes("a") ? "" : "a";
+}
+
+/**
  * Main migration function that runs all necessary migrations
  *
  * @param settings - The plugin settings object
@@ -72,6 +88,9 @@ export function migrateSettings(settings: TaskProgressBarSettings): void {
 
 	// Migrate startDateMarker from 🚀 to 🛫
 	migrateStartDateMarker(settings);
+
+	// Add the archived status to older settings
+	migrateArchivedStatus(settings);
 
 	// Future migrations can be added here
 	// e.g., migrateToNewFeature(settings);

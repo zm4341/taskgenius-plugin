@@ -17,6 +17,10 @@ import {
 	TwoColumnSpecificConfig,
 } from "@/common/setting-definition";
 import { filterTasks } from "@/utils/task/task-filter-utils";
+import {
+	isTableView,
+	withoutArchivedTasks,
+} from "@/utils/task/archived-status";
 import { RootFilterState } from "@/components/features/task/filter/ViewTaskFilter";
 import { QuickCaptureModal } from "@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch";
 import { t } from "@/translations/helper";
@@ -467,6 +471,15 @@ export class FluentComponentManager extends Component {
 			viewMode
 		);
 
+		// Only table views get archived tasks; they hide them until filtered for
+		const showsArchived = isTableView(this.plugin, viewId);
+		if (!showsArchived) {
+			tasks = withoutArchivedTasks(
+				tasks,
+				this.plugin.settings.taskStatuses
+			);
+		}
+
 		// Remove transient overlays (loading/error/empty) before showing components
 		if (this.contentArea) {
 			this.contentArea
@@ -691,7 +704,7 @@ export class FluentComponentManager extends Component {
 
 			// Handle updateTasks method for table view adapter
 			if (typeof targetComponent.updateTasks === "function") {
-				const filterOptions: any = {};
+				const filterOptions: any = { includeArchived: showsArchived };
 				if (
 					currentFilterState &&
 					currentFilterState.filterGroups &&

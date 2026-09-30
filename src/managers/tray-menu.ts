@@ -1,5 +1,6 @@
 import type TaskProgressBarPlugin from "@/index";
 import type { Task } from "@/types/task";
+import { withoutArchivedTasks } from "@/utils/task/archived-status";
 
 export class TrayMenuBuilder {
 	constructor(private plugin: TaskProgressBarPlugin) {}
@@ -42,7 +43,10 @@ export class TrayMenuBuilder {
 		today.setHours(23, 59, 59, 999); // End of today
 
 		// Filter: due today or overdue, not completed, exclude ICS badge only
-		const dueTasks = allTasks.filter((t) => {
+		const dueTasks = withoutArchivedTasks(
+			allTasks,
+			this.plugin.settings.taskStatuses
+		).filter((t) => {
 			if (t.completed || !t.metadata?.dueDate) return false;
 			if (this.isIcsBadge(t)) return false;
 			return t.metadata.dueDate <= today.getTime();

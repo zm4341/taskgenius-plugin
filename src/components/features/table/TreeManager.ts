@@ -4,6 +4,7 @@ import { TreeNode, TableRow, TableCell, TableColumn } from "./TableTypes";
 import { SortCriterion } from "@/common/setting-definition";
 import { sortTasks } from "@/commands/sortTaskCommands";
 import { t } from "@/translations/helper";
+import { getArchivedMarks } from "@/utils/task/archived-status";
 
 /**
  * Tree manager component responsible for handling hierarchical task display
@@ -497,6 +498,14 @@ export class TreeManager extends Component {
 
 	// Formatting methods (same as TableView)
 	private formatStatus(status: string): string {
+		if (
+			getArchivedMarks(this.pluginSettings?.taskStatuses).includes(
+				status
+			)
+		) {
+			return t("Archived");
+		}
+
 		const statusMap: Record<string, string> = {
 			" ": t("Not Started"),
 			x: t("Completed"),

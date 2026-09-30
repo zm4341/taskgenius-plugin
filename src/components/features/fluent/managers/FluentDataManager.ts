@@ -2,6 +2,7 @@ import { Component, debounce } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { Task } from "@/types/task";
 import { filterTasks } from "@/utils/task/task-filter-utils";
+import { isTableView } from "@/utils/task/archived-status";
 import { RootFilterState } from "@/components/features/task/filter/ViewTaskFilter";
 import { isDataflowEnabled } from "@/dataflow/createDataflow";
 import { Events, on } from "@/dataflow/events/Events";
@@ -128,6 +129,7 @@ export class FluentDataManager extends Component {
 		const filterOptions: any = {
 			textQuery:
 				filterState.filterInputValue || filterState.searchQuery || "",
+			includeArchived: isTableView(this.plugin, viewId),
 		};
 
 		// Always enable v2Filters for Working-on so the special filter runs

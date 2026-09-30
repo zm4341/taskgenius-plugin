@@ -332,6 +332,10 @@
 	color: var(--text-faint);
 }
 
+.task-table-status.archived .task-table-status-icon {
+	color: var(--text-muted);
+}
+
 /* Priority Cell */
 .task-table-priority {
 	display: flex;

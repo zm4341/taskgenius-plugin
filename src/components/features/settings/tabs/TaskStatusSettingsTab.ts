@@ -376,6 +376,15 @@ export function renderTaskStatusSettingsTab(
 		icon: "abandoned",
 	});
 
+	// Configure Archived status
+	createStatusConfigButton("archived", {
+		title: "Archived",
+		description:
+			"Configure symbols that represent archived tasks in square brackets. Archived tasks are hidden, except in the table view when its status column is filtered to them",
+		placeholder: "a",
+		icon: "archive",
+	});
+
 	// Configure Not Started status (preserves empty spaces)
 	createStatusConfigButton("notStarted", {
 		title: "Not Started",

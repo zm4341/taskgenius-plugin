@@ -44,6 +44,7 @@ function getStatus(task: Task, settings: TaskProgressBarSettings) {
 		planned: "Planned",
 		completed: "Completed",
 		inProgress: "In Progress",
+		archived: "Archived",
 	};
 
 	return statusTextMap[status as keyof typeof statusTextMap] || "No status";
@@ -59,6 +60,7 @@ export function getStatusText(
 		planned: "Planned",
 		completed: "Completed",
 		inProgress: "In Progress",
+		archived: "Archived",
 	};
 
 	return statusTextMap[status as keyof typeof statusTextMap] || "No status";

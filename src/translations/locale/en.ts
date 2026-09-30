@@ -2493,6 +2493,11 @@ const translations = {
 		"Drag to resize, double-click to reset",
 	"Drag to resize, double-click to fit content":
 		"Drag to resize, double-click to fit content",
+	"Show All": "Show All",
+	"Clear filter": "Clear filter",
+	Archived: "Archived",
+	"Configure symbols that represent archived tasks in square brackets. Archived tasks are hidden, except in the table view when its status column is filtered to them":
+		"Configure symbols that represent archived tasks in square brackets. Archived tasks are hidden, except in the table view when its status column is filtered to them",
 	"Clear date": "Clear date",
 	"Clear priority": "Clear priority",
 	"Clear all tags": "Clear all tags",

@@ -5,6 +5,7 @@ import { TrayMenuBuilder } from "./tray-menu";
 import { getTaskGeniusIcon } from "../icon";
 import { t } from "@/translations/helper";
 import { ElectronQuickCapture } from "./electron-quick-capture";
+import { withoutArchivedTasks } from "@/utils/task/archived-status";
 
 /** Desktop integration manager for system tray, notifications, and desktop features */
 export class DesktopIntegrationManager extends Component {
@@ -556,11 +557,13 @@ export class DesktopIntegrationManager extends Component {
 		const queryAPI = this.getQueryAPI();
 		if (!queryAPI) return;
 
-		// Prefer sync cache for speed; fall back to async if empty
+		// Prefer sync cache for speed; fall back to async if empty.
+		// Archived tasks are hidden, so they never trigger reminders.
 		const all = queryAPI.getAllTasksSync?.() as Task[] | undefined;
-		const tasks = (
-			all && all.length ? all : await queryAPI.getAllTasks()
-		) as Task[];
+		const tasks = withoutArchivedTasks(
+			(all && all.length ? all : await queryAPI.getAllTasks()) as Task[],
+			this.plugin.settings.taskStatuses
+		);
 
 		const leadMs = Math.max(0, (cfg.leadMinutes ?? 0) * 60_000);
 		const now = Date.now();
@@ -592,7 +595,10 @@ export class DesktopIntegrationManager extends Component {
 			if (!queryAPI) return;
 
 			// Count overdue + due today (exclude ICS badges)
-			const allTasks = (await queryAPI.getAllTasks()) as Task[];
+			const allTasks = withoutArchivedTasks(
+				(await queryAPI.getAllTasks()) as Task[],
+				this.plugin.settings.taskStatuses
+			);
 			const todayEnd = new Date();
 			todayEnd.setHours(23, 59, 59, 999);
 			const pending = allTasks
@@ -679,7 +685,10 @@ export class DesktopIntegrationManager extends Component {
 		if (!queryAPI) return;
 
 		// Count overdue + due today, exclude ICS badges
-		const allTasks = (await queryAPI.getAllTasks()) as Task[];
+		const allTasks = withoutArchivedTasks(
+			(await queryAPI.getAllTasks()) as Task[],
+			this.plugin.settings.taskStatuses
+		);
 		const todayEnd = new Date();
 		todayEnd.setHours(23, 59, 59, 999);
 		const pending = allTasks
@@ -883,7 +892,10 @@ export class DesktopIntegrationManager extends Component {
 		const queryAPI = this.getQueryAPI();
 		if (!queryAPI) return;
 		try {
-			const all = (await queryAPI.getAllTasks()) as Task[];
+			const all = withoutArchivedTasks(
+				(await queryAPI.getAllTasks()) as Task[],
+				this.plugin.settings.taskStatuses
+			);
 			const { from, to } = this.getDueTodayRange();
 			// include overdue + due today, exclude ICS
 			const pending = all.filter((t) => {

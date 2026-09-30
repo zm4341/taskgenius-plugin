@@ -60,7 +60,7 @@ const tasks = [
 	...[1, 2, 3].map((i) => makeTask(`akg-${i}`, "Dev/AKG")),
 ];
 
-async function createList(isTreeView: boolean) {
+async function createList(isTreeView: boolean, listTasks: Task[] = tasks) {
 	const storage = new Map<string, unknown>([
 		["task-genius-project-expanded", ["Dev", "Dev/Vernify"]],
 	]);
@@ -68,6 +68,7 @@ async function createList(isTreeView: boolean) {
 		settings: {
 			projectPathSeparator: "/",
 			projectConfig: { customProjects: [] },
+			taskStatuses: { archived: "a" },
 		},
 		app: {
 			loadLocalStorage: (key: string) => storage.get(key) ?? null,
@@ -76,7 +77,7 @@ async function createList(isTreeView: boolean) {
 			workspace: { on: () => ({}) },
 		},
 		dataflowOrchestrator: {
-			getQueryAPI: () => ({ getAllTasks: async () => tasks }),
+			getQueryAPI: () => ({ getAllTasks: async () => listTasks }),
 		},
 	};
 	const containerEl = document.createElement("div");
@@ -126,5 +127,12 @@ describe("Fluent sidebar project counts", () => {
 			"Dev/Vernify/Add": 5,
 			"Dev/Vernify/Enhance": 2,
 		});
+	});
+
+	it("leaves archived tasks out, as they are hidden everywhere", async () => {
+		const archived = { ...makeTask("akg-old", "Dev/AKG"), status: "a" };
+		const { containerEl } = await createList(false, [...tasks, archived]);
+
+		expect(shownCounts(containerEl)["Dev/AKG"]).toBe(3);
 	});
 });

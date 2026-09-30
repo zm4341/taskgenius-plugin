@@ -2,6 +2,7 @@ import { Component, Platform, setIcon, Menu, Modal, App } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { Task } from "@/types/task";
 import { getEffectiveProject } from "@/utils/task/task-operations";
+import { withoutArchivedTasks } from "@/utils/task/archived-status";
 import {
 	ProjectPopover,
 	ProjectModal,
@@ -154,6 +155,8 @@ export class ProjectList extends Component {
 		} else {
 			tasks = this.plugin.preloadedTasks || [];
 		}
+		// Archived tasks are hidden, so they are not counted either
+		tasks = withoutArchivedTasks(tasks, this.plugin.settings.taskStatuses);
 		const projectMap = new Map<string, Project>();
 
 		tasks.forEach((task: Task) => {

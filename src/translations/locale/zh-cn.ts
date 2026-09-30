@@ -2324,6 +2324,11 @@ const translations = {
 	"Toggle tree/list view": "切换树状/列表视图",
 	"Drag to resize, double-click to reset": "拖动调整高度，双击恢复默认",
 	"Drag to resize, double-click to fit content": "拖动调整列宽，双击按内容自适应",
+	"Show All": "显示全部",
+	"Clear filter": "清除筛选",
+	Archived: "已归档",
+	"Configure symbols that represent archived tasks in square brackets. Archived tasks are hidden, except in the table view when its status column is filtered to them":
+		"设置代表已归档任务的方括号内符号。已归档的任务默认隐藏，只有在表格视图的状态列筛选“已归档”时才显示",
 	"Clear date": "清除日期",
 	"Clear priority": "清除优先级",
 	"Clear all tags": "清除所有标签",

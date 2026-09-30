@@ -22,6 +22,7 @@ import { saveCapture } from "@/utils/file/file-operations";
 import "@/styles/timeline-sidebar.scss";
 import { createTaskCheckbox } from "@/components/features/task/view/details";
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
+import { withoutArchivedTasks } from "@/utils/task/archived-status";
 
 export const TIMELINE_SIDEBAR_VIEW_TYPE = "tg-timeline-sidebar-view";
 
@@ -313,6 +314,12 @@ export class TimelineSidebarView extends ItemView {
 		}
 
 		this.events = [];
+
+		// Archived tasks never show on the timeline
+		allTasks = withoutArchivedTasks(
+			allTasks,
+			this.plugin.settings.taskStatuses,
+		);
 
 		// Filter tasks based on showCompletedTasks setting
 		const shouldShowCompletedTasks =

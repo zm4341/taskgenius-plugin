@@ -23,6 +23,7 @@ import {
 	getAllStatusMarks,
 } from "@/utils/status-cycle-resolver";
 import { TaskTimerManager } from "@/managers/timer-manager";
+import { getArchivedMarks } from "@/utils/task/archived-status";
 
 /**
  * FluentActionHandlers - Handles all user actions and task operations
@@ -416,6 +417,36 @@ export class FluentActionHandlers extends Component {
 						});
 					});
 				}
+			}
+
+			// Archived belongs to no cycle, so it is offered on its own
+			const archivedMark = getArchivedMarks(
+				this.plugin.settings.taskStatuses
+			)[0];
+			if (
+				archivedMark &&
+				!getAllStatusMarks(this.plugin.settings).has(archivedMark)
+			) {
+				submenu.addSeparator();
+				submenu.addItem((subItem) => {
+					subItem.titleEl.createEl(
+						"span",
+						{ cls: "status-option-checkbox" },
+						(el) => {
+							createTaskCheckbox(archivedMark, task, el);
+						}
+					);
+					subItem.titleEl.createEl("span", {
+						cls: "status-option",
+						text: t("Archived"),
+					});
+					subItem.onClick(async () => {
+						await this.handleKanbanTaskStatusUpdate(
+							task,
+							archivedMark
+						);
+					});
+				});
 			}
 		});
 

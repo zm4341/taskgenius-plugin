@@ -15,6 +15,7 @@ import {
 	isProjectReadonly,
 } from "@/utils/task/task-operations";
 import { getAllStatusMarks, getAllStatusNames } from "@/utils/status-cycle-resolver";
+import { getArchivedMarks } from "@/utils/task/archived-status";
 
 // Cache for autocomplete data to avoid repeated expensive operations
 interface AutoCompleteCache {
@@ -813,28 +814,37 @@ export class TableRenderer extends Component {
 		const statusIcon = statusContainer.createSpan("task-table-status-icon");
 		const status = cell.value as string;
 
-		switch (status) {
-			case "x":
-			case "X":
-				setIcon(statusIcon, "check-circle");
-				statusContainer.addClass("completed");
-				break;
-			case "/":
-			case ">":
-				setIcon(statusIcon, "clock");
-				statusContainer.addClass("in-progress");
-				break;
-			case "-":
-				setIcon(statusIcon, "x-circle");
-				statusContainer.addClass("abandoned");
-				break;
-			case "?":
-				setIcon(statusIcon, "help-circle");
-				statusContainer.addClass("planned");
-				break;
-			default:
-				setIcon(statusIcon, "circle");
-				statusContainer.addClass("not-started");
+		if (
+			getArchivedMarks(this.plugin?.settings?.taskStatuses).includes(
+				status
+			)
+		) {
+			setIcon(statusIcon, "archive");
+			statusContainer.addClass("archived");
+		} else {
+			switch (status) {
+				case "x":
+				case "X":
+					setIcon(statusIcon, "check-circle");
+					statusContainer.addClass("completed");
+					break;
+				case "/":
+				case ">":
+					setIcon(statusIcon, "clock");
+					statusContainer.addClass("in-progress");
+					break;
+				case "-":
+					setIcon(statusIcon, "x-circle");
+					statusContainer.addClass("abandoned");
+					break;
+				case "?":
+					setIcon(statusIcon, "help-circle");
+					statusContainer.addClass("planned");
+					break;
+				default:
+					setIcon(statusIcon, "circle");
+					statusContainer.addClass("not-started");
+			}
 		}
 
 		// Add status text
@@ -941,6 +951,38 @@ export class TableRenderer extends Component {
 					});
 				});
 			}
+		}
+
+		// Archived belongs to no cycle, so it is offered on its own
+		const archivedMark = getArchivedMarks(
+			this.plugin.settings.taskStatuses
+		)[0];
+		if (
+			archivedMark &&
+			!getAllStatusMarks(this.plugin.settings).has(archivedMark)
+		) {
+			menu.addSeparator();
+			menu.addItem((item) => {
+				item.titleEl.createEl(
+					"span",
+					{ cls: "status-option-checkbox" },
+					(el) => {
+						const checkbox = el.createEl("input", {
+							cls: "task-list-item-checkbox",
+							type: "checkbox",
+						});
+						checkbox.dataset.task = archivedMark;
+						checkbox.checked = true;
+					},
+				);
+				item.titleEl.createEl("span", {
+					cls: "status-option",
+					text: t("Archived"),
+				});
+				item.onClick(() => {
+					this.onCellChange?.(rowId, cell.columnId, archivedMark);
+				});
+			});
 		}
 
 		const rect = cellEl.getBoundingClientRect();

@@ -14,6 +14,7 @@ import { VirtualScrollManager } from "./VirtualScrollManager";
 import { TableHeader, TableHeaderCallbacks } from "./TableHeader";
 import { sortTasks } from "@/commands/sortTaskCommands";
 import { isProjectReadonly } from "@/utils/task/task-operations";
+import { getArchivedMarks } from "@/utils/task/archived-status";
 import "@/styles/table.scss";
 
 export interface TableViewCallbacks {
@@ -434,6 +435,17 @@ export class TableView extends Component {
 		// Start with all tasks
 		this.filteredTasks = [...this.allTasks];
 
+		// Archived tasks stay hidden unless the status filter asks for them
+		const archivedMarks = getArchivedMarks(
+			this.plugin?.settings?.taskStatuses
+		);
+		const statusFilter = this.columnFilters.get("status");
+		if (!archivedMarks.some((mark) => statusFilter?.has(mark))) {
+			this.filteredTasks = this.filteredTasks.filter(
+				(task) => !archivedMarks.includes(task.status)
+			);
+		}
+
 		// Apply column filters
 		if (this.columnFilters.size > 0) {
 			this.filteredTasks = this.filteredTasks.filter((task) => {
@@ -622,6 +634,14 @@ export class TableView extends Component {
 
 	// Formatting methods
 	private formatStatus(status: string): string {
+		if (
+			getArchivedMarks(this.plugin?.settings?.taskStatuses).includes(
+				status
+			)
+		) {
+			return t("Archived");
+		}
+
 		// Convert status symbols to readable text
 		const statusMap: Record<string, string> = {
 			" ": t("Not Started"),
@@ -822,7 +842,11 @@ export class TableView extends Component {
 		menu.addSeparator();
 
 		// Add unique values as filter options
-		uniqueValues.forEach(({ value, displayValue, count }) => {
+		const addValueItem = ({
+			value,
+			displayValue,
+			count,
+		}: (typeof uniqueValues)[number]) => {
 			menu.addItem((item) => {
 				const isSelected = currentFilter.has(value);
 				item.setTitle(`${displayValue} (${count})`)
@@ -846,7 +870,21 @@ export class TableView extends Component {
 						this.applyFiltersAndRefresh();
 					});
 			});
-		});
+		};
+
+		// Archived statuses come last, apart from the ones shown by default
+		const archivedMarks =
+			columnId === "status"
+				? getArchivedMarks(this.plugin?.settings?.taskStatuses)
+				: [];
+		const isArchived = ({ value }: (typeof uniqueValues)[number]) =>
+			archivedMarks.includes(value);
+		uniqueValues.filter((entry) => !isArchived(entry)).forEach(addValueItem);
+		const archivedValues = uniqueValues.filter(isArchived);
+		if (archivedValues.length > 0) {
+			menu.addSeparator();
+			archivedValues.forEach(addValueItem);
+		}
 
 		// Add clear filter option if filter is active
 		if (currentFilter.size > 0) {

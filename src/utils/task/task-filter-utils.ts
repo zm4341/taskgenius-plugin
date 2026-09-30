@@ -12,6 +12,7 @@ import {
 	RootFilterState,
 } from "@/components/features/task/filter/ViewTaskFilter";
 import { hasProject } from "./task-operations";
+import { withoutArchivedTasks } from "./archived-status";
 
 // 从ViewTaskFilter.ts导入相关接口
 
@@ -30,6 +31,9 @@ interface FilterOptions {
 
 	// 添加高级过滤器选项
 	advancedFilter?: RootFilterState;
+
+	// Keep archived tasks; table views hide them until filtered for
+	includeArchived?: boolean;
 }
 
 /**
@@ -501,7 +505,9 @@ export function filterTasks(
 	plugin: TaskProgressBarPlugin,
 	options: FilterOptions = {},
 ): Task[] {
-	let filtered = [...allTasks];
+	let filtered = options.includeArchived
+		? [...allTasks]
+		: withoutArchivedTasks(allTasks, plugin.settings.taskStatuses);
 	const viewConfig = getViewSettingOrDefault(plugin, viewId);
 	const filterRules = viewConfig.filterRules || {};
 	const globalFilterRules = plugin.settings.globalFilterRules || {};

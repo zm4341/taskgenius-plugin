@@ -10,6 +10,7 @@ import {
 } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { Task } from "@/types/task";
+import { getArchivedMarks } from "@/utils/task/archived-status";
 import { t } from "@/translations/helper";
 import { Events, on } from "@/dataflow/events/Events";
 import { SettingsModal } from "@/components/features/settings/SettingsModal";
@@ -117,6 +118,14 @@ export class TopNavigation extends Component {
 
 		// Exclude abandoned/completed status tasks
 		if (task.status && isCompletedMark(this.plugin, task.status))
+			return false;
+
+		// Archived tasks are hidden, so they never count as overdue
+		if (
+			getArchivedMarks(this.plugin.settings.taskStatuses).includes(
+				task.status,
+			)
+		)
 			return false;
 
 		// Only include tasks with dueDate or scheduledDate

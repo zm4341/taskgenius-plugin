@@ -2278,6 +2278,11 @@ const translations = {
 	"Toggle tree/list view": "切換樹狀/清單視圖",
 	"Drag to resize, double-click to reset": "拖曳調整高度，按兩下恢復預設",
 	"Drag to resize, double-click to fit content": "拖曳調整欄寬，按兩下依內容自動調整",
+	"Show All": "顯示全部",
+	"Clear filter": "清除篩選",
+	Archived: "已歸檔",
+	"Configure symbols that represent archived tasks in square brackets. Archived tasks are hidden, except in the table view when its status column is filtered to them":
+		"設定代表已歸檔任務的方括號內符號。已歸檔的任務預設隱藏，只有在表格檢視的狀態欄篩選「已歸檔」時才顯示",
 	"Clear date": "清除日期",
 	"Clear priority": "清除優先級",
 	"Clear all tags": "清除所有標籤",
