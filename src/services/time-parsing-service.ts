@@ -613,68 +613,50 @@ export class TimeParsingService {
 			}
 
 			// Parse all date expressions using chrono-node
-			// For better Chinese support, we can use specific locale parsers
 			const chronoModule = chrono;
-			let parseResults;
-			try {
-				parseResults = chronoModule.parse(safeText);
-			} catch (chronoError) {
-				console.warn(
-					"TimeParsingService: Chrono parsing failed:",
-					chronoError,
-				);
-				parseResults = [];
-			}
+			const hasChinese = /[\u4e00-\u9fff]/.test(safeText);
+			let parseResults: any[] = [];
 
-			// If no results found with default parser and text contains Chinese characters,
-			// try with different locale parsers as fallback
-			if (parseResults.length === 0 && /[\u4e00-\u9fff]/.test(safeText)) {
+			// Chinese text goes to the Chinese parsers first: the default
+			// parser takes a bare "15:00" there and hides the date words next
+			// to it, and only the simplified parser knows words like "\u540e\u5929"
+			if (hasChinese) {
 				try {
-					// Try Chinese traditional (zh.hant) first if available
-					if (
-						chronoModule.zh &&
-						chronoModule.zh.hant &&
-						typeof chronoModule.zh.hant.parse === "function"
-					) {
-						const zhHantResult = chronoModule.zh.parse(safeText);
-						if (zhHantResult && zhHantResult.length > 0) {
-							parseResults = zhHantResult;
-						}
-					}
-
-					// If still no results, try simplified Chinese (zh) if available
-					if (
-						parseResults.length === 0 &&
-						chronoModule.zh &&
-						typeof chronoModule.zh.parse === "function"
-					) {
-						const zhResult = chronoModule.zh.parse(safeText);
-						if (zhResult && zhResult.length > 0) {
-							parseResults = zhResult;
-						}
-					}
-
-					// If still no results, fallback to custom Chinese parsing
+					parseResults = chronoModule.zh.hans.parse(safeText);
 					if (parseResults.length === 0) {
-						parseResults =
-							this.parseChineseTimeExpressions(safeText);
+						parseResults = chronoModule.zh.parse(safeText);
 					}
 				} catch (chineseParsingError) {
 					console.warn(
 						"TimeParsingService: Chinese parsing failed:",
 						chineseParsingError,
 					);
-					// Fallback to custom Chinese parsing
-					try {
-						parseResults =
-							this.parseChineseTimeExpressions(safeText);
-					} catch (customParsingError) {
-						console.warn(
-							"TimeParsingService: Custom Chinese parsing failed:",
-							customParsingError,
-						);
-						parseResults = [];
-					}
+					parseResults = [];
+				}
+			}
+
+			if (parseResults.length === 0) {
+				try {
+					parseResults = chronoModule.parse(safeText);
+				} catch (chronoError) {
+					console.warn(
+						"TimeParsingService: Chrono parsing failed:",
+						chronoError,
+					);
+					parseResults = [];
+				}
+			}
+
+			// Last resort for Chinese words chrono does not know, like "\u4e0b\u4e2a\u6708"
+			if (parseResults.length === 0 && hasChinese) {
+				try {
+					parseResults = this.parseChineseTimeExpressions(safeText);
+				} catch (customParsingError) {
+					console.warn(
+						"TimeParsingService: Custom Chinese parsing failed:",
+						customParsingError,
+					);
+					parseResults = [];
 				}
 			}
 
@@ -1158,9 +1140,10 @@ export class TimeParsingService {
 			return new Date(today.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
 		};
 
-		// Handle weekday expressions
+		// Handle weekday expressions; the 周/礼拜/星期 prefix is required, or
+		// the 天 in 明天 and 后天 would be read as Sunday
 		const weekdayMatch = expression.match(
-			/(?:(下|上|这)?(?:周|礼拜|星期)?)([一二三四五六日天])/,
+			/(下|上|这)?(?:周|礼拜|星期)([一二三四五六日天])/,
 		);
 		if (weekdayMatch) {
 			const [, weekPrefix, dayStr] = weekdayMatch;
