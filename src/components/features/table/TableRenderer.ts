@@ -869,6 +869,8 @@ export class TableRenderer extends Component {
 		if (!rowId) return;
 
 		const menu = new Menu();
+		// Only the task's current status is ticked
+		const currentMark = cell.value as string;
 
 		// Check if multi-cycle mode is enabled (same logic as right-click menu)
 		if (
@@ -902,9 +904,7 @@ export class TableRenderer extends Component {
 								type: "checkbox",
 							});
 							checkbox.dataset.task = mark;
-							if (mark !== " ") {
-								checkbox.checked = true;
-							}
+							checkbox.checked = mark === currentMark;
 						},
 					);
 					item.titleEl.createEl("span", {
@@ -935,9 +935,7 @@ export class TableRenderer extends Component {
 								type: "checkbox",
 							});
 							checkbox.dataset.task = mark;
-							if (mark !== " ") {
-								checkbox.checked = true;
-							}
+							checkbox.checked = mark === currentMark;
 						},
 					);
 					item.titleEl.createEl("span", {
@@ -972,7 +970,7 @@ export class TableRenderer extends Component {
 							type: "checkbox",
 						});
 						checkbox.dataset.task = archivedMark;
-						checkbox.checked = true;
+						checkbox.checked = archivedMark === currentMark;
 					},
 				);
 				item.titleEl.createEl("span", {

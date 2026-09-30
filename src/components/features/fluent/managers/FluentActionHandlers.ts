@@ -276,6 +276,12 @@ export class FluentActionHandlers extends Component {
 			item.setIcon("square-pen");
 			item.setTitle(t("Switch status"));
 			const submenu = item.setSubmenu();
+			const currentMark = task.status || " ";
+			// Only the task's current status is ticked
+			const addStatusCheckbox = (mark: string, el: HTMLElement) => {
+				createTaskCheckbox(mark, task, el).checked =
+					mark === currentMark;
+			};
 
 			// Check if multi-cycle is enabled
 			if (
@@ -283,7 +289,6 @@ export class FluentActionHandlers extends Component {
 				this.plugin.settings.statusCycles.length > 0
 			) {
 				// Multi-cycle mode: show applicable cycles first
-				const currentMark = task.status || " ";
 				const applicableCycles = findApplicableCycles(
 					currentMark,
 					this.plugin.settings.statusCycles
@@ -311,9 +316,8 @@ export class FluentActionHandlers extends Component {
 										cls: "status-option-checkbox",
 									},
 									(el) => {
-										createTaskCheckbox(
+										addStatusCheckbox(
 											nextStatusResult.mark,
-											task,
 											el
 										);
 									}
@@ -362,7 +366,7 @@ export class FluentActionHandlers extends Component {
 								cls: "status-option-checkbox",
 							},
 							(el) => {
-								createTaskCheckbox(mark, task, el);
+								addStatusCheckbox(mark, el);
 							}
 						);
 						subItem.titleEl.createEl("span", {
@@ -392,7 +396,7 @@ export class FluentActionHandlers extends Component {
 								cls: "status-option-checkbox",
 							},
 							(el) => {
-								createTaskCheckbox(mark, task, el);
+								addStatusCheckbox(mark, el);
 							}
 						);
 						subItem.titleEl.createEl("span", {
@@ -433,7 +437,7 @@ export class FluentActionHandlers extends Component {
 						"span",
 						{ cls: "status-option-checkbox" },
 						(el) => {
-							createTaskCheckbox(archivedMark, task, el);
+							addStatusCheckbox(archivedMark, el);
 						}
 					);
 					subItem.titleEl.createEl("span", {
