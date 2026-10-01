@@ -38,10 +38,9 @@ import { RootFilterState } from "@/components/features/task/filter/ViewTaskFilte
  */
 export class FluentLayoutManager extends Component {
 	// Layout state
-	// Sidebar starts open on desktop (narrow panes still auto-collapse in
-	// checkAndCollapseSidebar). Phones keep it collapsed: there the width
-	// handler would otherwise call toggleSidebar and open the drawer.
-	public isSidebarCollapsed = Platform.isPhone;
+	// Sidebar starts collapsed to its rail; its toggle opens it. On phones
+	// it is a drawer, which also starts closed.
+	public isSidebarCollapsed = true;
 	public isDetailsVisible = false;
 	public isMobileDrawerOpen = false;
 
