@@ -8,10 +8,7 @@ import {
 	Platform,
 } from "obsidian";
 import { WorkspaceSelector } from "./WorkspaceSelector";
-import {
-	Project,
-	ProjectList,
-} from "@/components/features/fluent/components/ProjectList";
+import { ProjectList } from "@/components/features/fluent/components/ProjectList";
 import { FluentTaskNavigationItem } from "@/types/fluent-types";
 import { WorkspaceData } from "@/types/workspace";
 import {
@@ -479,22 +476,6 @@ export class FluentSidebar extends Component {
 			}
 		}
 
-		// Projects menu button
-		if (
-			!this.plugin.workspaceManager?.isSidebarComponentHidden(
-				"projects-list",
-			)
-		) {
-			const projBtn = this.railEl.createDiv({
-				cls: "fluent-rail-btn",
-				attr: { "aria-label": t("Projects") },
-			});
-			setIcon(projBtn, "folder");
-			this.registerDomEvent(projBtn, "click", (e) =>
-				this.showProjectMenu(e as MouseEvent),
-			);
-		}
-
 		// Add (New Task) button
 		const addBtn = this.railEl.createDiv({
 			cls: "fluent-rail-btn",
@@ -850,36 +831,6 @@ export class FluentSidebar extends Component {
 		}
 
 		new CreateWorkspaceModal(this.plugin, () => this.render()).open();
-	}
-
-	private showProjectMenu(event: MouseEvent) {
-		// Try to use existing project list data; if missing, build a temporary one
-		let projects: Project[] = [];
-		const anyList: ProjectList = this.projectList as ProjectList;
-		if (anyList && typeof anyList.getProjects === "function") {
-			projects = anyList.getProjects();
-		} else {
-			const temp = createDiv();
-			const tempList: ProjectList = new ProjectList(
-				temp,
-				this.plugin,
-				this.onProjectSelect,
-			);
-			if (typeof tempList.getProjects === "function") {
-				projects = tempList.getProjects();
-			}
-		}
-		const menu = new Menu();
-		projects.forEach((p) => {
-			menu.addItem((item) => {
-				item.setTitle(p.name)
-					.setIcon("folder")
-					.onClick(() => {
-						this.onProjectSelect(p.filterKey);
-					});
-			});
-		});
-		menu.showAtMouseEvent(event);
 	}
 
 	private showOtherViewsMenu(

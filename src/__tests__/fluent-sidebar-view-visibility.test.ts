@@ -1,6 +1,7 @@
 /**
  * The Fluent sidebar lists only the views shown in settings, and follows
- * changes made there.
+ * changes made there. Collapsed, it shows them as a rail of buttons, with no
+ * projects button.
  *
  * Regression: the sidebar drew its view lists once and never listened to the
  * settings, so views hidden under Manage views stayed in the sidebar until
@@ -88,7 +89,7 @@ function view(id: string, visible: boolean, region: "top" | "bottom") {
 	return { id, name: id, icon: "list", type: "default", visible, region };
 }
 
-function openSidebar() {
+function openSidebar({ collapsed = false, showProjects = false } = {}) {
 	// Workspace events reach the handlers registered for them
 	const handlers: Record<string, Array<(payload?: unknown) => void>> = {};
 	const app = {
@@ -120,12 +121,19 @@ function openSidebar() {
 		workspaceManager: {
 			getActiveWorkspace: () => ({ id: "default" }),
 			isViewHidden: () => false,
-			// The project list is left out of these tests
-			isSidebarComponentHidden: (id: string) => id === "projects-list",
+			// The project list is left out of most of these tests
+			isSidebarComponentHidden: (id: string) =>
+				id === "projects-list" && !showProjects,
 		},
 	};
 	const containerEl = document.createElement("div");
-	const sidebar = new FluentSidebar(containerEl, plugin, jest.fn(), jest.fn());
+	const sidebar = new FluentSidebar(
+		containerEl,
+		plugin,
+		jest.fn(),
+		jest.fn(),
+		collapsed,
+	);
 	sidebar.load();
 
 	/** Changes a view the way Manage views in settings does */
@@ -183,5 +191,27 @@ describe("Fluent sidebar views", () => {
 
 		const active = containerEl.querySelector(".fluent-navigation-item.is-active");
 		expect(active?.getAttribute("data-view-id")).toBe("table");
+	});
+});
+
+describe("Collapsed Fluent sidebar", () => {
+	it("shows the views and New Task, with no projects button", () => {
+		const { containerEl } = openSidebar({
+			collapsed: true,
+			showProjects: true,
+		});
+
+		const buttons = Array.from(
+			containerEl.querySelectorAll(".fluent-rail-btn"),
+		).map((button) => button.getAttribute("aria-label"));
+
+		expect(buttons).toEqual([
+			"Workspace",
+			"Today",
+			"Upcoming",
+			"Inbox",
+			"table",
+			"New Task",
+		]);
 	});
 });
