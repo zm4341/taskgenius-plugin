@@ -118,6 +118,10 @@ export class CalendarComponent extends Component {
 	// Days that tasks without due, scheduled or start dates are shown on
 	private undatedPlacements: Map<string, UndatedPlacement> = new Map();
 
+	// A day's tasks, listed under its count, and what closes the list
+	private dayTasksEl: HTMLElement | null = null;
+	private dayTasksCleanup: (() => void) | null = null;
+
 	constructor(
 		app: App,
 		plugin: TaskProgressBarPlugin,
@@ -130,6 +134,10 @@ export class CalendarComponent extends Component {
 			onViewModeChange?: (viewMode: CalendarViewMode) => void;
 			persistViewMode?: boolean;
 			viewModeStorageKey?: string;
+			// The month view shows how many tasks each day has instead of
+			// the tasks; a day's count lists them. For calendars of all
+			// tasks, such as the Events view, where a day can have dozens.
+			monthShowsCounts?: boolean;
 		} = {},
 		private viewId: string = "calendar",
 	) {
@@ -241,6 +249,7 @@ export class CalendarComponent extends Component {
 
 	override onunload() {
 		super.onunload();
+		this.closeDayTasks();
 
 		// Clean up @taskgenius/calendar
 		if (this.tgCalendar) {
@@ -325,6 +334,12 @@ export class CalendarComponent extends Component {
 
 	public setTasks(tasks: Task[]) {
 		this.updateTasks(tasks);
+	}
+
+	private showsMonthCounts(): boolean {
+		return (
+			!!this.params.monthShowsCounts && this.currentViewMode === "month"
+		);
 	}
 
 	public setConfigOverride(override: Partial<CalendarSpecificConfig> | null) {
@@ -620,6 +635,11 @@ export class CalendarComponent extends Component {
 			"view-agenda",
 		);
 		this.viewContainerEl.addClass(`view-${this.currentViewMode}`);
+		this.viewContainerEl.toggleClass(
+			"is-month-counts",
+			this.showsMonthCounts(),
+		);
+		this.closeDayTasks();
 
 		// Render view - all views now go through unified TGCalendar
 		switch (this.currentViewMode) {
@@ -874,6 +894,8 @@ export class CalendarComponent extends Component {
 				showWeekNumbers: false,
 				showDateHeader: true,
 				firstDayOfWeek: this.getEffectiveFirstDayOfWeek(),
+				// Each day's count stands in for its tasks
+				maxEventsPerRow: this.showsMonthCounts() ? 0 : undefined,
 				// Use new dayFilter API (v0.6.0+) - must be inside view config
 				dayFilter: config.hideWeekends ? hideWeekends() : undefined,
 				// Add timeFilter for working hours (week/day view only)
@@ -1497,6 +1519,10 @@ export class CalendarComponent extends Component {
 		const tasksOnDate = this.getTasksForDate(date);
 		const badgeEvents = this.getBadgeEventsForDate(date);
 
+		if (this.showsMonthCounts()) {
+			this.setUpDayCount(cellEl, date, ctx.events ?? []);
+		}
+
 		// Render individual badge events (ICS events with badge showType)
 		// Note: Event counts are automatically handled by @taskgenius/calendar's showEventCounts feature
 		if (badgeEvents.length > 0) {
@@ -1608,6 +1634,121 @@ export class CalendarComponent extends Component {
 				dateNum.addClass("past-due");
 			}
 		}
+	}
+
+	/** Makes a day's count in the month view list the day's tasks */
+	private setUpDayCount(
+		cellEl: HTMLElement,
+		date: Date,
+		events: TGCalendarEvent[],
+	) {
+		const badge = cellEl.querySelector<HTMLElement>(
+			".tg-event-count-badge",
+		);
+		if (!badge) return;
+
+		badge.setAttribute(
+			"aria-label",
+			t("{{num}} Tasks", { interpolation: { num: events.length } }),
+		);
+		// A day of tasks without dates only, shown on the day they were
+		// finished or created
+		badge.toggleClass(
+			"is-undated",
+			events.every((event) => !!event.metadata?.undated),
+		);
+
+		// Pressing on the cell selects days for a new task; the count is
+		// left out of that
+		badge.addEventListener("mousedown", (e) => e.stopPropagation());
+		badge.addEventListener("dblclick", (e) => e.stopPropagation());
+		badge.addEventListener("click", (e) => {
+			e.stopPropagation();
+			if (this.dayTasksEl?.dataset.day === this.formatDateKey(date)) {
+				this.closeDayTasks();
+			} else {
+				this.showDayTasks(badge, date, events);
+			}
+		});
+	}
+
+	/** Lists a day's tasks under its count; a task opens its details */
+	private showDayTasks(
+		anchorEl: HTMLElement,
+		date: Date,
+		events: TGCalendarEvent[],
+	) {
+		this.closeDayTasks();
+
+		const doc = anchorEl.ownerDocument;
+		const popover = doc.body.createDiv("tg-day-tasks");
+		popover.dataset.day = this.formatDateKey(date);
+		popover.createDiv({
+			cls: "tg-day-tasks-header",
+			text: `${moment(date).format("LL")} · ${t("{{num}} Tasks", {
+				interpolation: { num: events.length },
+			})}`,
+		});
+
+		const list = popover.createDiv("tg-day-tasks-list");
+		events.forEach((event) => {
+			const task = getTaskFromEvent(event as AdapterCalendarEvent);
+			const item = list.createDiv({
+				cls: "tg-day-tasks-item",
+				text: event.title,
+			});
+			item.toggleClass("is-undated", !!event.metadata?.undated);
+			item.toggleClass("is-completed", !!task?.completed);
+			item.addEventListener("click", () => {
+				this.closeDayTasks();
+				this.handleTGEventClick(event as AdapterCalendarEvent);
+			});
+		});
+
+		this.dayTasksEl = popover;
+		this.positionDayTasks(popover, anchorEl);
+
+		// Closes on a press elsewhere, or on Escape
+		const onMouseDown = (e: MouseEvent) => {
+			const target = e.target as Node;
+			if (!popover.contains(target) && !anchorEl.contains(target)) {
+				this.closeDayTasks();
+			}
+		};
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") this.closeDayTasks();
+		};
+		doc.addEventListener("mousedown", onMouseDown, true);
+		doc.addEventListener("keydown", onKeyDown, true);
+		this.dayTasksCleanup = () => {
+			doc.removeEventListener("mousedown", onMouseDown, true);
+			doc.removeEventListener("keydown", onKeyDown, true);
+		};
+	}
+
+	/** Puts the list under the count, inside the window */
+	private positionDayTasks(popover: HTMLElement, anchorEl: HTMLElement) {
+		const win = anchorEl.ownerDocument.defaultView ?? window;
+		const anchor = anchorEl.getBoundingClientRect();
+		const box = popover.getBoundingClientRect();
+
+		let top = anchor.bottom + 4;
+		if (top + box.height > win.innerHeight - 8) {
+			top = Math.max(8, anchor.top - box.height - 4);
+		}
+		const left = Math.max(
+			8,
+			Math.min(anchor.left, win.innerWidth - box.width - 8),
+		);
+		popover.style.top = `${top}px`;
+		popover.style.left = `${left}px`;
+	}
+
+	private closeDayTasks() {
+		this.dayTasksCleanup?.();
+		this.dayTasksCleanup = null;
+		this.dayTasksEl?.remove();
+		this.dayTasksEl = null;
 	}
 
 	// ============================================

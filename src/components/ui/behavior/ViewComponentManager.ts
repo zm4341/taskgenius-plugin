@@ -74,6 +74,8 @@ class ViewComponentFactory {
 						onTaskSelected: handlers.onTaskSelected,
 						onTaskCompleted: handlers.onTaskCompleted,
 						onEventContextMenu: handlers.onEventContextMenu,
+						// Calendar views such as Events have all tasks
+						monthShowsCounts: true,
 					},
 					viewId,
 				);

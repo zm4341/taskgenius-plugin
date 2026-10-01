@@ -97,6 +97,9 @@ proto.addClass = function (...cls: string[]) {
 proto.removeClass = function (...cls: string[]) {
 	this.classList.remove(...cls);
 };
+proto.toggleClass = function (cls: string, on: boolean) {
+	this.classList.toggle(cls, on);
+};
 
 function openCalendar() {
 	const app: any = {
