@@ -154,17 +154,22 @@
 			display: none;
 		}
 
+		/* Large, in the middle of the day */
 		.tg-event-count-badge {
 			display: block;
-			right: var(--size-4-2);
-			bottom: var(--size-4-2);
-			min-width: 24px;
-			padding: 1px var(--size-4-2);
-			border-radius: var(--radius-l);
+			top: 50%;
+			left: 50%;
+			right: auto;
+			bottom: auto;
+			transform: translate(-50%, -50%);
+			min-width: 44px;
+			padding: 2px var(--size-4-3);
+			border-radius: var(--radius-xl);
 			background: var(--interactive-accent);
 			color: var(--text-on-accent);
-			font-size: var(--font-ui-small);
+			font-size: var(--font-ui-large);
 			font-weight: var(--font-semibold);
+			line-height: 1.4;
 			cursor: pointer;
 		}
 
