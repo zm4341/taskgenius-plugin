@@ -94,6 +94,7 @@ export class CalendarComponent extends Component {
 	private currentDate: moment.Moment = moment();
 
 	private headerEl: HTMLElement;
+	private dateDisplayEl: HTMLElement | null = null;
 	private viewContainerEl: HTMLElement;
 
 	private app: App;
@@ -290,33 +291,33 @@ export class CalendarComponent extends Component {
 	}
 
 	public navigate(direction: "prev" | "next") {
-		const unit = this.getViewUnit();
-		if (direction === "prev") {
-			this.currentDate.subtract(1, unit);
-		} else {
-			this.currentDate.add(1, unit);
-		}
-
-		// Update @taskgenius/calendar or re-render original views
+		// The calendar tells where it went through onDateChange
 		if (this.tgCalendar) {
 			if (direction === "prev") {
 				this.tgCalendar.prev();
 			} else {
 				this.tgCalendar.next();
 			}
-		} else {
-			this.render();
+			return;
 		}
+
+		const unit = this.getViewUnit();
+		if (direction === "prev") {
+			this.currentDate.subtract(1, unit);
+		} else {
+			this.currentDate.add(1, unit);
+		}
+		this.render();
 	}
 
 	public goToToday() {
-		this.currentDate = moment();
-
 		if (this.tgCalendar) {
 			this.tgCalendar.today();
-		} else {
-			this.render();
+			return;
 		}
+
+		this.currentDate = moment();
+		this.render();
 	}
 
 	public setTasks(tasks: Task[]) {
@@ -401,8 +402,8 @@ export class CalendarComponent extends Component {
 		nextBtn.onClick(() => this.navigate("next"));
 
 		// Date display
-		const dateDisplay = this.headerEl.createSpan("calendar-current-date");
-		dateDisplay.textContent = this.getCurrentDateDisplay();
+		this.dateDisplayEl = this.headerEl.createSpan("calendar-current-date");
+		this.updateDateDisplay();
 
 		// View switcher - segmented control style
 		const viewGroup = this.headerEl.createDiv("calendar-view-switcher");
@@ -536,6 +537,22 @@ export class CalendarComponent extends Component {
 					.setValue(this.currentViewMode);
 			},
 		);
+	}
+
+	/** Names the period on screen, in the header */
+	private updateDateDisplay() {
+		if (this.dateDisplayEl) {
+			this.dateDisplayEl.textContent = this.getCurrentDateDisplay();
+		}
+	}
+
+	/**
+	 * The calendar moved to another date, by its prev, next and today
+	 * buttons or when synced to ours
+	 */
+	private handleTGDateChange(date: Date) {
+		this.currentDate = moment(date);
+		this.updateDateDisplay();
 	}
 
 	/**
@@ -827,6 +844,8 @@ export class CalendarComponent extends Component {
 			// Custom event rendering - adds checkbox for task completion
 			onRenderEvent: (ctx: EventRenderContext) =>
 				this.handleTGRenderEvent(ctx),
+			// Keeps the header's date in step with the calendar
+			onDateChange: (date: Date) => this.handleTGDateChange(date),
 		};
 
 		// Add maxEventsPerRow for month view
@@ -920,6 +939,8 @@ export class CalendarComponent extends Component {
 			// Custom event rendering - adds checkbox for task completion
 			onRenderEvent: (ctx: EventRenderContext) =>
 				this.handleTGRenderEvent(ctx),
+			// Keeps the header's date in step with the calendar
+			onDateChange: (date: Date) => this.handleTGDateChange(date),
 		};
 
 		this.tgCalendar = new Calendar(this.viewContainerEl, calendarConfig);
