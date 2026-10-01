@@ -1,6 +1,7 @@
 /**
- * The Events view's month calendar shows how many tasks each day has, and
- * a day's count lists them.
+ * The month calendars of the Events view, and of Today and the other views
+ * in calendar mode, show how many tasks each day has, large in the middle
+ * of the day; a day's count lists them.
  *
  * Regression: the month view drew every task of a day, so a day with dozens
  * of tasks stretched its week into a column taller than the screen.
@@ -8,6 +9,7 @@
 
 import { CalendarComponent } from "@/components/features/calendar";
 import { ViewComponentManager } from "@/components/ui/behavior/ViewComponentManager";
+import { FluentComponentManager } from "@/components/features/fluent/managers/FluentComponentManager";
 import { Component } from "obsidian";
 
 jest.mock("obsidian", () => {
@@ -78,24 +80,70 @@ jest.mock("@/components/features/task/view/details", () => ({
 	createTaskCheckbox: () => document.createElement("input"),
 }));
 
-// The other views the Events view's manager can make
+// The other views the managers of the Events and Fluent views can make,
+// each kept to an element it can hide
 jest.mock("@/components/features/kanban/kanban", () => ({
-	KanbanComponent: class {},
+	KanbanComponent: class {
+		containerEl = document.createElement("div");
+		load() {}
+	},
 }));
 jest.mock("@/components/features/gantt/gantt", () => ({
-	GanttComponent: class {},
+	GanttComponent: class {
+		containerEl = document.createElement("div");
+		load() {}
+	},
 }));
 jest.mock("@/components/features/task/view/TaskPropertyTwoColumnView", () => ({
 	TaskPropertyTwoColumnView: class {},
 }));
 jest.mock("@/components/features/task/view/forecast", () => ({
-	ForecastComponent: class {},
+	ForecastComponent: class {
+		containerEl = document.createElement("div");
+		load() {}
+	},
 }));
 jest.mock("@/components/features/table/TableViewAdapter", () => ({
 	TableViewAdapter: class {},
 }));
 jest.mock("@/components/features/quadrant/quadrant", () => ({
 	QuadrantComponent: class {},
+}));
+jest.mock("@/components/features/task/view/content", () => ({
+	ContentComponent: class {
+		containerEl = document.createElement("div");
+		load() {}
+	},
+}));
+jest.mock("@/components/features/task/view/tags", () => ({
+	TagsComponent: class {
+		containerEl = document.createElement("div");
+		load() {}
+	},
+}));
+jest.mock("@/components/features/task/view/projects", () => ({
+	ProjectsComponent: class {
+		containerEl = document.createElement("div");
+		load() {}
+	},
+}));
+jest.mock("@/components/features/task/view/review", () => ({
+	ReviewComponent: class {
+		containerEl = document.createElement("div");
+		load() {}
+	},
+}));
+jest.mock("@/components/features/habit/habit", () => ({
+	Habit: class {
+		containerEl = document.createElement("div");
+		load() {}
+	},
+}));
+jest.mock("@/components/features/fluent/components/FluentTopNavigation", () => ({
+	TopNavigation: class {},
+}));
+jest.mock("@/components/features/task/selection/TaskSelectionManager", () => ({
+	TaskSelectionManager: class {},
 }));
 
 // Obsidian's DOM helpers, as far as the calendar uses them
@@ -132,6 +180,9 @@ proto.toggleClass = function (cls: string, on: boolean) {
 };
 proto.hide = function () {
 	this.style.display = "none";
+};
+proto.show = function () {
+	this.style.display = "";
 };
 
 /** A task in a note of its own, created at the given time */
@@ -350,5 +401,34 @@ describe("The Events view", () => {
 			parentEl.querySelector(".calendar-view-container")?.classList,
 		).toContain("is-month-counts");
 		expect(parentEl.querySelectorAll(".tg-event-bar")).toHaveLength(0);
+	});
+});
+
+describe("Today in calendar mode", () => {
+	it("counts each day's tasks in its month view, as Events does", () => {
+		const { app, plugin } = setUp();
+		const parent = new Component();
+		parent.load();
+		const contentArea = document.createElement("div");
+		const manager = new FluentComponentManager(
+			app,
+			plugin,
+			contentArea,
+			parent,
+			{
+				onTaskSelected: () => {},
+				onTaskCompleted: () => {},
+				onTaskUpdate: async () => {},
+				onTaskContextMenu: () => {},
+			} as any,
+		);
+		manager.initializeViewComponents();
+
+		manager.renderContentWithViewMode("today", tasks, tasks, "calendar");
+
+		expect(
+			contentArea.querySelector(".calendar-view-container")?.classList,
+		).toContain("is-month-counts");
+		expect(contentArea.querySelectorAll(".tg-event-bar")).toHaveLength(0);
 	});
 });

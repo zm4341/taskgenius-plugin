@@ -343,6 +343,9 @@ export class FluentComponentManager extends Component {
 				onEventContextMenu: (ev: MouseEvent, event: Task) => {
 					if (event) this.viewHandlers.onTaskContextMenu(ev, event);
 				},
+				// The calendar mode of Today and the other views counts each
+				// day's tasks in its month view, as the Events view does
+				monthShowsCounts: true,
 			}
 		);
 		this.parentView.addChild(this.calendarComponent);
