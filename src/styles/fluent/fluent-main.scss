@@ -769,6 +769,18 @@ button.fluent-new-task-btn:hover {
 	color: var(--text-normal);
 }
 
+/* New Task on the rail, in the colours of the sidebar's New Task button */
+.fluent-rail-btn.fluent-rail-new-task {
+	margin-bottom: 4px;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.fluent-rail-btn.fluent-rail-new-task:hover {
+	background-color: var(--interactive-accent-hover);
+	color: var(--text-on-accent);
+}
+
 .tg-beta {
 	position: relative;
 }

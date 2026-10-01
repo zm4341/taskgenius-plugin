@@ -432,6 +432,17 @@ export class FluentSidebar extends Component {
 		// Clear existing content
 		this.railEl.empty();
 
+		// New Task first, apart from the views: at the end of them it read as
+		// adding a view
+		const addBtn = this.railEl.createDiv({
+			cls: "fluent-rail-btn fluent-rail-new-task",
+			attr: { "aria-label": t("New Task") },
+		});
+		setIcon(addBtn, "plus");
+		this.registerDomEvent(addBtn, "click", () =>
+			this.onNavigate("new-task"),
+		);
+
 		// Workspace menu button
 		const wsBtn = this.railEl.createDiv({
 			cls: "fluent-rail-btn",
@@ -475,16 +486,6 @@ export class FluentSidebar extends Component {
 				);
 			}
 		}
-
-		// Add (New Task) button
-		const addBtn = this.railEl.createDiv({
-			cls: "fluent-rail-btn",
-			attr: { "aria-label": t("New Task") },
-		});
-		setIcon(addBtn, "plus");
-		this.registerDomEvent(addBtn, "click", () =>
-			this.onNavigate("new-task"),
-		);
 	}
 
 	private renderRailButton(item: FluentTaskNavigationItem) {

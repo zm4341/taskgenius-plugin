@@ -1,7 +1,7 @@
 /**
  * The Fluent sidebar lists only the views shown in settings, and follows
- * changes made there. Collapsed, it shows them as a rail of buttons, with no
- * projects button.
+ * changes made there. Collapsed, it shows them as a rail of buttons under
+ * New Task, with no projects button.
  *
  * Regression: the sidebar drew its view lists once and never listened to the
  * settings, so views hidden under Manage views stayed in the sidebar until
@@ -195,7 +195,7 @@ describe("Fluent sidebar views", () => {
 });
 
 describe("Collapsed Fluent sidebar", () => {
-	it("shows the views and New Task, with no projects button", () => {
+	it("shows New Task first, then the views, with no projects button", () => {
 		const { containerEl } = openSidebar({
 			collapsed: true,
 			showProjects: true,
@@ -205,13 +205,14 @@ describe("Collapsed Fluent sidebar", () => {
 			containerEl.querySelectorAll(".fluent-rail-btn"),
 		).map((button) => button.getAttribute("aria-label"));
 
+		// At the end of the views, New Task read as adding a view
 		expect(buttons).toEqual([
+			"New Task",
 			"Workspace",
 			"Today",
 			"Upcoming",
 			"Inbox",
 			"table",
-			"New Task",
 		]);
 	});
 });
