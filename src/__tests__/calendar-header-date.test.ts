@@ -59,10 +59,9 @@ jest.mock("obsidian", () => {
 	return { ...actual, moment, ButtonComponent, DropdownComponent };
 });
 
-jest.mock(
-	"@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch",
-	() => ({ QuickCaptureModal: class {} }),
-);
+jest.mock("@/components/features/quick-capture/modals/NewTaskNoteModal", () => ({
+	NewTaskNoteModal: class {},
+}));
 
 jest.mock("@/components/features/task/view/details", () => ({
 	createTaskCheckbox: () => document.createElement("input"),

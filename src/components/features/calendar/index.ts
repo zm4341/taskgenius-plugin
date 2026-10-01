@@ -65,7 +65,7 @@ import { t } from "@/translations/helper";
 import { TGAgendaView } from "./views/tg-agenda-view";
 import { TGYearView } from "./views/tg-year-view";
 import TaskProgressBarPlugin from "@/index";
-import { QuickCaptureModal } from "@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch";
+import { NewTaskNoteModal } from "@/components/features/quick-capture/modals/NewTaskNoteModal";
 import {
 	CalendarSpecificConfig,
 	CustomCalendarViewConfig,
@@ -1766,15 +1766,25 @@ export class CalendarComponent extends Component {
 	}
 
 	/**
-	 * Handle double click on a date cell - opens quick capture modal
+	 * Opens New Task for the days picked: one day is scheduled for that
+	 * day, several start on the first and are due on the last. Times are
+	 * left out, as New Task has days only.
+	 */
+	private openNewTask(first: Date, last: Date = first) {
+		const firstDay = startOfDay(first);
+		const lastDay = startOfDay(last);
+		const dates =
+			lastDay > firstDay
+				? { start: firstDay, due: lastDay }
+				: { scheduled: firstDay };
+		new NewTaskNoteModal(this.app, this.plugin, { dates }).open();
+	}
+
+	/**
+	 * Handle double click on a date cell - opens New Task for the day
 	 */
 	private handleDateDoubleClick(date: Date) {
-		new QuickCaptureModal(
-			this.app,
-			this.plugin,
-			{ dueDate: date },
-			true,
-		).open();
+		this.openNewTask(date);
 	}
 
 	/**
@@ -1793,48 +1803,26 @@ export class CalendarComponent extends Component {
 	}
 
 	/**
-	 * Handle double click on time slot - opens quick capture with time
+	 * Handle double click on time slot - opens New Task for its day
 	 */
 	private handleTimeSlotDoubleClick(dateTime: Date) {
-		// Create task with specific time
-		new QuickCaptureModal(
-			this.app,
-			this.plugin,
-			{ dueDate: dateTime },
-			true,
-		).open();
+		this.openNewTask(dateTime);
 	}
 
 	/**
-	 * Handle date range selection in month view
-	 * Opens quick capture modal with start and due dates pre-filled
+	 * Handle date range selection in month view, which a click on a day is
+	 * too - opens New Task for those days
 	 */
 	private handleDateRangeSelect(startDate: Date, endDate: Date) {
-		new QuickCaptureModal(
-			this.app,
-			this.plugin,
-			{
-				startDate: startDate,
-				dueDate: endDate,
-			},
-			true,
-		).open();
+		this.openNewTask(startDate, endDate);
 	}
 
 	/**
-	 * Handle time range selection in week/day view
-	 * Opens quick capture modal with start and due dates/times pre-filled
+	 * Handle time range selection in week/day view - opens New Task for its
+	 * days
 	 */
 	private handleTimeRangeSelect(startDateTime: Date, endDateTime: Date) {
-		new QuickCaptureModal(
-			this.app,
-			this.plugin,
-			{
-				startDate: startDateTime,
-				dueDate: endDateTime,
-			},
-			true,
-		).open();
+		this.openNewTask(startDateTime, endDateTime);
 	}
 
 	// ============================================
@@ -1860,12 +1848,7 @@ export class CalendarComponent extends Component {
 			this.currentDate = moment(dayDate);
 			this.render();
 		} else if (options.behavior === "open-quick-capture") {
-			new QuickCaptureModal(
-				this.app,
-				this.plugin,
-				{ dueDate: dayDate },
-				true,
-			).open();
+			this.openNewTask(dayDate);
 		}
 	};
 

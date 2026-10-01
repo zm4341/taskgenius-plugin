@@ -1,10 +1,12 @@
 /**
  * The month calendars of the Events view, and of Today and the other views
  * in calendar mode, show how many tasks each day has, large in the middle
- * of the day; a day's count lists them.
+ * of the day; a day's count lists them. Picking days makes a task with New
+ * Task, the window the rest of the plugin makes tasks with.
  *
- * Regression: the month view drew every task of a day, so a day with dozens
- * of tasks stretched its week into a column taller than the screen.
+ * Regressions: the month view drew every task of a day, so a day with
+ * dozens of tasks stretched its week into a column taller than the screen;
+ * and picking days opened the old quick capture window.
  */
 
 import { CalendarComponent } from "@/components/features/calendar";
@@ -63,17 +65,25 @@ jest.mock("obsidian", () => {
 	return { ...actual, moment, ButtonComponent, DropdownComponent };
 });
 
-// Counts the quick capture windows opened, as pressing on a day does
+// Keeps the dates each New Task window opens with, as picking days does
+jest.mock("@/components/features/quick-capture/modals/NewTaskNoteModal", () => ({
+	NewTaskNoteModal: class {
+		static opened: any[] = [];
+		constructor(
+			_app: unknown,
+			_plugin: unknown,
+			private readonly options: any,
+		) {}
+		open() {
+			(this.constructor as any).opened.push(this.options.dates);
+		}
+	},
+}));
+
+// The old quick capture window, which the Fluent manager still imports
 jest.mock(
 	"@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch",
-	() => ({
-		QuickCaptureModal: class {
-			static opened = 0;
-			open() {
-				(this.constructor as any).opened++;
-			}
-		},
-	}),
+	() => ({ QuickCaptureModal: class {} }),
 );
 
 jest.mock("@/components/features/task/view/details", () => ({
@@ -266,14 +276,15 @@ function openCalendar(countsInMonth: boolean) {
 	return { calendar, parentEl, countOn, onTaskSelected };
 }
 
-const QuickCapture = () =>
+/** The dates of the New Task windows opened so far */
+const newTasks = (): any[] =>
 	jest.requireMock(
-		"@/components/features/quick-capture/modals/QuickCaptureModalWithSwitch",
-	).QuickCaptureModal;
+		"@/components/features/quick-capture/modals/NewTaskNoteModal",
+	).NewTaskNoteModal.opened;
 
 beforeEach(() => {
 	jest.useFakeTimers({ now: new Date(2026, 9, 1, 10, 0, 0) });
-	QuickCapture().opened = 0;
+	newTasks().length = 0;
 });
 
 afterEach(() => {
@@ -347,11 +358,53 @@ describe("Events view month calendar", () => {
 		};
 
 		press(countOn("30")!);
-		expect(QuickCapture().opened).toBe(0);
+		expect(newTasks()).toHaveLength(0);
 
 		// The rest of the day still starts a new task
 		press(countOn("30")!.parentElement!);
-		expect(QuickCapture().opened).toBe(1);
+		expect(newTasks()).toHaveLength(1);
+	});
+});
+
+describe("Picking days on the calendar", () => {
+	it("opens New Task scheduled for the day pressed", () => {
+		const { countOn } = openCalendar(true);
+		const cell = countOn("5")!.parentElement!;
+
+		cell.dispatchEvent(
+			new MouseEvent("mousedown", { bubbles: true, button: 0 }),
+		);
+		document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
+		expect(newTasks()).toEqual([{ scheduled: new Date(2026, 9, 5) }]);
+	});
+
+	it("starts a task over several days on the first, due on the last", () => {
+		const { calendar } = openCalendar(true);
+
+		(calendar as any).handleDateRangeSelect(
+			new Date(2026, 9, 5),
+			new Date(2026, 9, 7),
+		);
+
+		expect(newTasks()).toEqual([
+			{ start: new Date(2026, 9, 5), due: new Date(2026, 9, 7) },
+		]);
+	});
+
+	it("keeps the day of a time picked in the week view, not the time", () => {
+		const { calendar } = openCalendar(true);
+
+		(calendar as any).handleTimeSlotDoubleClick(new Date(2026, 9, 6, 14, 30));
+		(calendar as any).handleTimeRangeSelect(
+			new Date(2026, 9, 6, 9, 0),
+			new Date(2026, 9, 6, 11, 0),
+		);
+
+		expect(newTasks()).toEqual([
+			{ scheduled: new Date(2026, 9, 6) },
+			{ scheduled: new Date(2026, 9, 6) },
+		]);
 	});
 });
 

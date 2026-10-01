@@ -61,6 +61,21 @@ class TaskNoteFolderSuggest extends AbstractInputSuggest<string> {
 export interface NewTaskNoteOptions {
 	/** Project selected in the sidebar; its folder is used by default */
 	project?: string | null;
+	/** Dates to start with, such as the days picked on a calendar */
+	dates?: TaskNoteDates;
+}
+
+/** One of the window's date rows */
+interface DateRow {
+	type: DateType;
+	/** YYYY-MM-DD, or empty for no date */
+	value: string;
+}
+
+/** A date input's value, YYYY-MM-DD */
+function toDateValue(date: Date): string {
+	const two = (n: number) => ("0" + n).slice(-2);
+	return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`;
 }
 
 /**
@@ -72,9 +87,8 @@ export class NewTaskNoteModal extends Modal {
 	private readonly folders: string[];
 	private title = "";
 	private description = "";
-	private dateType: DateType = "scheduled";
-	/** YYYY-MM-DD, or empty for no date */
-	private dateValue = "";
+	/** One row, unless the window opened with more dates */
+	private dateRows: DateRow[];
 	private folder: string;
 	private useExistingNote = false;
 	private existingNote: TFile | null = null;
@@ -82,7 +96,6 @@ export class NewTaskNoteModal extends Modal {
 	private submitting = false;
 
 	private titleInput: TextComponent | null = null;
-	private dateInput: TextComponent | null = null;
 	private folderInput: TextComponent | null = null;
 	private folderHintEl: HTMLElement | null = null;
 	private existingNoteSetting: Setting | null = null;
@@ -99,6 +112,12 @@ export class NewTaskNoteModal extends Modal {
 		this.settings = getTaskNoteSettings(plugin.settings);
 		this.folders = listTaskNoteFolders(app, this.settings);
 		this.folder = this.defaultFolder(options.project);
+
+		const dates = options.dates ?? {};
+		const rows = (["start", "scheduled", "due"] as DateType[])
+			.filter((type) => dates[type])
+			.map((type) => ({ type, value: toDateValue(dates[type]!) }));
+		this.dateRows = rows.length > 0 ? rows : [{ type: "scheduled", value: "" }];
 	}
 
 	onOpen(): void {
@@ -133,34 +152,37 @@ export class NewTaskNoteModal extends Modal {
 				});
 			});
 
-		new Setting(contentEl)
-			.setName(t("Date"))
-			.addDropdown((dropdown) => {
-				dropdown
-					.addOption("scheduled", t("Scheduled"))
-					.addOption("due", t("Due"))
-					.addOption("start", t("Start"))
-					.setValue(this.dateType)
-					.onChange((value) => {
-						this.dateType = value as DateType;
+		this.dateRows.forEach((row, index) => {
+			let dateInput: TextComponent | null = null;
+			new Setting(contentEl)
+				.setName(index === 0 ? t("Date") : "")
+				.addDropdown((dropdown) => {
+					dropdown
+						.addOption("scheduled", t("Scheduled"))
+						.addOption("due", t("Due"))
+						.addOption("start", t("Start"))
+						.setValue(row.type)
+						.onChange((value) => {
+							row.type = value as DateType;
+						});
+				})
+				.addText((text) => {
+					dateInput = text;
+					text.inputEl.type = "date";
+					text.setValue(row.value).onChange((value) => {
+						row.value = value;
 					});
-			})
-			.addText((text) => {
-				this.dateInput = text;
-				text.inputEl.type = "date";
-				text.setValue(this.dateValue).onChange((value) => {
-					this.dateValue = value;
+				})
+				.addExtraButton((button) => {
+					button
+						.setIcon("x")
+						.setTooltip(t("Clear date"))
+						.onClick(() => {
+							row.value = "";
+							dateInput?.setValue("");
+						});
 				});
-			})
-			.addExtraButton((button) => {
-				button
-					.setIcon("x")
-					.setTooltip(t("Clear date"))
-					.onClick(() => {
-						this.dateValue = "";
-						this.dateInput?.setValue("");
-					});
-			});
+		});
 
 		const folderSetting = new Setting(contentEl)
 			.setName(t("Folder"))
@@ -320,16 +342,19 @@ export class NewTaskNoteModal extends Modal {
 		this.errorEl?.setText(message);
 	}
 
-	/** The date picked in the window, as the task's dates */
+	/** The dates picked in the window, as the task's dates */
 	private selectedDates(): TaskNoteDates | undefined {
-		const match = this.dateValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-		if (!match) return undefined;
-		const date = new Date(
-			Number(match[1]),
-			Number(match[2]) - 1,
-			Number(match[3]),
-		);
-		return { [this.dateType]: date };
+		const dates: TaskNoteDates = {};
+		for (const row of this.dateRows) {
+			const match = row.value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+			if (!match) continue;
+			dates[row.type] = new Date(
+				Number(match[1]),
+				Number(match[2]) - 1,
+				Number(match[3]),
+			);
+		}
+		return Object.keys(dates).length > 0 ? dates : undefined;
 	}
 
 	private async submit(): Promise<void> {
