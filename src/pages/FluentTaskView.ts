@@ -1116,7 +1116,7 @@ export class FluentTaskView extends ItemView {
 
 		// Update task count
 		this.layoutManager.updateTaskMark();
-		this.layoutManager.showSelectedProject(this.viewState.selectedProject);
+		this.layoutManager.showProjectFilter(this.viewState.selectedProject);
 
 		// Update sidebar active item
 		this.layoutManager.setSidebarActiveItem(this.currentViewId);

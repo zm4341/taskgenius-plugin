@@ -2343,6 +2343,8 @@ const translations = {
 	"No date, shown on the day it was finished": "沒有日期，顯示在完成那天",
 	"Project: {{name}}": "項目：{{name}}",
 	"Clear project filter": "清除項目篩選",
+	"Filter by project": "按項目篩選",
+	"Search projects...": "搜尋項目…",
 	"Clear date": "清除日期",
 	"Clear priority": "清除優先級",
 	"Clear all tags": "清除所有標籤",

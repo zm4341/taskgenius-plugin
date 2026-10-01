@@ -2564,6 +2564,8 @@ const translations = {
 	"No date, shown on the day it was finished": "No date, shown on the day it was finished",
 	"Project: {{name}}": "Project: {{name}}",
 	"Clear project filter": "Clear project filter",
+	"Filter by project": "Filter by project",
+	"Search projects...": "Search projects...",
 	"Clear date": "Clear date",
 	"Clear priority": "Clear priority",
 	"Clear all tags": "Clear all tags",

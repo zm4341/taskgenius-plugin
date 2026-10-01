@@ -9,6 +9,7 @@ import {
 } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { FluentSidebar } from "../components/FluentSidebar";
+import { ProjectList } from "../components/ProjectList";
 import { TaskDetailsComponent } from "@/components/features/task/view/details";
 import { Task } from "@/types/task";
 import { t } from "@/translations/helper";
@@ -68,8 +69,13 @@ export class FluentLayoutManager extends Component {
 	private onProjectClear?: () => void;
 	private leaf: WorkspaceLeaf;
 
-	// Names the sidebar project next to the title while it narrows the view
+	// Next to the title: the project narrowing the view, or a button to
+	// pick one
 	private projectChipEl: HTMLElement | null = null;
+	// The projects listed under it, and what closes the list
+	private projectPickerEl: HTMLElement | null = null;
+	private projectPickerList: ProjectList | null = null;
+	private projectPickerCleanup: (() => void) | null = null;
 
 	constructor(
 		private app: App,
@@ -291,33 +297,44 @@ export class FluentLayoutManager extends Component {
 	}
 
 	/**
-	 * Names the project picked in the sidebar next to the title while it
-	 * narrows the view, with a button that clears it; nothing when no
-	 * project is picked. The sidebar may be collapsed, so this is the one
-	 * sign of it on screen.
+	 * Next to the title: the project narrowing the view, with a button that
+	 * clears it, or else a button for picking one. Either opens the list of
+	 * projects, so they can be picked with the sidebar collapsed too.
 	 */
-	showSelectedProject(projectId: string | null | undefined): void {
-		if (!projectId) {
-			this.projectChipEl?.remove();
-			this.projectChipEl = null;
-			return;
-		}
-
+	showProjectFilter(projectId: string | null | undefined): void {
+		const id = projectId || "";
 		if (!this.projectChipEl) {
 			this.projectChipEl = createDiv({
 				cls: "fluent-project-filter-chip",
 			});
 			this.titleEl.insertAdjacentElement("afterend", this.projectChipEl);
-		} else if (this.projectChipEl.dataset.projectId === projectId) {
+			this.projectChipEl.addEventListener("click", () =>
+				this.toggleProjectPicker(),
+			);
+		} else if (this.projectChipEl.dataset.projectId === id) {
 			return;
 		}
 		const chip = this.projectChipEl;
 		chip.empty();
-		chip.dataset.projectId = projectId;
-		chip.setAttribute("aria-label", projectId);
+		chip.dataset.projectId = id;
+		chip.toggleClass("is-empty", !id);
 
+		if (!id) {
+			chip.setAttribute("aria-label", t("Filter by project"));
+			chip.createSpan({
+				cls: "fluent-project-filter-chip-label",
+				text: t("Project"),
+			});
+			setIcon(
+				chip.createDiv({ cls: "fluent-project-filter-chip-icon" }),
+				"chevron-down",
+			);
+			return;
+		}
+
+		chip.setAttribute("aria-label", id);
 		const separator = this.plugin.settings.projectPathSeparator || "/";
-		const name = projectId.split(separator).pop() || projectId;
+		const name = id.split(separator).pop() || id;
 		chip.createSpan({
 			cls: "fluent-project-filter-chip-label",
 			text: t("Project: {{name}}", { interpolation: { name } }),
@@ -330,8 +347,105 @@ export class FluentLayoutManager extends Component {
 		setIcon(clearBtn, "x");
 		clearBtn.addEventListener("click", (e) => {
 			e.stopPropagation();
+			this.closeProjectPicker();
 			this.onProjectClear?.();
 		});
+	}
+
+	private toggleProjectPicker(): void {
+		if (this.projectPickerEl) {
+			this.closeProjectPicker();
+		} else if (this.projectChipEl) {
+			this.openProjectPicker(this.projectChipEl);
+		}
+	}
+
+	/**
+	 * Lists the projects under the title, as the sidebar does, with a search
+	 * box; picking one narrows the view to it
+	 */
+	private openProjectPicker(anchorEl: HTMLElement): void {
+		this.closeProjectPicker();
+
+		const doc = anchorEl.ownerDocument;
+		const picker = doc.body.createDiv({ cls: "fluent-project-picker" });
+		this.projectPickerEl = picker;
+
+		const search = picker.createEl("input", {
+			cls: "fluent-project-picker-search",
+			attr: {
+				type: "search",
+				placeholder: t("Search projects..."),
+				spellcheck: "false",
+			},
+		});
+
+		const list = new ProjectList(
+			picker.createDiv(),
+			this.plugin,
+			(projectId) => this.pickProject(projectId),
+			this.app.loadLocalStorage("task-genius-project-view-mode") ===
+				"tree",
+		);
+		list.setActiveProject(anchorEl.dataset.projectId || null);
+		this.projectPickerList = list;
+		this.addChild(list);
+
+		search.addEventListener("input", () => list.setFilter(search.value));
+		search.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") {
+				e.preventDefault();
+				list.selectFirstVisible();
+			} else if (e.key === "Escape") {
+				e.preventDefault();
+				this.closeProjectPicker();
+			}
+		});
+
+		// Under the title, inside the window
+		const win = doc.defaultView ?? window;
+		const anchor = anchorEl.getBoundingClientRect();
+		const width = picker.getBoundingClientRect().width;
+		const left = Math.max(
+			8,
+			Math.min(
+				anchor.left + anchor.width / 2 - width / 2,
+				win.innerWidth - width - 8,
+			),
+		);
+		picker.style.top = `${anchor.bottom + 6}px`;
+		picker.style.left = `${left}px`;
+
+		// Closes on a press elsewhere
+		const onMouseDown = (e: MouseEvent) => {
+			const target = e.target as Node;
+			if (!picker.contains(target) && !anchorEl.contains(target)) {
+				this.closeProjectPicker();
+			}
+		};
+		doc.addEventListener("mousedown", onMouseDown, true);
+		this.projectPickerCleanup = () =>
+			doc.removeEventListener("mousedown", onMouseDown, true);
+
+		search.focus();
+	}
+
+	private pickProject(projectId: string): void {
+		this.closeProjectPicker();
+		// The sidebar's list marks it too
+		this.setActiveProject(projectId);
+		this.onProjectSelect?.(projectId);
+	}
+
+	private closeProjectPicker(): void {
+		this.projectPickerCleanup?.();
+		this.projectPickerCleanup = null;
+		if (this.projectPickerList) {
+			this.removeChild(this.projectPickerList);
+			this.projectPickerList = null;
+		}
+		this.projectPickerEl?.remove();
+		this.projectPickerEl = null;
 	}
 
 	/**
@@ -693,6 +807,7 @@ export class FluentLayoutManager extends Component {
 	 * Clean up mobile event listeners
 	 */
 	onunload(): void {
+		this.closeProjectPicker();
 		if (Platform.isPhone && (this as any).mobileDetailsOverlayHandler) {
 			document.removeEventListener(
 				"click",

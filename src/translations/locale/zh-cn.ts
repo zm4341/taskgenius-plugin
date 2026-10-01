@@ -2389,6 +2389,8 @@ const translations = {
 	"No date, shown on the day it was finished": "没有日期，显示在完成那天",
 	"Project: {{name}}": "项目：{{name}}",
 	"Clear project filter": "清除项目筛选",
+	"Filter by project": "按项目筛选",
+	"Search projects...": "搜索项目…",
 	"Clear date": "清除日期",
 	"Clear priority": "清除优先级",
 	"Clear all tags": "清除所有标签",

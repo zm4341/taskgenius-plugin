@@ -1,11 +1,12 @@
 /**
- * A project picked in the Fluent sidebar narrows the view it was picked in,
- * and says so next to the title. Going to another view in the sidebar shows
- * all of that view's tasks again.
+ * A project picked in the Fluent sidebar, or from the title, narrows the
+ * view it was picked in, and the title says so. Going to another view in
+ * the sidebar shows all of that view's tasks again.
  *
  * Regression: the project kept filtering every view the user went to, with
  * nothing on screen saying so once the sidebar was collapsed, so Kanban and
- * Events showed only that project's tasks, or none at all.
+ * Events showed only that project's tasks, or none at all. And with the
+ * sidebar collapsed there was no good way to pick a project.
  */
 
 import { FluentTaskView } from "@/pages/FluentTaskView";
@@ -132,6 +133,15 @@ proto.setText = function (text: string) {
 proto.empty = function () {
 	this.innerHTML = "";
 };
+proto.addClass = function (...cls: string[]) {
+	this.classList.add(...cls);
+};
+proto.removeClass = function (...cls: string[]) {
+	this.classList.remove(...cls);
+};
+proto.toggleClass = function (cls: string, on: boolean) {
+	this.classList.toggle(cls, on);
+};
 (globalThis as any).createDiv = (o?: any) =>
 	document.createElement("div").createDiv(o);
 
@@ -177,7 +187,7 @@ function openViewWithProject() {
 
 	const layout = {
 		setActiveProject: jest.fn(),
-		showSelectedProject: jest.fn(),
+		showProjectFilter: jest.fn(),
 		updateTaskMark() {},
 		setSidebarActiveItem() {},
 		sidebar: null,
@@ -222,7 +232,7 @@ describe("Going to a view in the sidebar", () => {
 		);
 		// The sidebar no longer marks the project
 		expect(layout.setActiveProject).toHaveBeenCalledWith(null);
-		expect(layout.showSelectedProject).toHaveBeenLastCalledWith(
+		expect(layout.showProjectFilter).toHaveBeenLastCalledWith(
 			undefined,
 		);
 	});
@@ -249,27 +259,46 @@ describe("Switching between list, kanban and calendar in the top bar", () => {
 
 		expect(view.viewState.selectedProject).toBe(PROJECT);
 		expect(view.filteredTasks).toHaveLength(1);
-		expect(layout.showSelectedProject).toHaveBeenLastCalledWith(PROJECT);
+		expect(layout.showProjectFilter).toHaveBeenLastCalledWith(PROJECT);
 	});
 });
 
-describe("The project named next to the title", () => {
+describe("The project next to the title", () => {
 	beforeEach(() => {
 		translationManager.setLocale("zh-cn");
 	});
 
 	afterEach(() => {
 		translationManager.setLocale("en");
+		document.body.innerHTML = "";
 	});
 
 	function openTitleBar() {
 		const headerEl = document.createElement("div");
+		document.body.appendChild(headerEl);
 		const titleContainer = headerEl.createDiv("view-header-title-container");
 		const titleEl = titleContainer.createDiv("view-header-title");
-		const plugin: any = { settings: { projectPathSeparator: "/" } };
+		const app: any = {
+			workspace: { on: () => ({}), trigger: () => {} },
+			loadLocalStorage: () => null,
+			saveLocalStorage: () => {},
+		};
+		const plugin: any = {
+			app,
+			settings: {
+				projectPathSeparator: "/",
+				taskStatuses: { completed: "x", abandoned: "-", archived: "a" },
+			},
+			preloadedTasks: [
+				...tasks,
+				task("plugin chore", PROJECT),
+				task("add quiz", "Development/Vernify/Add"),
+				task("tidy up", "Development/Vernify/Optimize"),
+			].map((t) => ({ ...t, status: " ", completed: false })),
+		};
 		const view: any = { leaf: {} };
 		const layout = new FluentLayoutManager(
-			{} as any,
+			app,
 			plugin,
 			view,
 			document.createElement("div"),
@@ -277,37 +306,70 @@ describe("The project named next to the title", () => {
 			titleEl,
 			() => 0,
 		);
+		layout.load();
 		const onProjectClear = jest.fn();
 		layout.setFilterCallbacks({
 			onFilterReset: () => {},
 			getLiveFilterState: () => null,
 			onProjectClear,
 		});
-		return { layout, titleContainer, onProjectClear };
+		const onProjectSelect = jest.fn();
+		layout.setOnProjectSelect(onProjectSelect);
+
+		const chip = () =>
+			titleContainer.querySelector(
+				".fluent-project-filter-chip",
+			) as HTMLElement;
+		/** Opens the list of projects and waits for it to fill */
+		const openPicker = async () => {
+			chip().click();
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			return document.body.querySelector(
+				".fluent-project-picker",
+			) as HTMLElement;
+		};
+		const listed = (picker: HTMLElement) =>
+			Array.from(
+				picker.querySelectorAll(".fluent-project-item .fluent-project-name"),
+			).map((name) => name.textContent);
+
+		return {
+			layout,
+			titleContainer,
+			chip,
+			openPicker,
+			listed,
+			onProjectClear,
+			onProjectSelect,
+		};
 	}
 
-	it("shows while a project narrows the view, by its last name", () => {
-		const { layout, titleContainer } = openTitleBar();
+	it("names the project narrowing the view, by its last name", () => {
+		const { layout, chip } = openTitleBar();
 
-		layout.showSelectedProject(PROJECT);
+		layout.showProjectFilter(PROJECT);
 
-		const chip = titleContainer.querySelector(".fluent-project-filter-chip");
-		expect(chip?.textContent).toBe("项目：TaskGenius");
-		expect(chip?.getAttribute("aria-label")).toBe(PROJECT);
-		expect(chip?.previousElementSibling?.className).toBe(
+		expect(chip().textContent).toBe("项目：TaskGenius");
+		expect(chip().getAttribute("aria-label")).toBe(PROJECT);
+		expect(chip().previousElementSibling?.className).toBe(
 			"view-header-title",
 		);
+	});
 
-		layout.showSelectedProject(undefined);
+	it("offers to pick a project when none is picked", () => {
+		const { layout, chip } = openTitleBar();
 
-		expect(
-			titleContainer.querySelector(".fluent-project-filter-chip"),
-		).toBeNull();
+		layout.showProjectFilter(PROJECT);
+		layout.showProjectFilter(undefined);
+
+		expect(chip().textContent).toBe("项目");
+		expect(chip().classList).toContain("is-empty");
+		expect(chip().getAttribute("aria-label")).toBe("按项目筛选");
 	});
 
 	it("clears the project from its button", () => {
 		const { layout, titleContainer, onProjectClear } = openTitleBar();
-		layout.showSelectedProject(PROJECT);
+		layout.showProjectFilter(PROJECT);
 
 		const clear = titleContainer.querySelector(
 			".fluent-project-filter-chip-clear",
@@ -316,5 +378,75 @@ describe("The project named next to the title", () => {
 		clear.click();
 
 		expect(onProjectClear).toHaveBeenCalled();
+		expect(document.body.querySelector(".fluent-project-picker")).toBeNull();
+	});
+
+	it("lists the projects to pick from, and narrows the view to one", async () => {
+		const { layout, openPicker, listed, onProjectSelect } = openTitleBar();
+		layout.showProjectFilter(undefined);
+
+		const picker = await openPicker();
+
+		expect(
+			(picker.querySelector("input") as HTMLInputElement).placeholder,
+		).toBe("搜索项目…");
+		// Named as in the sidebar's list, dashes shown as spaces
+		expect(listed(picker)).toEqual([
+			"Development/ob plugins/TaskGenius",
+			"Development/Vernify",
+			"Development/Vernify/Add",
+			"Development/Vernify/Optimize",
+		]);
+
+		(
+			picker.querySelector(
+				'[data-project-id="Development/Vernify/Add"]',
+			) as HTMLElement
+		).click();
+
+		expect(onProjectSelect).toHaveBeenCalledWith("Development/Vernify/Add");
+		expect(document.body.querySelector(".fluent-project-picker")).toBeNull();
+	});
+
+	it("finds projects by name, and picks the first with Enter", async () => {
+		const { layout, openPicker, listed, onProjectSelect } = openTitleBar();
+		layout.showProjectFilter(PROJECT);
+		const picker = await openPicker();
+		const search = picker.querySelector("input") as HTMLInputElement;
+
+		search.value = "vernify/";
+		search.dispatchEvent(new Event("input"));
+		expect(listed(picker)).toEqual([
+			"Development/Vernify/Add",
+			"Development/Vernify/Optimize",
+		]);
+
+		search.value = "nothing like it";
+		search.dispatchEvent(new Event("input"));
+		expect(listed(picker)).toEqual([]);
+		expect(picker.textContent).toContain("未找到项目");
+
+		search.value = "opt";
+		search.dispatchEvent(new Event("input"));
+		search.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+
+		expect(onProjectSelect).toHaveBeenCalledWith(
+			"Development/Vernify/Optimize",
+		);
+	});
+
+	it("closes the list from the title again, or on a press elsewhere", async () => {
+		const { layout, chip, openPicker } = openTitleBar();
+		layout.showProjectFilter(undefined);
+
+		await openPicker();
+		chip().click();
+		expect(document.body.querySelector(".fluent-project-picker")).toBeNull();
+
+		await openPicker();
+		document.body.dispatchEvent(
+			new MouseEvent("mousedown", { bubbles: true }),
+		);
+		expect(document.body.querySelector(".fluent-project-picker")).toBeNull();
 	});
 });

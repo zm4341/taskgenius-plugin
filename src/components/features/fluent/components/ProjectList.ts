@@ -56,6 +56,8 @@ export class ProjectList extends Component {
 	private isTreeView = false;
 	private expandedNodes: Set<string> = new Set();
 	private treeNodes: ProjectTreeNode[] = [];
+	// Text that the shown projects' names contain, lowercased
+	private filterQuery = "";
 
 	constructor(
 		containerEl: HTMLElement,
@@ -239,6 +241,33 @@ export class ProjectList extends Component {
 		this.render();
 	}
 
+	/**
+	 * Shows only the projects whose name contains the text, with the
+	 * levels above them opened; empty text shows all again
+	 */
+	public setFilter(query: string) {
+		this.filterQuery = query.trim().toLowerCase();
+		this.render();
+	}
+
+	/** Picks the first project shown, as Enter does in a search */
+	public selectFirstVisible(): boolean {
+		const first = this.containerEl.querySelector<HTMLElement>(
+			".fluent-project-item:not(.is-virtual)",
+		);
+		first?.click();
+		return !!first;
+	}
+
+	private visibleProjects(): Project[] {
+		if (!this.filterQuery) return this.projects;
+		return this.projects.filter((project) =>
+			[project.name, project.displayName ?? ""].some((name) =>
+				name.toLowerCase().includes(this.filterQuery),
+			),
+		);
+	}
+
 	private sortProjects() {
 		this.projects.sort((a, b) => {
 			switch (this.currentSort) {
@@ -272,7 +301,7 @@ export class ProjectList extends Component {
 		const separator = this.plugin.settings.projectPathSeparator || "/";
 
 		// Process each project and create intermediate nodes as needed
-		this.projects.forEach((project) => {
+		this.visibleProjects().forEach((project) => {
 			const segments = this.parseProjectPath(project.name);
 			if (segments.length === 0) return;
 
@@ -312,7 +341,10 @@ export class ProjectList extends Component {
 						project: nodeProject,
 						children: [],
 						level: i,
-						expanded: this.expandedNodes.has(currentPath),
+						// A search opens every level holding a match
+						expanded:
+							this.filterQuery !== "" ||
+							this.expandedNodes.has(currentPath),
 						path: segments.slice(0, i + 1),
 						fullPath: currentPath,
 						parent: parentNode,
@@ -484,8 +516,15 @@ export class ProjectList extends Component {
 			this.renderTreeNodes(scrollArea, this.treeNodes, 0);
 		} else {
 			// Render flat list view
-			this.projects.forEach((project) => {
+			this.visibleProjects().forEach((project) => {
 				this.renderProjectItem(scrollArea, project, 0, false);
+			});
+		}
+
+		if (this.filterQuery && this.visibleProjects().length === 0) {
+			scrollArea.createDiv({
+				cls: "fluent-project-list-empty",
+				text: t("No projects found"),
 			});
 		}
 

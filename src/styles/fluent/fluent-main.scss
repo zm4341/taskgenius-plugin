@@ -1043,7 +1043,8 @@ button.fluent-new-task-btn:hover {
 	z-index: 1000;
 }
 
-/* The sidebar project narrowing the view, named next to the title */
+/* Next to the title: the project narrowing the view, or a button for
+   picking one; both open the list of projects */
 .fluent-project-filter-chip {
 	display: inline-flex;
 	align-items: center;
@@ -1057,9 +1058,71 @@ button.fluent-new-task-btn:hover {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	white-space: nowrap;
+	cursor: pointer;
+}
+
+.fluent-project-filter-chip:hover {
+	color: var(--text-normal);
+}
+
+.fluent-project-filter-chip.is-empty {
+	padding-inline: var(--size-4-2) var(--size-4-1);
+	background-color: transparent;
+}
+
+.fluent-project-filter-chip.is-empty:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.fluent-project-filter-chip-icon {
+	display: flex;
+	--icon-size: var(--icon-xs);
 }
 
 .fluent-project-filter-chip-clear.clickable-icon {
 	padding: 2px;
 	--icon-size: var(--icon-xs);
+}
+
+/* The projects listed under the title, to pick one */
+.fluent-project-picker {
+	position: fixed;
+	z-index: var(--layer-menu);
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	width: 300px;
+	max-height: min(440px, 70vh);
+	padding: var(--size-4-2);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background-color: var(--background-primary);
+	box-shadow: var(--shadow-s);
+}
+
+.fluent-project-picker-search {
+	width: 100%;
+}
+
+.fluent-project-picker .fluent-project-list {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+}
+
+/* The sidebar's list height, and the handle that sets it, are its own */
+.fluent-project-picker .fluent-project-scroll {
+	max-height: none !important;
+	overflow: visible;
+	padding: 0;
+}
+
+.fluent-project-picker .fluent-project-resize-handle {
+	display: none;
+}
+
+.fluent-project-list-empty {
+	padding: var(--size-4-2);
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
 }
