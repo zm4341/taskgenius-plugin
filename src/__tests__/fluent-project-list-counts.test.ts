@@ -136,3 +136,13 @@ describe("Fluent sidebar project counts", () => {
 		expect(shownCounts(containerEl)["Dev/AKG"]).toBe(3);
 	});
 });
+
+describe("Fluent sidebar project list", () => {
+	// Projects come from task note folders, so the list has no add button
+	it("offers no Add Project button", async () => {
+		const { containerEl } = await createList(false);
+
+		expect(containerEl.querySelector(".fluent-add-project")).toBeNull();
+		expect(containerEl.textContent).not.toContain("Add Project");
+	});
+});

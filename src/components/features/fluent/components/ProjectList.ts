@@ -1,13 +1,9 @@
-import { Component, Platform, setIcon, Menu, Modal, App } from "obsidian";
+import { Component, setIcon, Menu, Modal, App } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { Task } from "@/types/task";
 import { getEffectiveProject } from "@/utils/task/task-operations";
 import { withoutArchivedTasks } from "@/utils/task/archived-status";
-import {
-	ProjectPopover,
-	ProjectModal,
-	EditProjectModal,
-} from "./ProjectPopover";
+import { EditProjectModal } from "./ProjectPopover";
 import type { CustomProject } from "@/common/setting-definition";
 import { t } from "@/translations/helper";
 import { onWorkspaceSwitched } from "@/components/features/fluent/events/ui-event";
@@ -50,7 +46,6 @@ export class ProjectList extends Component {
 	private projects: Project[] = [];
 	private activeProjectId: string | null = null;
 	private onProjectSelect: (projectId: string) => void;
-	private currentPopover: ProjectPopover | null = null;
 	private currentSort: SortOption = "name-asc";
 	private readonly STORAGE_KEY = "task-genius-project-sort";
 	private readonly EXPANDED_KEY = "task-genius-project-expanded";
@@ -135,12 +130,6 @@ export class ProjectList extends Component {
 		if (this.refreshTimeoutId) {
 			clearTimeout(this.refreshTimeoutId);
 			this.refreshTimeoutId = null;
-		}
-
-		// Clean up any open popover
-		if (this.currentPopover) {
-			this.removeChild(this.currentPopover);
-			this.currentPopover = null;
 		}
 
 		// Clear container
@@ -501,25 +490,6 @@ export class ProjectList extends Component {
 		}
 
 		this.renderResizeHandle(scrollArea);
-
-		// Add new project button
-		const addProjectBtn = this.containerEl.createDiv({
-			cls: "fluent-project-item fluent-add-project",
-		});
-
-		const addIcon = addProjectBtn.createDiv({
-			cls: "fluent-project-add-icon",
-		});
-		addIcon.createDiv({ cls: "fluent-project-color-dashed" });
-
-		addProjectBtn.createSpan({
-			cls: "fluent-project-name",
-			text: t("Add Project"),
-		});
-
-		this.registerDomEvent(addProjectBtn, "click", () => {
-			this.handleAddProject(addProjectBtn);
-		});
 	}
 
 	/**
@@ -778,85 +748,6 @@ export class ProjectList extends Component {
 		} else {
 			this.containerEl.addClass("tg-project-list-disabled");
 		}
-	}
-
-	private handleAddProject(buttonEl: HTMLElement) {
-		// Clean up any existing popover
-		if (this.currentPopover) {
-			this.removeChild(this.currentPopover);
-			this.currentPopover = null;
-		}
-
-		if (Platform.isPhone) {
-			// Mobile: Use Obsidian Modal
-			const modal = new ProjectModal(
-				this.plugin.app,
-				this.plugin,
-				async (project) => {
-					await this.saveProject(project);
-				},
-			);
-			modal.open();
-		} else {
-			// Desktop: Use popover
-			this.currentPopover = new ProjectPopover(
-				this.plugin,
-				buttonEl,
-				async (project) => {
-					await this.saveProject(project);
-					if (this.currentPopover) {
-						this.removeChild(this.currentPopover);
-						this.currentPopover = null;
-					}
-				},
-				() => {
-					if (this.currentPopover) {
-						this.removeChild(this.currentPopover);
-						this.currentPopover = null;
-					}
-				},
-			);
-			this.addChild(this.currentPopover);
-		}
-	}
-
-	private async saveProject(project: CustomProject) {
-		// Initialize customProjects if it doesn't exist
-		if (!this.plugin.settings.projectConfig) {
-			this.plugin.settings.projectConfig = {
-				enableEnhancedProject: false,
-				pathMappings: [],
-				metadataConfig: {
-					metadataKey: "project",
-					enabled: false,
-				},
-				configFile: {
-					fileName: "project.md",
-					searchRecursively: true,
-					enabled: false,
-				},
-				metadataMappings: [],
-				defaultProjectNaming: {
-					strategy: "filename",
-					stripExtension: true,
-					enabled: false,
-				},
-				customProjects: [],
-			};
-		}
-
-		if (!this.plugin.settings.projectConfig.customProjects) {
-			this.plugin.settings.projectConfig.customProjects = [];
-		}
-
-		// Add the new project
-		this.plugin.settings.projectConfig.customProjects.push(project);
-
-		// Save settings
-		await this.plugin.saveSettings();
-
-		// Refresh the project list
-		this.loadProjects();
 	}
 
 	private loadCustomProjects() {

@@ -294,10 +294,6 @@ button.fluent-new-task-btn:hover {
 	transition: background-color 0.15s;
 }
 
-.fluent-project-item.fluent-add-project {
-	margin: 0 8px;
-}
-
 .fluent-project-item:hover {
 	background-color: var(--background-modifier-hover);
 }
@@ -313,13 +309,6 @@ button.fluent-new-task-btn:hover {
 	flex-shrink: 0;
 }
 
-.fluent-project-color-dashed {
-	width: 12px;
-	height: 12px;
-	border: 1.5px dashed var(--text-muted);
-	border-radius: 3px;
-}
-
 .fluent-project-name {
 	flex: 1;
 	font-size: 14px;
@@ -327,10 +316,6 @@ button.fluent-new-task-btn:hover {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-}
-
-.fluent-add-project .fluent-project-name {
-	color: var(--text-muted);
 }
 
 .fluent-project-count {
@@ -909,8 +894,7 @@ button.fluent-new-task-btn:hover {
 
 /* Touch-friendly sizing */
 .is-mobile .fluent-navigation-item,
-.is-mobile .fluent-project-item,
-.is-mobile .fluent-add-project {
+.is-mobile .fluent-project-item {
 	min-height: 44px;
 }
 
