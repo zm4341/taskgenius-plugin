@@ -254,31 +254,6 @@ body.enable-transparent-theme {
 		background: color-mix(in srgb, var(--background-modifier-hover) 40%, transparent) !important;
 	}
 	
-	/* 快速输入区域 - 半透明毛玻璃 */
-	div[data-type^="tg-timeline-sidebar-view"] .timeline-quick-input {
-		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
-		backdrop-filter: blur(calc(var(--tg-blur-px, 10px) * 1.2)) !important;
-		-webkit-backdrop-filter: blur(calc(var(--tg-blur-px, 10px) * 1.2)) !important;
-	}
-	
-	/* 折叠状态的头部 */
-	div[data-type^="tg-timeline-sidebar-view"] .quick-input-header-collapsed {
-		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
-		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
-		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
-	}
-	
-	div[data-type^="tg-timeline-sidebar-view"] .quick-input-header-collapsed:hover {
-		background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent) !important;
-	}
-	
-	/* 输入编辑器 */
-	div[data-type^="tg-timeline-sidebar-view"] .quick-input-editor {
-		background: color-mix(in srgb, var(--background-primary) var(--tg-card-opacity-pct, 55%), transparent) !important;
-		backdrop-filter: blur(var(--tg-blur-px, 10px));
-		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px));
-	}
-	
 	/* 滚动条 */
 	div[data-type^="tg-timeline-sidebar-view"] .timeline-content::-webkit-scrollbar-track {
 		background: transparent !important;

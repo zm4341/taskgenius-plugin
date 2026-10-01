@@ -30,12 +30,6 @@ const LAST_FOLDER_KEY = "task-genius-new-task-folder";
 
 type DateType = keyof TaskNoteDates;
 
-/** A date input's value, YYYY-MM-DD */
-function toDateValue(date: Date): string {
-	const two = (n: number) => ("0" + n).slice(-2);
-	return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`;
-}
-
 /** Suggests folders under the task notes root by their path relative to it */
 class TaskNoteFolderSuggest extends AbstractInputSuggest<string> {
 	constructor(
@@ -67,14 +61,6 @@ class TaskNoteFolderSuggest extends AbstractInputSuggest<string> {
 export interface NewTaskNoteOptions {
 	/** Project selected in the sidebar; its folder is used by default */
 	project?: string | null;
-	/** Task already typed elsewhere, such as the timeline's quick capture */
-	draft?: {
-		title?: string;
-		description?: string;
-		dates?: TaskNoteDates;
-	};
-	/** Called once the task is created */
-	onCreated?: () => void;
 }
 
 /**
@@ -94,7 +80,6 @@ export class NewTaskNoteModal extends Modal {
 	private existingNote: TFile | null = null;
 	private moveNote = true;
 	private submitting = false;
-	private readonly onCreated?: () => void;
 
 	private titleInput: TextComponent | null = null;
 	private dateInput: TextComponent | null = null;
@@ -114,20 +99,6 @@ export class NewTaskNoteModal extends Modal {
 		this.settings = getTaskNoteSettings(plugin.settings);
 		this.folders = listTaskNoteFolders(app, this.settings);
 		this.folder = this.defaultFolder(options.project);
-		this.onCreated = options.onCreated;
-
-		const { draft } = options;
-		this.title = draft?.title ?? "";
-		this.description = draft?.description ?? "";
-		// The window holds one date; the timeline shows due first, then scheduled
-		const dates = draft?.dates ?? {};
-		const dateType = (["due", "scheduled", "start"] as DateType[]).find(
-			(type) => dates[type],
-		);
-		if (dateType) {
-			this.dateType = dateType;
-			this.dateValue = toDateValue(dates[dateType]!);
-		}
 	}
 
 	onOpen(): void {
@@ -395,7 +366,6 @@ export class NewTaskNoteModal extends Modal {
 			new Notice(
 				t("Task created: {{task}}", { interpolation: { task: title } }),
 			);
-			this.onCreated?.();
 			this.close();
 		} catch (error) {
 			this.showError(

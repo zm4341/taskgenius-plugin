@@ -709,12 +709,6 @@ export interface TimelineSidebarSettings {
 	showCompletedTasks: boolean;
 	focusModeByDefault: boolean;
 	maxEventsToShow: number;
-	// Quick input collapse settings
-	quickInputCollapsed: boolean;
-	quickInputDefaultHeight: number;
-	quickInputAnimationDuration: number;
-	quickInputCollapseOnCapture: boolean;
-	quickInputShowQuickActions: boolean;
 }
 
 /** Task Timer Metadata Detection Settings */
@@ -1710,12 +1704,6 @@ export const DEFAULT_SETTINGS: TaskProgressBarSettings = {
 		showCompletedTasks: true,
 		focusModeByDefault: false,
 		maxEventsToShow: 100,
-		// Quick input collapse defaults
-		quickInputCollapsed: false,
-		quickInputDefaultHeight: 150,
-		quickInputAnimationDuration: 300,
-		quickInputCollapseOnCapture: false,
-		quickInputShowQuickActions: true,
 	},
 
 	// File Filter Defaults

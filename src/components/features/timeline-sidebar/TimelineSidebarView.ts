@@ -6,7 +6,6 @@ import {
 	Component,
 	debounce,
 	ButtonComponent,
-	Notice,
 	Platform,
 	TFile,
 } from "obsidian";
@@ -14,20 +13,6 @@ import { Task } from "@/types/task";
 import { TimeComponent } from "@/types/time-parsing";
 import { t } from "@/translations/helper";
 import TaskProgressBarPlugin from "@/index";
-import { NewTaskNoteModal } from "@/components/features/quick-capture/modals/NewTaskNoteModal";
-import {
-	createEmbeddableMarkdownEditor,
-	EmbeddableMarkdownEditor,
-} from "../../../editor-extensions/core/markdown-editor";
-import {
-	DEFAULT_TIME_PARSING_CONFIG,
-	TimeParsingService,
-} from "@/services/time-parsing-service";
-import { createTaskNote, getTaskNoteSettings } from "@/utils/file/task-note";
-import {
-	readCapturedDraft,
-	readCapturedTasks,
-} from "@/utils/file/task-capture";
 import "@/styles/timeline-sidebar.scss";
 import { createTaskCheckbox } from "@/components/features/task/view/details";
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
@@ -77,8 +62,6 @@ export class TimelineSidebarView extends ItemView {
 	private plugin: TaskProgressBarPlugin;
 	public containerEl: HTMLElement;
 	private timelineContainerEl: HTMLElement;
-	private quickInputContainerEl: HTMLElement;
-	private markdownEditor: EmbeddableMarkdownEditor | null = null;
 	private currentDate: moment.Moment = moment();
 	private events: EnhancedTimelineEvent[] = [];
 	private isAutoScrolling: boolean = false;
@@ -89,17 +72,6 @@ export class TimelineSidebarView extends ItemView {
 	private isFocusMode = false;
 	// "Focus mode by default" as last applied, to follow changes in settings
 	private appliedFocusDefault: boolean | null = null;
-
-	// Quick capture
-	private targetInfoEl: HTMLElement | null = null;
-	private isCapturing = false;
-
-	// Collapse state management
-	private isInputCollapsed: boolean = false;
-	private tempEditorContent: string = "";
-	private isAnimating: boolean = false;
-	private collapsedHeaderEl: HTMLElement | null = null;
-	private quickInputHeaderEl: HTMLElement | null = null;
 
 	// Debounced methods
 	private debouncedRender = debounce(async () => {
@@ -130,12 +102,8 @@ export class TimelineSidebarView extends ItemView {
 		this.containerEl.empty();
 		this.containerEl.addClass("timeline-sidebar-container");
 
-		// Restore collapsed state from settings
-		this.isInputCollapsed = this.plugin.settings.timelineSidebar.quickInputCollapsed;
-
 		this.createHeader();
 		this.createTimelineArea();
-		this.createQuickInputArea();
 		this.applyFocusDefault();
 
 		// Load initial data
@@ -173,10 +141,6 @@ export class TimelineSidebarView extends ItemView {
 	}
 
 	onClose(): Promise<void> {
-		if (this.markdownEditor) {
-			this.markdownEditor.destroy();
-			this.markdownEditor = null;
-		}
 		return Promise.resolve();
 	}
 
@@ -231,104 +195,6 @@ export class TimelineSidebarView extends ItemView {
 		this.registerDomEvent(this.timelineContainerEl, "scroll", () => {
 			this.debouncedScroll();
 		});
-	}
-
-	private createQuickInputArea(): void {
-		this.quickInputContainerEl = this.containerEl.createDiv(
-			"timeline-quick-input"
-		);
-
-		// Create collapsed header (always exists but hidden when expanded)
-		this.collapsedHeaderEl = this.quickInputContainerEl.createDiv(
-			"quick-input-header-collapsed"
-		);
-		this.createCollapsedHeader();
-
-		// Input header with target info
-		this.quickInputHeaderEl =
-			this.quickInputContainerEl.createDiv("quick-input-header");
-
-		// Add collapse button to header
-		const headerLeft = this.quickInputHeaderEl.createDiv("quick-input-header-left");
-
-		const collapseBtn = headerLeft.createDiv("quick-input-collapse-btn");
-		setIcon(collapseBtn, "chevron-down");
-		collapseBtn.setAttribute("aria-label", t("Collapse quick input"));
-		this.registerDomEvent(collapseBtn, "click", () => {
-			this.toggleInputCollapse();
-		});
-
-		const headerTitle = headerLeft.createDiv("quick-input-title");
-		headerTitle.setText(t("Quick Capture"));
-
-		this.targetInfoEl = this.quickInputHeaderEl.createDiv("quick-input-target-info");
-		this.updateTargetInfo(this.targetInfoEl);
-
-		// Editor container
-		const editorContainer =
-			this.quickInputContainerEl.createDiv("quick-input-editor");
-
-		// Initialize markdown editor
-		setTimeout(() => {
-			this.markdownEditor = createEmbeddableMarkdownEditor(
-				this.app,
-				editorContainer,
-				{
-					placeholder: t("What do you want to do today?"),
-					onEnter: (editor, mod, shift) => {
-						if (mod) {
-							// Submit on Cmd/Ctrl+Enter
-							this.handleQuickCapture();
-							return true;
-						}
-						return false;
-					},
-					onEscape: () => {
-						// Clear input on Escape
-						if (this.markdownEditor) {
-							this.markdownEditor.set("", false);
-						}
-					},
-					onChange: () => {
-						// Auto-resize or other behaviors
-					},
-				}
-			);
-
-			// Focus the editor if not collapsed
-			if (!this.isInputCollapsed) {
-				this.markdownEditor?.editor?.focus();
-			}
-		}, 50);
-
-		// Action buttons
-		const actionsEl = this.quickInputContainerEl.createDiv(
-			"quick-input-actions"
-		);
-
-		const captureBtn = actionsEl.createEl("button", {
-			cls: "quick-capture-btn mod-cta",
-			text: t("Capture"),
-		});
-		this.registerDomEvent(captureBtn, "click", () => {
-			this.handleQuickCapture();
-		});
-
-		const fullModalBtn = actionsEl.createEl("button", {
-			cls: "quick-modal-btn",
-			text: t("More options"),
-		});
-		this.registerDomEvent(fullModalBtn, "click", () => {
-			this.openNewTaskWindow();
-		});
-
-		// Apply initial collapsed state
-		if (this.isInputCollapsed) {
-			this.quickInputContainerEl.addClass("is-collapsed");
-			this.collapsedHeaderEl?.show();
-		} else {
-			this.collapsedHeaderEl?.hide();
-		}
 	}
 
 	private async loadEvents(): Promise<void> {
@@ -1220,91 +1086,6 @@ export class TimelineSidebarView extends ItemView {
 		this.app.workspace.setActiveLeaf(leafToUse, {focus: true});
 	}
 
-	/**
-	 * Creates a task note in the Inbox for each line typed. Lines whose task
-	 * can't be created stay in the input.
-	 */
-	private async handleQuickCapture(): Promise<void> {
-		const editor = this.markdownEditor;
-		if (!editor || this.isCapturing) return;
-
-		const tasks = readCapturedTasks(editor.value, this.createTimeParser());
-		if (tasks.length === 0) return;
-
-		this.isCapturing = true;
-		const settings = getTaskNoteSettings(this.plugin.settings);
-		const created: string[] = [];
-		const failedLines: string[] = [];
-		try {
-			for (const task of tasks) {
-				try {
-					// The root folder is the Inbox: no project
-					await createTaskNote(this.app, settings, {
-						title: task.title,
-						folder: "",
-						dates: task.dates,
-					});
-					created.push(task.title);
-				} catch (error) {
-					failedLines.push(task.line);
-					new Notice(
-						error instanceof Error ? error.message : String(error)
-					);
-				}
-			}
-		} finally {
-			this.isCapturing = false;
-		}
-
-		if (created.length === 1) {
-			new Notice(
-				t("Task created: {{task}}", {
-					interpolation: { task: created[0] },
-				})
-			);
-		} else if (created.length > 1) {
-			new Notice(
-				t("{{count}} tasks created", {
-					interpolation: { count: created.length },
-				})
-			);
-		}
-		editor.set(failedLines.join("\n"), false);
-
-		// Refresh timeline
-		await this.loadEvents();
-		this.renderTimeline();
-
-		// Check if we should collapse after capture
-		if (
-			failedLines.length === 0 &&
-			this.plugin.settings.timelineSidebar.quickInputCollapseOnCapture
-		) {
-			this.toggleInputCollapse();
-		} else {
-			// Focus back to input
-			editor.editor?.focus();
-		}
-	}
-
-	/** The New Task window, filled in with what was typed here */
-	private openNewTaskWindow(): void {
-		const draft = readCapturedDraft(
-			this.markdownEditor?.value ?? "",
-			this.createTimeParser()
-		);
-		new NewTaskNoteModal(this.app, this.plugin, {
-			draft,
-			onCreated: () => this.markdownEditor?.set("", false),
-		}).open();
-	}
-
-	private createTimeParser(): TimeParsingService {
-		return new TimeParsingService(
-			this.plugin.settings.timeParsing || DEFAULT_TIME_PARSING_CONFIG
-		);
-	}
-
 	/** Scrolls to today; `flash` pulses it, since it may already be in view */
 	private scrollToToday(flash = false): void {
 		const todayEl = this.timelineContainerEl.querySelector<HTMLElement>(
@@ -1461,19 +1242,9 @@ export class TimelineSidebarView extends ItemView {
 		}
 	}
 
-	private updateTargetInfo(targetInfoEl: HTMLElement): void {
-		// Captured tasks become notes in the task notes folder itself: the Inbox
-		const folder = getTaskNoteSettings(this.plugin.settings).folder || "/";
-		targetInfoEl.setText(`${t("to")} ${t("Inbox")}`);
-		targetInfoEl.setAttribute("title", `${t("to")} ${folder}`);
-	}
-
 	// Method to trigger view update (called when settings change)
 	public async triggerViewUpdate(): Promise<void> {
 		this.applyFocusDefault();
-		if (this.targetInfoEl) {
-			this.updateTargetInfo(this.targetInfoEl);
-		}
 		await this.loadEvents();
 		this.renderTimeline();
 	}
@@ -1482,126 +1253,5 @@ export class TimelineSidebarView extends ItemView {
 	public async refreshTimeline(): Promise<void> {
 		await this.loadEvents();
 		this.renderTimeline();
-	}
-
-	// Create collapsed header content
-	private createCollapsedHeader(): void {
-		if (!this.collapsedHeaderEl) return;
-
-		// Expand button
-		const expandBtn = this.collapsedHeaderEl.createDiv("collapsed-expand-btn");
-		setIcon(expandBtn, "chevron-right");
-		expandBtn.setAttribute("aria-label", t("Expand quick input"));
-		this.registerDomEvent(expandBtn, "click", () => {
-			this.toggleInputCollapse();
-		});
-
-		// Title
-		const titleEl = this.collapsedHeaderEl.createDiv("collapsed-title");
-		titleEl.setText(t("Quick Capture"));
-
-		// Quick actions
-		if (this.plugin.settings.timelineSidebar.quickInputShowQuickActions) {
-			const quickActionsEl = this.collapsedHeaderEl.createDiv("collapsed-quick-actions");
-
-			// Quick capture button
-			const quickCaptureBtn = quickActionsEl.createDiv("collapsed-quick-capture");
-			setIcon(quickCaptureBtn, "plus");
-			quickCaptureBtn.setAttribute("aria-label", t("Quick capture"));
-			this.registerDomEvent(quickCaptureBtn, "click", () => {
-				// Expand and focus editor
-				if (this.isInputCollapsed) {
-					this.toggleInputCollapse();
-					setTimeout(() => {
-						this.markdownEditor?.editor?.focus();
-					}, 350); // Wait for animation
-				}
-			});
-
-			// More options button
-			const moreOptionsBtn = quickActionsEl.createDiv("collapsed-more-options");
-			setIcon(moreOptionsBtn, "more-horizontal");
-			moreOptionsBtn.setAttribute("aria-label", t("More options"));
-			this.registerDomEvent(moreOptionsBtn, "click", () => {
-				this.openNewTaskWindow();
-			});
-		}
-	}
-
-	// Toggle collapse state
-	private toggleInputCollapse(): void {
-		if (this.isAnimating) return;
-
-		this.isAnimating = true;
-		this.isInputCollapsed = !this.isInputCollapsed;
-
-		// Save state to settings
-		this.plugin.settings.timelineSidebar.quickInputCollapsed = this.isInputCollapsed;
-		this.plugin.saveSettings();
-
-		if (this.isInputCollapsed) {
-			this.handleCollapseEditor();
-		} else {
-			this.handleExpandEditor();
-		}
-
-		// Reset animation flag after animation completes
-		setTimeout(() => {
-			this.isAnimating = false;
-		}, this.plugin.settings.timelineSidebar.quickInputAnimationDuration);
-	}
-
-	// Handle collapsing the editor
-	private handleCollapseEditor(): void {
-		// Save current editor content
-		if (this.markdownEditor) {
-			this.tempEditorContent = this.markdownEditor.value;
-		}
-
-		// Add collapsed class for animation
-		this.quickInputContainerEl.addClass("is-collapsing");
-		this.quickInputContainerEl.addClass("is-collapsed");
-
-		// Show collapsed header after a slight delay
-		setTimeout(() => {
-			this.collapsedHeaderEl?.show();
-			this.quickInputContainerEl.removeClass("is-collapsing");
-		}, 50);
-
-		// Update collapse button icon
-		const collapseBtn = this.quickInputHeaderEl?.querySelector(".quick-input-collapse-btn");
-		if (collapseBtn) {
-			setIcon(collapseBtn as HTMLElement, "chevron-right");
-			collapseBtn.setAttribute("aria-label", t("Expand quick input"));
-		}
-	}
-
-	// Handle expanding the editor
-	private handleExpandEditor(): void {
-		// Hide collapsed header immediately
-		this.collapsedHeaderEl?.hide();
-
-		// Remove collapsed class for animation
-		this.quickInputContainerEl.addClass("is-expanding");
-		this.quickInputContainerEl.removeClass("is-collapsed");
-
-		// Restore editor content
-		if (this.markdownEditor && this.tempEditorContent) {
-			this.markdownEditor.set(this.tempEditorContent, false);
-			this.tempEditorContent = "";
-		}
-
-		// Focus editor after animation
-		setTimeout(() => {
-			this.quickInputContainerEl.removeClass("is-expanding");
-			this.markdownEditor?.editor?.focus();
-		}, 50);
-
-		// Update collapse button icon
-		const collapseBtn = this.quickInputHeaderEl?.querySelector(".quick-input-collapse-btn");
-		if (collapseBtn) {
-			setIcon(collapseBtn as HTMLElement, "chevron-down");
-			collapseBtn.setAttribute("aria-label", t("Collapse quick input"));
-		}
 	}
 }
