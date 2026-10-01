@@ -237,9 +237,10 @@ export class TopNavigation extends Component {
 		});
 		this.cycleSelectorContainer.hide();
 
-		// Notification button
+		// Notification button: lists overdue tasks
 		const notificationBtn = rightSection.createDiv({
 			cls: "fluent-nav-icon-button",
+			attr: { "aria-label": t("Overdue tasks") },
 		});
 		setIcon(notificationBtn, "bell");
 		const badge = notificationBtn.createDiv({
@@ -260,6 +261,7 @@ export class TopNavigation extends Component {
 		// Settings button
 		const settingsBtn = rightSection.createDiv({
 			cls: "fluent-nav-icon-button",
+			attr: { "aria-label": t("Settings") },
 		});
 		setIcon(settingsBtn, "settings");
 		this.registerDomEvent(settingsBtn, "click", () => {
@@ -329,12 +331,14 @@ export class TopNavigation extends Component {
 
 		if (overdueTasks.length === 0) {
 			menu.addItem((item) => {
-				item.setTitle("No overdue tasks").setDisabled(true);
+				item.setTitle(t("No overdue tasks")).setDisabled(true);
 			});
 		} else {
 			menu.addItem((item) => {
 				item.setTitle(
-					`${overdueTasks.length} overdue tasks`,
+					t("{{count}} overdue tasks", {
+						interpolation: { count: overdueTasks.length },
+					}),
 				).setDisabled(true);
 			});
 
@@ -401,10 +405,10 @@ export class TopNavigation extends Component {
 		this.viewTabsContainer.empty();
 
 		const modeConfig: Record<ViewMode, { icon: string; label: string }> = {
-			list: { icon: "list", label: "List" },
-			kanban: { icon: "layout-grid", label: "Kanban" },
-			tree: { icon: "git-branch", label: "Tree" },
-			calendar: { icon: "calendar", label: "Calendar" },
+			list: { icon: "list", label: t("List") },
+			kanban: { icon: "layout-grid", label: t("Kanban") },
+			tree: { icon: "git-branch", label: t("Tree") },
+			calendar: { icon: "calendar", label: t("Calendar") },
 		};
 
 		for (const mode of this.availableModes) {

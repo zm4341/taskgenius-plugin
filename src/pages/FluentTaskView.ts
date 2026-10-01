@@ -31,6 +31,7 @@ import { FluentWorkspaceStateManager } from "@/components/features/fluent/manage
 import { FluentActionHandlers } from "@/components/features/fluent/managers/FluentActionHandlers";
 import { TaskSelectionManager } from "@/components/features/task/selection/TaskSelectionManager";
 import { getViewSettingOrDefault } from "@/common/setting-definition";
+import { withoutArchivedTasks } from "@/utils/task/archived-status";
 
 export const FLUENT_TASK_VIEW = "fluent-task-genius-view";
 
@@ -819,7 +820,13 @@ export class FluentTaskView extends ItemView {
 			this.rootContainerEl,
 			this.headerEl, // Obsidian's view header
 			this.titleEl, // Obsidian's view title element
-			() => this.filteredTasks.length
+			// The table gets archived tasks but keeps them hidden, so they
+			// are not counted, as in the project counts
+			() =>
+				withoutArchivedTasks(
+					this.filteredTasks,
+					this.plugin.settings.taskStatuses
+				).length
 		);
 		this.layoutManager.setOnSidebarNavigate((viewId) => {
 			this.actionHandlers.handleNavigate(
