@@ -269,7 +269,7 @@
 .tg-quadrant-card-title {
 	flex: 1;
 	min-width: 0;
-	font-size: var(--font-ui-small);
+	font-size: var(--tg-view-font-size, 16px);
 	line-height: 1.4;
 	color: var(--text-normal);
 	word-wrap: break-word;

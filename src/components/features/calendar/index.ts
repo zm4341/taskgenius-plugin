@@ -835,7 +835,8 @@ export class CalendarComponent extends Component {
 				cellHeight: 60,
 				fontSize: {
 					header: "var(--font-ui-small)",
-					event: "var(--font-ui-smaller)",
+					// The tasks' size in every view
+					event: "var(--tg-view-font-size, 16px)",
 				},
 			},
 			// Event interactions
@@ -929,7 +930,8 @@ export class CalendarComponent extends Component {
 				cellHeight: 60,
 				fontSize: {
 					header: "var(--font-ui-small)",
-					event: "var(--font-ui-smaller)",
+					// The tasks' size in every view
+					event: "var(--tg-view-font-size, 16px)",
 				},
 			},
 			// Use custom view registry for agenda/year views

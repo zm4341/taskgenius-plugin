@@ -644,6 +644,8 @@ button.fluent-new-task-btn:hover {
 .tg-fluent-content {
 	flex: 1;
 	overflow: auto;
+	/* The tasks' text in every view is the table's size */
+	font-size: var(--tg-view-font-size, 16px);
 }
 
 .bases-view .tg-kanban-filters,

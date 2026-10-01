@@ -79,22 +79,22 @@ settings:
                 label.zh: 非常强烈 (20px)
                 value: tg-blur-very-strong
     -
-        id: table-view-heading
-        title: Table View
-        title.zh: 表格视图
+        id: task-views-heading
+        title: Task Views
+        title.zh: 任务视图
         type: heading
         level: 1
         collapsed: false
     -
-        id: tg-table-font-size
-        title: Table Font Size
-        title.zh: 表格字号
-        description: Size of the text in the table view. Defaults to the size of the sidebar navigation
-        description.zh: 表格文字的大小，默认与侧栏导航一致
+        id: tg-view-font-size
+        title: Task Font Size
+        title.zh: 任务字号
+        description: Size of the tasks' text in the table, list, kanban, matrix and calendar views, and in the timeline
+        description.zh: 表格、列表、看板、矩阵、日历视图和时间轴里任务文字的大小
         type: variable-number-slider
-        default: 15
+        default: 16
         min: 12
-        max: 20
+        max: 22
         step: 1
         format: px
     -

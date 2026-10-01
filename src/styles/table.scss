@@ -21,8 +21,8 @@
 	width: 100%;
 	border-collapse: collapse;
 	table-layout: fixed;
-	/* Same size as the sidebar navigation; adjustable in Style Settings */
-	font-size: var(--tg-table-font-size, var(--font-ui-medium));
+	/* The size of the tasks in every view; adjustable in Style Settings */
+	font-size: var(--tg-view-font-size, 16px);
 	flex: 1;
 	min-height: 0;
 	/* Ensure table takes full width even with many columns */
@@ -696,7 +696,7 @@
 @media (max-width: 768px) {
 	/* A bit smaller on narrow screens, still following the chosen size */
 	.task-table {
-		font-size: calc(var(--tg-table-font-size, var(--font-ui-medium)) * 0.9);
+		font-size: calc(var(--tg-view-font-size, 16px) * 0.9);
 	}
 
 	th[data-column-id="rowNumber"] {
