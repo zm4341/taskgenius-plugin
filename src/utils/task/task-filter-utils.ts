@@ -94,6 +94,10 @@ export function isNotCompleted(
 	const completedStatus = plugin.settings.taskStatuses.completed.split("|");
 
 	if (viewConfig.hideCompletedAndAbandonedTasks) {
+		// Today keeps what was finished today, as a record of the day
+		if (viewId === "today" && isCompletedToday(task)) {
+			return true;
+		}
 		return (
 			!task.completed &&
 			!abandonedStatus.includes(task.status.toLowerCase()) &&
@@ -102,6 +106,72 @@ export function isNotCompleted(
 	}
 
 	return true;
+}
+
+function isCompletedToday(task: Task): boolean {
+	const completedDate = task.metadata?.completedDate;
+	return (
+		task.completed &&
+		!!completedDate &&
+		moment(completedDate).isSame(moment(), "day")
+	);
+}
+
+/** Completed or abandoned, by the task's status */
+function isFinished(plugin: TaskProgressBarPlugin, task: Task): boolean {
+	const { completed = "", abandoned = "" } = plugin.settings.taskStatuses;
+	const finishedMarks = `${completed}|${abandoned}`
+		.split("|")
+		.filter((mark) => mark !== "")
+		.map((mark) => mark.toLowerCase());
+	return task.completed || finishedMarks.includes(task.status.toLowerCase());
+}
+
+/** When the task was created: its own date, else its note's createdAt */
+function getCreatedDate(
+	plugin: TaskProgressBarPlugin,
+	task: Task,
+): moment.Moment | null {
+	if (task.metadata?.createdDate) {
+		return moment(task.metadata.createdDate);
+	}
+	const file = plugin.app?.vault?.getFileByPath?.(task.filePath);
+	const frontmatter = file
+		? plugin.app.metadataCache.getFileCache(file)?.frontmatter
+		: undefined;
+	const value = frontmatter?.createdAt ?? frontmatter?.created;
+	if (value === undefined || value === null || value === "") return null;
+	const created = moment(String(value), moment.ISO_8601);
+	return created.isValid() ? created : null;
+}
+
+/**
+ * Whether a task belongs in the Today view: due, scheduled or starting
+ * today, completed today, overdue, or created today
+ */
+export function isTodayViewTask(
+	plugin: TaskProgressBarPlugin,
+	task: Task,
+): boolean {
+	const today = moment().startOf("day");
+	const isToday = (date?: string | number | Date | moment.Moment | null) =>
+		date ? moment(date).isSame(today, "day") : false;
+	const { dueDate, scheduledDate, startDate } = task.metadata ?? {};
+
+	if (isToday(dueDate) || isToday(scheduledDate) || isToday(startDate)) {
+		return true;
+	}
+	if (isCompletedToday(task)) {
+		return true;
+	}
+	if (
+		dueDate &&
+		moment(dueDate).isBefore(today, "day") &&
+		!isFinished(plugin, task)
+	) {
+		return true;
+	}
+	return isToday(getCreatedDate(plugin, task));
 }
 
 /**
@@ -753,14 +823,8 @@ export function filterTasks(
 				break;
 			}
 			case "today": {
-				const today = moment().startOf("day");
-				const isToday = (d?: string | number | Date) =>
-					d ? moment(d).isSame(today, "day") : false;
-				filtered = filtered.filter(
-					(task) =>
-						isToday(task.metadata?.dueDate) ||
-						isToday(task.metadata?.scheduledDate) ||
-						isToday(task.metadata?.startDate),
+				filtered = filtered.filter((task) =>
+					isTodayViewTask(plugin, task),
 				);
 				break;
 			}

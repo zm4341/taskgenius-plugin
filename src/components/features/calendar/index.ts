@@ -111,6 +111,9 @@ export class CalendarComponent extends Component {
 	// Config override from Bases
 	private configOverride: Partial<CalendarSpecificConfig> | null = null;
 
+	// Day that tasks without due, scheduled or start dates are shown on
+	private undatedTaskDay: Date | null = null;
+
 	constructor(
 		app: App,
 		plugin: TaskProgressBarPlugin,
@@ -318,6 +321,15 @@ export class CalendarComponent extends Component {
 
 	public setTasks(tasks: Task[]) {
 		this.updateTasks(tasks);
+	}
+
+	/**
+	 * Shows tasks without due, scheduled or start dates on the given day, as
+	 * the Today view does with tasks completed or created today; null leaves
+	 * them off the calendar. Only for display: the tasks get no dates.
+	 */
+	public setUndatedTaskDay(day: Date | null) {
+		this.undatedTaskDay = day;
 	}
 
 	public setConfigOverride(override: Partial<CalendarSpecificConfig> | null) {
@@ -1721,7 +1733,9 @@ export class CalendarComponent extends Component {
 					task.metadata.dueDate ||
 					task.metadata.scheduledDate ||
 					task.metadata.startDate ||
-					null;
+					(this.undatedTaskDay
+						? startOfDay(this.undatedTaskDay).getTime()
+						: null);
 			}
 
 			if (eventDate) {
@@ -1772,6 +1786,9 @@ export class CalendarComponent extends Component {
 	}
 
 	private convertTasksToTGEvents(): AdapterCalendarEvent[] {
+		if (this.undatedTaskDay) {
+			return tasksToCalendarEvents(this.tasks, this.undatedTaskDay);
+		}
 		const tasksWithDates = this.tasks.filter((task) =>
 			hasDateInformation(task),
 		);
@@ -1800,7 +1817,12 @@ export class CalendarComponent extends Component {
 				);
 				if (startDate.getTime() === targetTime) return true;
 			}
-			return false;
+			return (
+				!!this.undatedTaskDay &&
+				!hasDateInformation(task) &&
+				this.normalizeDateToDay(this.undatedTaskDay).getTime() ===
+					targetTime
+			);
 		});
 	}
 

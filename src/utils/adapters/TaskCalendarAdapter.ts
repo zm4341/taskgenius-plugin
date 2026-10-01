@@ -40,13 +40,21 @@ interface TaskDateRange {
  * Convert a Task to a CalendarEvent
  *
  * @param task - The task to convert
+ * @param undatedDay - Day to show the task on when it has no date
  * @returns CalendarEvent object or null if task has no date
  */
-export function taskToCalendarEvent(task: Task): CalendarEvent | null {
+export function taskToCalendarEvent(
+	task: Task,
+	undatedDay?: Date,
+): CalendarEvent | null {
 	const dateRange = calculateTaskDateRange(task);
 
 	if (!dateRange.start) {
-		return null; // No date information, skip this task
+		// No date information: skip the task, unless the view gives it a day
+		if (!undatedDay) return null;
+		const day = new Date(undatedDay);
+		day.setHours(0, 0, 0, 0);
+		dateRange.start = day.getTime();
 	}
 
 	const isStartDateOnly = isDateOnly(dateRange.start);
@@ -76,14 +84,18 @@ export function taskToCalendarEvent(task: Task): CalendarEvent | null {
 
 /**
  * Convert multiple tasks to calendar events
- * Filters out tasks without dates
+ * Filters out tasks without dates, unless they are given a day
  *
  * @param tasks - Array of tasks
+ * @param undatedDay - Day to show tasks without dates on
  * @returns Array of CalendarEvent objects
  */
-export function tasksToCalendarEvents(tasks: Task[]): CalendarEvent[] {
+export function tasksToCalendarEvents(
+	tasks: Task[],
+	undatedDay?: Date,
+): CalendarEvent[] {
 	return tasks
-		.map((task) => taskToCalendarEvent(task))
+		.map((task) => taskToCalendarEvent(task, undatedDay))
 		.filter((event): event is CalendarEvent => event !== null);
 }
 

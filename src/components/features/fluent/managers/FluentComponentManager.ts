@@ -659,6 +659,13 @@ export class FluentComponentManager extends Component {
 				targetComponent.setViewMode(modeForComponent as any, project);
 			}
 
+			// The calendar is shared with Today's calendar mode
+			if (targetComponent === this.calendarComponent) {
+				this.calendarComponent.setUndatedTaskDay(
+					this.undatedTaskDayFor(viewId)
+				);
+			}
+
 			// Set tasks on the component
 			if (typeof targetComponent.setTasks === "function") {
 				// Special handling for components that need filtered + all tasks
@@ -846,11 +853,22 @@ export class FluentComponentManager extends Component {
 					filteredTasks.length,
 					"tasks to calendar"
 				);
+				this.calendarComponent.setUndatedTaskDay(
+					this.undatedTaskDayFor(viewId)
+				);
 				this.calendarComponent.setTasks(filteredTasks);
 				this.currentVisibleComponent = this.calendarComponent;
 				console.log("[FluentComponent] Calendar mode setup complete");
 				break;
 		}
+	}
+
+	/**
+	 * Today also lists tasks completed or created today, which may have no
+	 * date; its calendar shows such tasks on today
+	 */
+	private undatedTaskDayFor(viewId: string): Date | null {
+		return viewId === "today" ? new Date() : null;
 	}
 
 	/**
@@ -869,6 +887,9 @@ export class FluentComponentManager extends Component {
 					this.kanbanComponent?.setTasks?.(filteredTasks);
 					break;
 				case "calendar":
+					this.calendarComponent?.setUndatedTaskDay?.(
+						this.undatedTaskDayFor(viewId)
+					);
 					this.calendarComponent?.setTasks?.(filteredTasks);
 					break;
 				case "tree":
@@ -910,6 +931,11 @@ export class FluentComponentManager extends Component {
 		};
 
 		const target: any = (mapping as any)[viewId];
+		if (target === this.calendarComponent) {
+			this.calendarComponent.setUndatedTaskDay(
+				this.undatedTaskDayFor(viewId)
+			);
+		}
 		if (target?.setTasks) {
 			if (viewId === "projects" || this.isContentBasedView(viewId)) {
 				target.setTasks(filteredTasks, tasks, true);
