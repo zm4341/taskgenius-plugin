@@ -579,52 +579,9 @@ export class FluentTaskView extends ItemView {
 				this.currentViewId = viewId;
 				console.log(`[Task Genius] currentViewId updated to: ${this.currentViewId}`);
 
-				// When navigating to projects view directly, clear project selection
-				// This enables the full project overview mode
-				if (viewId === "projects") {
-					console.log(
-						"[Task Genius] Navigating to projects overview - clearing project selection"
-					);
-					this.viewState.selectedProject = undefined;
-
-					// Clear project filter from filter state
-					try {
-						if (this.liveFilterState) {
-							const nextState = { ...this.liveFilterState };
-							nextState.filterGroups = (
-								nextState.filterGroups || []
-							)
-								.map((g: any) => ({
-									...g,
-									filters: (g.filters || []).filter(
-										(f: any) => f.property !== "project"
-									),
-								}))
-								.filter(
-									(g: any) =>
-										g.filters && g.filters.length > 0
-								);
-
-							this.liveFilterState = nextState as any;
-							this.currentFilterState = nextState as any;
-							this.app.saveLocalStorage(
-								"task-genius-view-filter",
-								nextState
-							);
-
-							// Broadcast filter change
-							this.app.workspace.trigger(
-								"task-genius:filter-changed",
-								nextState
-							);
-						}
-					} catch (e) {
-						console.warn(
-							"[Task Genius] Failed to clear project filter",
-							e
-						);
-					}
-				}
+				// A view chosen in the sidebar shows all its tasks, so the
+				// project picked there earlier stops narrowing it
+				this.dropSelectedProject();
 
 				// Recompute filtered tasks for the newly selected view so all modes stay in sync
 				this.filteredTasks = this.dataManager.applyFilters(this.tasks);
@@ -963,6 +920,7 @@ export class FluentTaskView extends ItemView {
 		this.layoutManager.setFilterCallbacks({
 			onFilterReset: () => this.resetCurrentFilter(),
 			getLiveFilterState: () => this.liveFilterState,
+			onProjectClear: () => this.clearSelectedProject(),
 		});
 
 		// Create action buttons in Obsidian view header
@@ -1100,6 +1058,7 @@ export class FluentTaskView extends ItemView {
 							payload.selectionId
 						) {
 							this.currentViewId = payload.selectionId;
+							this.dropSelectedProject();
 							this.filteredTasks = this.dataManager.applyFilters(
 								this.tasks
 							);
@@ -1157,6 +1116,7 @@ export class FluentTaskView extends ItemView {
 
 		// Update task count
 		this.layoutManager.updateTaskMark();
+		this.layoutManager.showSelectedProject(this.viewState.selectedProject);
 
 		// Update sidebar active item
 		this.layoutManager.setSidebarActiveItem(this.currentViewId);
@@ -1216,6 +1176,51 @@ export class FluentTaskView extends ItemView {
 			this.viewState.viewMode,
 			this.viewState.selectedProject
 		);
+	}
+
+	/**
+	 * Stops narrowing the view to the project picked in the sidebar. Other
+	 * filters stay.
+	 */
+	private dropSelectedProject(): void {
+		this.viewState.selectedProject = undefined;
+		this.layoutManager?.setActiveProject(null);
+
+		const groups = this.liveFilterState?.filterGroups ?? [];
+		const hasProjectFilter = groups.some((group) =>
+			(group.filters || []).some(
+				(filter) => filter.property === "project"
+			)
+		);
+		if (!this.liveFilterState || !hasProjectFilter) {
+			return;
+		}
+
+		const nextState: RootFilterState = {
+			...this.liveFilterState,
+			filterGroups: groups
+				.map((group) => ({
+					...group,
+					filters: (group.filters || []).filter(
+						(filter) => filter.property !== "project"
+					),
+				}))
+				.filter((group) => group.filters.length > 0),
+		};
+		this.liveFilterState = nextState;
+		this.currentFilterState = nextState;
+		this.app.saveLocalStorage("task-genius-view-filter", nextState);
+
+		// Lets the filter controls and the sidebar's reset button follow
+		this.app.workspace.trigger("task-genius:filter-changed", nextState);
+	}
+
+	/** The project next to the title was cleared */
+	private clearSelectedProject(): void {
+		this.dropSelectedProject();
+		this.filteredTasks = this.dataManager.applyFilters(this.tasks);
+		this.updateView();
+		this.workspaceStateManager.saveFilterStateToWorkspace();
 	}
 
 	/**

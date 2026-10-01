@@ -1042,3 +1042,24 @@ button.fluent-new-task-btn:hover {
 	border-radius: 4px;
 	z-index: 1000;
 }
+
+/* The sidebar project narrowing the view, named next to the title */
+.fluent-project-filter-chip {
+	display: inline-flex;
+	align-items: center;
+	flex-shrink: 0;
+	gap: var(--size-2-1);
+	height: var(--size-4-6);
+	margin-inline-start: var(--size-4-2);
+	padding-inline: var(--size-4-2) var(--size-2-1);
+	border-radius: var(--radius-l);
+	background-color: var(--background-modifier-hover);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+}
+
+.fluent-project-filter-chip-clear.clickable-icon {
+	padding: 2px;
+	--icon-size: var(--icon-xs);
+}

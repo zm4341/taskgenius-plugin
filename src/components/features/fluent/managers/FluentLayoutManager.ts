@@ -4,6 +4,7 @@ import {
 	Component,
 	ItemView,
 	Platform,
+	setIcon,
 	WorkspaceLeaf,
 } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
@@ -64,7 +65,11 @@ export class FluentLayoutManager extends Component {
 	) => Promise<void>;
 	private onFilterReset?: () => void;
 	private getLiveFilterState?: () => RootFilterState | null;
+	private onProjectClear?: () => void;
 	private leaf: WorkspaceLeaf;
+
+	// Names the sidebar project next to the title while it narrows the view
+	private projectChipEl: HTMLElement | null = null;
 
 	constructor(
 		private app: App,
@@ -113,9 +118,11 @@ export class FluentLayoutManager extends Component {
 	setFilterCallbacks(callbacks: {
 		onFilterReset: () => void;
 		getLiveFilterState: () => RootFilterState | null;
+		onProjectClear?: () => void;
 	}): void {
 		this.onFilterReset = callbacks.onFilterReset;
 		this.getLiveFilterState = callbacks.getLiveFilterState;
+		this.onProjectClear = callbacks.onProjectClear;
 	}
 
 	/**
@@ -281,6 +288,50 @@ export class FluentLayoutManager extends Component {
 				},
 			}),
 		);
+	}
+
+	/**
+	 * Names the project picked in the sidebar next to the title while it
+	 * narrows the view, with a button that clears it; nothing when no
+	 * project is picked. The sidebar may be collapsed, so this is the one
+	 * sign of it on screen.
+	 */
+	showSelectedProject(projectId: string | null | undefined): void {
+		if (!projectId) {
+			this.projectChipEl?.remove();
+			this.projectChipEl = null;
+			return;
+		}
+
+		if (!this.projectChipEl) {
+			this.projectChipEl = createDiv({
+				cls: "fluent-project-filter-chip",
+			});
+			this.titleEl.insertAdjacentElement("afterend", this.projectChipEl);
+		} else if (this.projectChipEl.dataset.projectId === projectId) {
+			return;
+		}
+		const chip = this.projectChipEl;
+		chip.empty();
+		chip.dataset.projectId = projectId;
+		chip.setAttribute("aria-label", projectId);
+
+		const separator = this.plugin.settings.projectPathSeparator || "/";
+		const name = projectId.split(separator).pop() || projectId;
+		chip.createSpan({
+			cls: "fluent-project-filter-chip-label",
+			text: t("Project: {{name}}", { interpolation: { name } }),
+		});
+
+		const clearBtn = chip.createDiv({
+			cls: "fluent-project-filter-chip-clear clickable-icon",
+			attr: { "aria-label": t("Clear project filter") },
+		});
+		setIcon(clearBtn, "x");
+		clearBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			this.onProjectClear?.();
+		});
 	}
 
 	/**

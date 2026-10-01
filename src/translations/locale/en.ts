@@ -2560,6 +2560,8 @@ const translations = {
 	"{{num}} Tasks": "{{num}} Tasks",
 	"Group By": "Group By",
 	"No tasks here.": "No tasks here.",
+	"Project: {{name}}": "Project: {{name}}",
+	"Clear project filter": "Clear project filter",
 	"Clear date": "Clear date",
 	"Clear priority": "Clear priority",
 	"Clear all tags": "Clear all tags",
