@@ -29,6 +29,18 @@
 	min-width: max-content;
 }
 
+/* An empty cell ends each row and takes the width the columns leave over,
+   so each column is as wide as it is set to: resizing one leaves the
+   others as they are, where the browser would spread the leftover width
+   over all of them. The last column's header keeps its edge line. */
+.task-table:not(.task-table-measure) {
+	.task-table-header-row::after,
+	.task-table-row::after {
+		content: "";
+		display: table-cell;
+	}
+}
+
 /* Table wrapper for scrolling */
 .task-table-wrapper {
 	flex: 1;
@@ -68,10 +80,6 @@
 	background-color: var(--background-secondary);
 	/* Prevent header cells from shrinking too much */
 	white-space: nowrap;
-}
-
-.task-table-header-cell:last-child {
-	border-right: none;
 }
 
 .task-table-header-cell.sortable {
