@@ -97,6 +97,16 @@
 		filter: grayscale(0.3);
 	}
 
+	/* Tasks without dates, shown on the day they were finished or created */
+	.tg-event-base.tg-event-undated {
+		border: 1px dashed var(--background-modifier-border-hover);
+		color: var(--text-muted);
+	}
+
+	.tg-event-base.tg-event-undated:hover {
+		color: var(--text-on-accent);
+	}
+
 	/* Month view event bar */
 	.tg-event-bar {
 		height: 26px;

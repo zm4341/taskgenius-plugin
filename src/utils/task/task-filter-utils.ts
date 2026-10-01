@@ -13,6 +13,7 @@ import {
 } from "@/components/features/task/filter/ViewTaskFilter";
 import { hasProject } from "./task-operations";
 import { withoutArchivedTasks } from "./archived-status";
+import type { UndatedPlacement } from "@/utils/adapters/TaskCalendarAdapter";
 
 // 从ViewTaskFilter.ts导入相关接口
 
@@ -172,6 +173,28 @@ export function isTodayViewTask(
 		return true;
 	}
 	return isToday(getCreatedDate(plugin, task));
+}
+
+/**
+ * Where calendars show a task without due, scheduled or start dates: on the
+ * day it was finished, or else on the day it was created
+ */
+export function placeUndatedTask(
+	plugin: TaskProgressBarPlugin,
+	task: Task,
+): UndatedPlacement | null {
+	const { completedDate, cancelledDate } = task.metadata ?? {};
+	const finishedOn = completedDate || cancelledDate;
+	if (finishedOn && isFinished(plugin, task)) {
+		return {
+			day: moment(finishedOn).startOf("day").valueOf(),
+			reason: "finished",
+		};
+	}
+	const created = getCreatedDate(plugin, task);
+	return created
+		? { day: created.startOf("day").valueOf(), reason: "created" }
+		: null;
 }
 
 /**

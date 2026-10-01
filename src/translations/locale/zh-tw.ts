@@ -2339,6 +2339,8 @@ const translations = {
 	"{{num}} Tasks": "{{num}} 個任務",
 	"Group By": "分組",
 	"No tasks here.": "這裡沒有任務。",
+	"No date, shown on the day it was created": "沒有日期，顯示在建立那天",
+	"No date, shown on the day it was finished": "沒有日期，顯示在完成那天",
 	"Project: {{name}}": "項目：{{name}}",
 	"Clear project filter": "清除項目篩選",
 	"Clear date": "清除日期",

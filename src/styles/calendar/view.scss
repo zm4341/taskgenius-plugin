@@ -795,6 +795,14 @@
 	flex: 1;
 }
 
+/* Tasks without dates, shown on the day they were finished or created */
+.full-calendar-container .agenda-event-item.is-undated .calendar-event {
+	background-color: transparent;
+	border: 1px dashed var(--background-modifier-border-hover);
+	color: var(--text-muted);
+	--bold-color: var(--text-muted);
+}
+
 .full-calendar-container input.task-list-item-checkbox {
 	vertical-align: middle;
 }

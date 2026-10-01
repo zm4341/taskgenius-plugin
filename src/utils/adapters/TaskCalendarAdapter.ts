@@ -37,22 +37,39 @@ interface TaskDateRange {
 }
 
 /**
+ * Where a task without due, scheduled or start dates goes on the calendar
+ */
+export interface UndatedPlacement {
+	/** Day to show the task on, as a timestamp */
+	day: number;
+	/** What that day is to the task */
+	reason: "created" | "finished";
+}
+
+/**
+ * Finds the day for a task without dates; null leaves it off the calendar
+ */
+export type PlaceUndatedTask = (task: Task) => UndatedPlacement | null;
+
+/**
  * Convert a Task to a CalendarEvent
  *
  * @param task - The task to convert
- * @param undatedDay - Day to show the task on when it has no date
+ * @param placeUndated - Finds a day for the task when it has no date
  * @returns CalendarEvent object or null if task has no date
  */
 export function taskToCalendarEvent(
 	task: Task,
-	undatedDay?: Date,
+	placeUndated?: PlaceUndatedTask,
 ): CalendarEvent | null {
 	const dateRange = calculateTaskDateRange(task);
+	let placement: UndatedPlacement | null = null;
 
 	if (!dateRange.start) {
-		// No date information: skip the task, unless the view gives it a day
-		if (!undatedDay) return null;
-		const day = new Date(undatedDay);
+		// No date information: skip the task, unless it is given a day
+		placement = placeUndated?.(task) ?? null;
+		if (!placement) return null;
+		const day = new Date(placement.day);
 		day.setHours(0, 0, 0, 0);
 		dateRange.start = day.getTime();
 	}
@@ -78,6 +95,8 @@ export function taskToCalendarEvent(
 			priority: task.metadata.priority,
 			tags: task.metadata.tags,
 			project: task.metadata.project,
+			// Set when the task has no date and sits on a day found for it
+			undated: placement?.reason,
 		},
 	};
 }
@@ -87,15 +106,15 @@ export function taskToCalendarEvent(
  * Filters out tasks without dates, unless they are given a day
  *
  * @param tasks - Array of tasks
- * @param undatedDay - Day to show tasks without dates on
+ * @param placeUndated - Finds a day for each task without dates
  * @returns Array of CalendarEvent objects
  */
 export function tasksToCalendarEvents(
 	tasks: Task[],
-	undatedDay?: Date,
+	placeUndated?: PlaceUndatedTask,
 ): CalendarEvent[] {
 	return tasks
-		.map((task) => taskToCalendarEvent(task, undatedDay))
+		.map((task) => taskToCalendarEvent(task, placeUndated))
 		.filter((event): event is CalendarEvent => event !== null);
 }
 

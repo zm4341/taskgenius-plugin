@@ -1,14 +1,16 @@
 /**
  * The Today view lists the day's tasks: due, scheduled or starting today,
- * completed today, overdue, and created today. Its calendar shows the ones
- * without dates on today.
+ * completed today, overdue, and created today. Calendars show tasks without
+ * dates on the day they were finished, or else created, so Today's calendar
+ * shows its undated tasks on today.
  *
  * Regression: Today took only tasks dated today and hid completed ones, so a
  * day's finished work and new undated tasks never showed in any of its
- * panels.
+ * panels; and calendars left out every task without dates, so the Events
+ * view stayed empty when no task had one.
  */
 
-import { filterTasks } from "@/utils/task/task-filter-utils";
+import { filterTasks, placeUndatedTask } from "@/utils/task/task-filter-utils";
 import { tasksToCalendarEvents } from "@/utils/adapters/TaskCalendarAdapter";
 import type { Task } from "@/types/task";
 
@@ -103,27 +105,23 @@ afterEach(() => {
 	jest.useRealTimers();
 });
 
-describe("Today view", () => {
-	const tasks = [
-		task("due today", { dueDate: day(0) }),
-		task("due tomorrow", { dueDate: day(1) }),
-		task("scheduled today", { scheduledDate: day(0) }),
-		task("done today", { completedDate: day(0, 9) }, "x"),
-		task("done yesterday", { completedDate: day(-1) }, "x"),
-		task("overdue", { dueDate: day(-2) }),
-		task(
-			"overdue but done",
-			{ dueDate: day(-2), completedDate: day(-1) },
-			"x",
-		),
-		task("overdue but dropped", { dueDate: day(-2) }, "-"),
-		task("note made today", {}, " ", "2026-10-01 07:33:16"),
-		task("note made yesterday", {}, " ", "2026-09-30 22:00:00"),
-		task("created today", { createdDate: day(0, 8) }),
-		task("archived today", { completedDate: day(0) }, "a"),
-		task("undated", {}),
-	];
+const tasks = [
+	task("due today", { dueDate: day(0) }),
+	task("due tomorrow", { dueDate: day(1) }),
+	task("scheduled today", { scheduledDate: day(0) }),
+	task("done today", { completedDate: day(0, 9) }, "x"),
+	task("done yesterday", { completedDate: day(-1) }, "x"),
+	task("overdue", { dueDate: day(-2) }),
+	task("overdue but done", { dueDate: day(-2), completedDate: day(-1) }, "x"),
+	task("overdue but dropped", { dueDate: day(-2) }, "-"),
+	task("note made today", {}, " ", "2026-10-01 07:33:16"),
+	task("note made yesterday", {}, " ", "2026-09-30 22:00:00"),
+	task("created today", { createdDate: day(0, 8) }),
+	task("archived today", { completedDate: day(0) }, "a"),
+	task("undated", {}),
+];
 
+describe("Today view", () => {
 	it("lists tasks dated, completed, overdue or created today", () => {
 		const shown = filterTasks(tasks, "today" as any, createPlugin(tasks));
 
@@ -145,26 +143,58 @@ describe("Today view", () => {
 });
 
 describe("Calendar events for tasks without dates", () => {
-	it("are left out, unless the view gives them a day to sit on", () => {
-		const undated = task("undated");
+	it("sit on the day the task was finished, or else created", () => {
+		const undated = [
+			task("open", {}, " ", "2026-09-29 07:33:16"),
+			task("done", { completedDate: day(-1, 9) }, "x", "2026-09-20 10:00"),
+			task("dropped", { cancelledDate: day(0, 9) }, "-", "2026-09-20 10:00"),
+			task("done, no date", {}, "x", "2026-09-21 10:00:00"),
+			task("no creation date"),
+		];
+		const plugin = createPlugin(undated);
 
-		expect(tasksToCalendarEvents([undated])).toEqual([]);
+		const events = tasksToCalendarEvents(undated, (t) =>
+			placeUndatedTask(plugin, t),
+		);
+
 		expect(
-			tasksToCalendarEvents([undated], new Date(2026, 9, 1, 15, 30)),
+			events.map((e) => [e.title, e.start, e.allDay, e.metadata?.undated]),
 		).toEqual([
-			expect.objectContaining({
-				start: "2026-10-01",
-				end: "2026-10-01",
-				allDay: true,
-			}),
+			["open", "2026-09-29", true, "created"],
+			["done", "2026-09-30", true, "finished"],
+			["dropped", "2026-10-01", true, "finished"],
+			["done, no date", "2026-09-21", true, "created"],
 		]);
 	});
 
-	it("leave tasks with dates on their own day", () => {
-		const dated = task("due later", { dueDate: day(4) });
+	it("are left out when nothing gives them a day", () => {
+		expect(tasksToCalendarEvents([task("undated")])).toEqual([]);
+	});
 
-		expect(
-			tasksToCalendarEvents([dated], new Date(2026, 9, 1))[0].start,
-		).toBe("2026-10-05");
+	it("leave tasks with dates on their own day, unmarked", () => {
+		const dated = task("due later", { dueDate: day(4) }, " ", "2026-09-20");
+		const plugin = createPlugin([dated]);
+
+		const [event] = tasksToCalendarEvents([dated], (t) =>
+			placeUndatedTask(plugin, t),
+		);
+
+		expect(event.start).toBe("2026-10-05");
+		expect(event.metadata?.undated).toBeUndefined();
+	});
+
+	it("put the undated tasks of Today on today", () => {
+		const plugin = createPlugin(tasks);
+		const shown = filterTasks(tasks, "today" as any, plugin);
+
+		const undated = tasksToCalendarEvents(shown, (t) =>
+			placeUndatedTask(plugin, t),
+		).filter((e) => e.metadata?.undated);
+
+		expect(undated.map((e) => [e.title, e.start])).toEqual([
+			["done today", "2026-10-01"],
+			["note made today", "2026-10-01"],
+			["created today", "2026-10-01"],
+		]);
 	});
 });

@@ -40,6 +40,7 @@ import type {
 	ViewClass,
 	ExtendedCalendarConfig,
 	EventRenderContext,
+	EventStyle,
 } from "@taskgenius/calendar";
 import * as dateFns from "date-fns";
 import { addDays, startOfDay, differenceInDays, isBefore } from "date-fns";
@@ -50,7 +51,9 @@ import {
 	getTaskFromEvent,
 	hasDateInformation,
 	type CalendarEvent as AdapterCalendarEvent,
+	type UndatedPlacement,
 } from "@/utils/adapters/TaskCalendarAdapter";
+import { placeUndatedTask } from "@/utils/task/task-filter-utils";
 import "@taskgenius/calendar/styles.css";
 import "@/styles/taskgenius-calendar.scss";
 import "@/styles/calendar/view.scss";
@@ -112,8 +115,8 @@ export class CalendarComponent extends Component {
 	// Config override from Bases
 	private configOverride: Partial<CalendarSpecificConfig> | null = null;
 
-	// Day that tasks without due, scheduled or start dates are shown on
-	private undatedTaskDay: Date | null = null;
+	// Days that tasks without due, scheduled or start dates are shown on
+	private undatedPlacements: Map<string, UndatedPlacement> = new Map();
 
 	constructor(
 		app: App,
@@ -322,15 +325,6 @@ export class CalendarComponent extends Component {
 
 	public setTasks(tasks: Task[]) {
 		this.updateTasks(tasks);
-	}
-
-	/**
-	 * Shows tasks without due, scheduled or start dates on the given day, as
-	 * the Today view does with tasks completed or created today; null leaves
-	 * them off the calendar. Only for display: the tasks get no dates.
-	 */
-	public setUndatedTaskDay(day: Date | null) {
-		this.undatedTaskDay = day;
 	}
 
 	public setConfigOverride(override: Partial<CalendarSpecificConfig> | null) {
@@ -553,6 +547,11 @@ export class CalendarComponent extends Component {
 	private handleTGDateChange(date: Date) {
 		this.currentDate = moment(date);
 		this.updateDateDisplay();
+	}
+
+	/** Marks the events of tasks without dates, shown on a day found for them */
+	private handleTGStyleEvent(event: TGCalendarEvent): EventStyle {
+		return event.metadata?.undated ? { className: "tg-event-undated" } : {};
 	}
 
 	/**
@@ -844,6 +843,8 @@ export class CalendarComponent extends Component {
 			// Custom event rendering - adds checkbox for task completion
 			onRenderEvent: (ctx: EventRenderContext) =>
 				this.handleTGRenderEvent(ctx),
+			onStyleEvent: (event: TGCalendarEvent) =>
+				this.handleTGStyleEvent(event),
 			// Keeps the header's date in step with the calendar
 			onDateChange: (date: Date) => this.handleTGDateChange(date),
 		};
@@ -939,6 +940,8 @@ export class CalendarComponent extends Component {
 			// Custom event rendering - adds checkbox for task completion
 			onRenderEvent: (ctx: EventRenderContext) =>
 				this.handleTGRenderEvent(ctx),
+			onStyleEvent: (event: TGCalendarEvent) =>
+				this.handleTGStyleEvent(event),
 			// Keeps the header's date in step with the calendar
 			onDateChange: (date: Date) => this.handleTGDateChange(date),
 		};
@@ -1023,6 +1026,17 @@ export class CalendarComponent extends Component {
 		ctx.defaultRender();
 
 		const { event, el } = ctx;
+
+		// Says why a task without dates sits on this day
+		const undated = event.metadata?.undated;
+		if (undated) {
+			el.setAttribute(
+				"aria-label",
+				undated === "finished"
+					? t("No date, shown on the day it was finished")
+					: t("No date, shown on the day it was created"),
+			);
+		}
 
 		// Skip if checkbox already added
 		if (el.querySelector(".task-list-item-checkbox")) {
@@ -1581,10 +1595,14 @@ export class CalendarComponent extends Component {
 			});
 		}, 50); // Small delay to ensure TGCalendar has rendered events
 
-		// Mark past due dates
+		// Mark past due dates. Tasks without dates are not due on the day
+		// they are shown on.
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
-		if (date < today && tasksOnDate.some((t) => !t.completed)) {
+		if (
+			date < today &&
+			tasksOnDate.some((t) => !t.completed && hasDateInformation(t))
+		) {
 			const dateNum = cellEl.querySelector(".tg-date-number");
 			if (dateNum) {
 				dateNum.addClass("past-due");
@@ -1733,6 +1751,7 @@ export class CalendarComponent extends Component {
 	private async processTasks() {
 		this.events = [];
 		this.badgeEventsCache.clear();
+		this.undatedPlacements.clear();
 
 		this.tasks.forEach((task) => {
 			const isIcsTask = (task as any).source?.type === "ics";
@@ -1749,14 +1768,19 @@ export class CalendarComponent extends Component {
 			if (isIcsTask && icsTask?.icsEvent) {
 				eventDate = icsTask.icsEvent.dtstart.getTime();
 				isAllDay = icsTask.icsEvent.allDay;
-			} else {
+			} else if (hasDateInformation(task)) {
 				eventDate =
 					task.metadata.dueDate ||
 					task.metadata.scheduledDate ||
 					task.metadata.startDate ||
-					(this.undatedTaskDay
-						? startOfDay(this.undatedTaskDay).getTime()
-						: null);
+					null;
+			} else {
+				// Shown on the day it was finished or created
+				const placement = placeUndatedTask(this.plugin, task);
+				if (placement) {
+					this.undatedPlacements.set(task.id, placement);
+					eventDate = placement.day;
+				}
 			}
 
 			if (eventDate) {
@@ -1807,13 +1831,10 @@ export class CalendarComponent extends Component {
 	}
 
 	private convertTasksToTGEvents(): AdapterCalendarEvent[] {
-		if (this.undatedTaskDay) {
-			return tasksToCalendarEvents(this.tasks, this.undatedTaskDay);
-		}
-		const tasksWithDates = this.tasks.filter((task) =>
-			hasDateInformation(task),
+		return tasksToCalendarEvents(
+			this.tasks,
+			(task) => this.undatedPlacements.get(task.id) ?? null,
 		);
-		return tasksToCalendarEvents(tasksWithDates);
 	}
 
 	private getTasksForDate(date: Date): Task[] {
@@ -1838,10 +1859,10 @@ export class CalendarComponent extends Component {
 				);
 				if (startDate.getTime() === targetTime) return true;
 			}
+			const placement = this.undatedPlacements.get(task.id);
 			return (
-				!!this.undatedTaskDay &&
-				!hasDateInformation(task) &&
-				this.normalizeDateToDay(this.undatedTaskDay).getTime() ===
+				!!placement &&
+				this.normalizeDateToDay(new Date(placement.day)).getTime() ===
 					targetTime
 			);
 		});

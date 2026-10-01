@@ -14,6 +14,7 @@ import {
 import { CalendarEvent } from "@/components/features/calendar/index";
 import { renderCalendarEvent } from "../rendering/event-renderer";
 import TaskProgressBarPlugin from "@/index";
+import { t } from "@/translations/helper";
 
 /**
  * Options for AgendaView customization
@@ -302,6 +303,19 @@ export class TGAgendaView<T = unknown> extends BaseView<T> {
 
 		sortedEvents.forEach((event) => {
 			const eventItem = container.createDiv("agenda-event-item");
+
+			// A task without dates, shown on the day it was finished or created
+			const undated = (event.metadata as { undated?: string } | undefined)
+				?.undated;
+			if (undated) {
+				eventItem.addClass("is-undated");
+				eventItem.setAttribute(
+					"aria-label",
+					undated === "finished"
+						? t("No date, shown on the day it was finished")
+						: t("No date, shown on the day it was created"),
+				);
+			}
 
 			if (this.app) {
 				const { eventEl, component } = renderCalendarEvent({
