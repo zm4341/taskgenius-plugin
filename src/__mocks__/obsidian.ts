@@ -466,6 +466,16 @@ export function setIcon(el: HTMLElement, iconId: string): void {
 	// Mock implementation
 }
 
+// Same rules as Obsidian's normalizePath
+export function normalizePath(path: string): string {
+	const normalized = path
+		.replace(/[\\/]+/g, "/")
+		.replace(/^\/+|\/+$/g, "")
+		.replace(/[\u00A0\u202F]/g, " ")
+		.normalize("NFC");
+	return normalized === "" ? "/" : normalized;
+}
+
 export function debounce<T extends (...args: any[]) => any>(
 	func: T,
 	wait: number,

@@ -340,6 +340,12 @@ export class DataflowOrchestrator {
 				);
 			}
 
+			// The snapshot may also hold tasks of files the file filter now
+			// excludes, e.g. the filter was changed on another device and only
+			// the settings synced here, or by a build that didn't persist the
+			// prune. Runs after loading the suppressed sets so it adds to them.
+			await this.pruneByFilter();
+
 			// Ensure cache is populated for synchronous access
 			await this.queryAPI.ensureCache();
 
@@ -1065,14 +1071,15 @@ export class DataflowOrchestrator {
 	 * Prune existing index and file-tasks by current file filter (lightweight)
 	 * Performance notes:
 	 * - Uses index snapshot to avoid scanning vault
+	 * - Only visits files that still have tasks, so it is cheap enough to run on startup
 	 * - Batches inline clearing via repository.updateBatch
-	 * - Only runs when fileFilter actually changes
+	 * - Runs on startup and whenever fileFilter changes
 	 */
 	private async pruneByFilter(): Promise<void> {
 		if (!this.fileFilterManager) return;
 		try {
 			const start = Date.now();
-			const files = await this.repository.getIndexedFilePaths();
+			const files = await this.repository.getFilePathsWithTasks();
 			const toClear = new Map<string, Task[]>();
 			let prunedInline = 0;
 			for (const p of files) {
@@ -1094,6 +1101,10 @@ export class DataflowOrchestrator {
 					this.suppressedInline.add(p);
 					prunedInline++;
 				}
+				// Persist the pruned index, otherwise these tasks come back from
+				// the consolidated snapshot on next startup. Per-file caches are
+				// left alone so restoreByFilter can bring the tasks back
+				await this.repository.persist();
 			}
 			const fileTaskPaths = this.repository.getFileTaskPaths?.() || [];
 			let prunedFileTasks = 0;
@@ -1109,20 +1120,22 @@ export class DataflowOrchestrator {
 				}
 			}
 			// Persist suppressed sets for cross-restart restore capability (after updates)
-			try {
-				await (this.storage as any).saveMeta?.(
-					"filter:suppressedInline",
-					Array.from(this.suppressedInline),
-				);
-				await (this.storage as any).saveMeta?.(
-					"filter:suppressedFileTasks",
-					Array.from(this.suppressedFileTasks),
-				);
-			} catch (e) {
-				console.warn(
-					"[DataflowOrchestrator] persist suppressed meta after prune failed",
-					e,
-				);
+			if (prunedInline > 0 || prunedFileTasks > 0) {
+				try {
+					await (this.storage as any).saveMeta?.(
+						"filter:suppressedInline",
+						Array.from(this.suppressedInline),
+					);
+					await (this.storage as any).saveMeta?.(
+						"filter:suppressedFileTasks",
+						Array.from(this.suppressedFileTasks),
+					);
+				} catch (e) {
+					console.warn(
+						"[DataflowOrchestrator] persist suppressed meta after prune failed",
+						e,
+					);
+				}
 			}
 			const elapsed = Date.now() - start;
 			console.log("[DataflowOrchestrator] pruneByFilter", {

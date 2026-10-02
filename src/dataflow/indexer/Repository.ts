@@ -55,6 +55,14 @@ export class Repository {
 		return Array.from(snapshot.files.keys());
 	}
 
+	/** Get file paths that have at least one task in the inline index */
+	public async getFilePathsWithTasks(): Promise<string[]> {
+		const snapshot = await this.indexer.getIndexSnapshot();
+		return Array.from(snapshot.files)
+			.filter(([, taskIds]) => taskIds.size > 0)
+			.map(([filePath]) => filePath);
+	}
+
 	/** Get all file paths that currently have file-level tasks */
 	public getFileTaskPaths(): string[] {
 		return Array.from(this.fileTasks.keys());
