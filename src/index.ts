@@ -69,6 +69,10 @@ import { MinimalQuickCaptureModal } from "./components/features/quick-capture/mo
 import { MinimalQuickCaptureSuggest } from "./components/features/quick-capture/suggest/MinimalQuickCaptureSuggest";
 import { SuggestManager } from "@/components/ui/suggest";
 import { t } from "./translations/helper";
+import {
+	addNoteMetadataToTasks,
+	getTaskNoteSettings,
+} from "./utils/file/task-note";
 import { TASK_VIEW_TYPE, TaskView } from "./pages/TaskView";
 import { SettingsModal } from "./components/features/settings/SettingsModal";
 import "./styles/global.scss";
@@ -830,6 +834,39 @@ export default class TaskProgressBarPlugin extends Plugin {
 					location: "file",
 				});
 				modal.open();
+			},
+		});
+
+		this.addCommand({
+			id: "add-note-tags-to-tasks",
+			name: t("Add the note's tags and project to its tasks"),
+			checkCallback: (checking) => {
+				const file = this.app.workspace.getActiveFile();
+				if (file?.extension !== "md") return false;
+				if (!checking) {
+					void addNoteMetadataToTasks(
+						this.app,
+						getTaskNoteSettings(this.settings),
+						file,
+					).then((result) => {
+						if (result === null) {
+							new Notice(t("This note has no tags or project to add"));
+						} else if (result.tasks === 0) {
+							new Notice(t("This note has no tasks"));
+						} else if (result.changed === 0) {
+							new Notice(
+								t("Its tasks already have the note's tags and project"),
+							);
+						} else {
+							new Notice(
+								t("Added the note's tags and project to {{count}} task(s)", {
+									interpolation: { count: String(result.changed) },
+								}),
+							);
+						}
+					});
+				}
+				return true;
 			},
 		});
 

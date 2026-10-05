@@ -9,7 +9,11 @@ import {
 	TFile,
 } from "obsidian";
 import type TaskProgressBarPlugin from "@/index";
-import { SimpleFileSuggest } from "@/components/ui/inputs/AutoComplete";
+import {
+	SimpleFileSuggest,
+	TagSuggest,
+} from "@/components/ui/inputs/AutoComplete";
+import { parseTagNames } from "@/utils/file/note-tags";
 import { t } from "@/translations/helper";
 import {
 	cleanFolderInput,
@@ -87,6 +91,8 @@ export class NewTaskNoteModal extends Modal {
 	private readonly folders: string[];
 	private title = "";
 	private description = "";
+	/** As typed: separated by commas or spaces, "#" optional */
+	private tags = "";
 	/** One row, unless the window opened with more dates */
 	private dateRows: DateRow[];
 	private folder: string;
@@ -183,6 +189,18 @@ export class NewTaskNoteModal extends Modal {
 						});
 				});
 		});
+
+		new Setting(contentEl)
+			.setName(t("Tags"))
+			.setDesc(t("Added to the note's tags property and the task"))
+			.addText((text) => {
+				text.setPlaceholder(t("Optional, separated by commas or spaces"))
+					.setValue(this.tags)
+					.onChange((value) => {
+						this.tags = value;
+					});
+				new TagSuggest(this.app, text.inputEl, this.plugin);
+			});
 
 		const folderSetting = new Setting(contentEl)
 			.setName(t("Folder"))
@@ -375,6 +393,7 @@ export class NewTaskNoteModal extends Modal {
 			description: this.description,
 			folder,
 			dates: this.selectedDates(),
+			tags: parseTagNames(this.tags),
 		};
 		this.submitting = true;
 		try {

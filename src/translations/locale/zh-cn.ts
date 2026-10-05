@@ -2359,6 +2359,13 @@ const translations = {
 	"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.":
 		"{{tags}} 来自笔记属性，这篇笔记里的其他任务也有，所以没删；要删请到笔记属性里删",
 	"Open {{note}}": "打开 {{note}}",
+	"Added to the note's tags property and the task": "写进笔记的 tags 属性，任务也会带上",
+	"Optional, separated by commas or spaces": "可选，用逗号或空格分隔",
+	"Add the note's tags and project to its tasks": "把笔记的标签和项目补到任务行",
+	"This note has no tags or project to add": "这篇笔记的属性里没有标签和项目",
+	"This note has no tasks": "这篇笔记里没有任务",
+	"Its tasks already have the note's tags and project": "任务行已经带着笔记的标签和项目了",
+	"Added the note's tags and project to {{count}} task(s)": "已给 {{count}} 个任务补上笔记的标签和项目",
 	"New Task button": "新建任务按钮",
 	"Task notes folder": "任务笔记文件夹",
 	"Each task gets its own note in this folder or a subfolder. A subfolder is a project: its path is written to the note's project property. Leave empty for the vault root.":

@@ -24,6 +24,24 @@ export function noteTagsOf(
 		.filter((tag) => tag.length > 0);
 }
 
+/** Tag names in what the user typed: separated by commas or spaces, "#" optional */
+export function parseTagNames(text: string): string[] {
+	return noteTagsOf({ tags: text });
+}
+
+/** Tag names of all the lists, each once; tags ignore case, so the first spelling stays */
+export function mergeTagNames(...lists: string[][]): string[] {
+	const seen = new Set<string>();
+	const merged: string[] = [];
+	for (const tag of lists.flat().map(tagName)) {
+		const key = tag.toLowerCase();
+		if (tag === "" || seen.has(key)) continue;
+		seen.add(key);
+		merged.push(tag);
+	}
+	return merged;
+}
+
 /** Drops these tags from the note's tags property; an emptied one stays as `tags:` */
 export function removeNoteTags(
 	frontmatter: Record<string, unknown>,

@@ -2535,6 +2535,13 @@ const translations = {
 	"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.":
 		"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.",
 	"Open {{note}}": "Open {{note}}",
+	"Added to the note's tags property and the task": "Added to the note's tags property and the task",
+	"Optional, separated by commas or spaces": "Optional, separated by commas or spaces",
+	"Add the note's tags and project to its tasks": "Add the note's tags and project to its tasks",
+	"This note has no tags or project to add": "This note has no tags or project to add",
+	"This note has no tasks": "This note has no tasks",
+	"Its tasks already have the note's tags and project": "Its tasks already have the note's tags and project",
+	"Added the note's tags and project to {{count}} task(s)": "Added the note's tags and project to {{count}} task(s)",
 	"New Task button": "New Task button",
 	"Task notes folder": "Task notes folder",
 	"Each task gets its own note in this folder or a subfolder. A subfolder is a project: its path is written to the note's project property. Leave empty for the vault root.":

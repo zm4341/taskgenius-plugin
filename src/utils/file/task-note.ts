@@ -1,7 +1,7 @@
 import { App, TFile, TFolder, moment, normalizePath } from "obsidian";
 import type { TaskProgressBarSettings } from "@/common/setting-definition";
 import { t } from "@/translations/helper";
-import { noteTagsOf } from "@/utils/file/note-tags";
+import { mergeTagNames, noteTagsOf } from "@/utils/file/note-tags";
 
 /** Where the New Task button puts task notes, one note per task */
 export interface TaskNoteSettings {
@@ -30,6 +30,8 @@ export interface TaskNoteInput {
 	folder: string;
 	/** Dates written on the task line */
 	dates?: TaskNoteDates;
+	/** Tags added to the note's tags property, so the task has them too */
+	tags?: string[];
 }
 
 const TIMESTAMP_FORMAT = "YYYY-MM-DD HH:mm:ss";
@@ -102,6 +104,144 @@ export function formatNoteMetadata(
 		if (project) parts.push(`#${prefix}/${project.replace(/\s+/g, "-")}`);
 	}
 	return parts.join(" ");
+}
+
+const TASK_PREFIX = /^\s*(?:[-*+]|\d+[.)])\s+\[.\]\s*/;
+const TOP_LEVEL_TASK = /^(?:[-*+]|\d+[.)])\s+\[.\]/;
+/** Where the line's context, priority, dates or Dataview fields start */
+const LINE_METADATA = /(?:^|\s)@\S|[🔺⏫🔼🔽⏬🛫⏳📅✅❌➕🔁🆔⛔🏁]|\[[^[\]]+::/u;
+
+/** The text with links and inline code blanked out, so a "#" or "@" in them doesn't count */
+function maskLinksAndCode(text: string): string {
+	const blank = (match: string) => "x".repeat(match.length);
+	return text
+		.replace(/\[\[[^\]]*\]\]/g, blank)
+		.replace(/\[[^\]]*\]\([^)]*\)/g, blank)
+		.replace(/`[^`]*`/g, blank);
+}
+
+/**
+ * The task line with the note's tags and project, as New Task writes them:
+ * missing tags are added, a different project is replaced, and both go
+ * before the line's context, priority and dates. Tasks format only.
+ */
+export function withNoteMetadata(
+	line: string,
+	tags: string[],
+	project: string,
+	settings: Pick<TaskNoteSettings, "projectTagPrefix">,
+): string {
+	const prefix = line.match(TASK_PREFIX)?.[0];
+	if (prefix === undefined) return line;
+	let body = line.slice(prefix.length);
+
+	const prefixName = settings.projectTagPrefix || "project";
+	// Tags ignore case, so "#Project/x" is the project too
+	const projectHead = `${prefixName}/`.toLowerCase();
+	const projectTag = project
+		? `#${prefixName}/${project.trim().replace(/\s+/g, "-")}`
+		: "";
+	const lineTags = new Set<string>();
+	let projectAt: { start: number; end: number } | null = null;
+	for (const match of maskLinksAndCode(body).matchAll(/(^|\s)#([^\s#]+)/g)) {
+		const start = match.index! + match[1].length;
+		const name = match[2].replace(/[,.;:!?，。；：！？、)）\]】]+$/, "");
+		if (!name.toLowerCase().startsWith(projectHead)) {
+			lineTags.add(name.toLowerCase());
+		} else if (!projectAt) {
+			projectAt = { start, end: start + 1 + name.length };
+		}
+	}
+
+	if (projectTag && projectAt) {
+		body = body.slice(0, projectAt.start) + projectTag + body.slice(projectAt.end);
+		projectAt.end = projectAt.start + projectTag.length;
+	}
+	const added = [
+		...mergeTagNames(tags)
+			.filter((tag) => !lineTags.has(tag.toLowerCase()))
+			.filter((tag) => !tag.toLowerCase().startsWith(projectHead))
+			.map((tag) => `#${tag.replace(/\s+/g, "-")}`),
+		...(projectTag && !projectAt ? [projectTag] : []),
+	];
+	if (added.length > 0) {
+		// Tags go before the project; both before the rest of the metadata
+		const metadataAt = maskLinksAndCode(body).search(LINE_METADATA);
+		const at = Math.min(
+			projectAt?.start ?? body.length,
+			metadataAt === -1
+				? body.length
+				: metadataAt + (/\s/.test(body[metadataAt]) ? 1 : 0),
+		);
+		body = [body.slice(0, at).trimEnd(), ...added, body.slice(at).trimStart()]
+			.filter(Boolean)
+			.join(" ");
+	}
+	return prefix + body;
+}
+
+/** Maps each task line that isn't nested, outside the properties and code blocks */
+function mapTopLevelTasks(content: string, map: (line: string) => string): string {
+	const frontmatter = content.match(FRONTMATTER)?.[0] ?? "";
+	let inCode = false;
+	const lines = content
+		.slice(frontmatter.length)
+		.split("\n")
+		.map((line) => {
+			if (/^\s*(?:```|~~~)/.test(line)) inCode = !inCode;
+			if (inCode || !TOP_LEVEL_TASK.test(line)) return line;
+			const cr = line.endsWith("\r") ? "\r" : "";
+			return map(line.slice(0, line.length - cr.length)) + cr;
+		});
+	return frontmatter + lines.join("\n");
+}
+
+/** The note with its tags and project on each task line that isn't nested */
+export function withNoteMetadataOnTasks(
+	content: string,
+	tags: string[],
+	project: string,
+	settings: Pick<TaskNoteSettings, "projectTagPrefix">,
+): string {
+	return mapTopLevelTasks(content, (line) =>
+		withNoteMetadata(line, tags, project, settings),
+	);
+}
+
+/**
+ * Puts the note's tags and project on its task lines, for tasks typed by
+ * hand or properties changed after the task was made. Returns how many task
+ * lines the note has and how many changed; null when the note has neither
+ * tags nor a project.
+ */
+export async function addNoteMetadataToTasks(
+	app: App,
+	settings: TaskNoteSettings,
+	file: TFile,
+): Promise<{ tasks: number; changed: number } | null> {
+	const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
+	const tags = noteTagsOf(frontmatter);
+	const project = String(frontmatter?.[settings.projectKey] ?? "").trim();
+	if (tags.length === 0 && project === "") return null;
+
+	const update = (content: string) =>
+		withNoteMetadataOnTasks(content, tags, project, settings);
+	const before = await app.vault.read(file);
+	let tasks = 0;
+	mapTopLevelTasks(before, (line) => {
+		tasks++;
+		return line;
+	});
+	if (update(before) === before) return { tasks, changed: 0 };
+
+	let changed = 0;
+	await app.vault.process(file, (content) => {
+		const next = update(content);
+		const old = content.split("\n");
+		changed = next.split("\n").filter((line, i) => line !== old[i]).length;
+		return next;
+	});
+	return { tasks, changed };
 }
 
 /** Replaces characters that break file names or links */
@@ -210,12 +350,15 @@ export async function createTaskNote(
 
 	const template = await readTemplate(app, settings);
 	await ensureFolder(app, folderPath);
-	const tags = noteTagsOf(templateProperties(app, settings));
+	const tags = mergeTagNames(
+		noteTagsOf(templateProperties(app, settings)),
+		input.tags ?? [],
+	);
 	const file = await app.vault.create(
 		path,
 		withTaskAtTop(template, taskBlock(input, settings, tags)),
 	);
-	await applyTaskNoteProperties(app, settings, file, input.folder);
+	await applyTaskNoteProperties(app, settings, file, input);
 	return file;
 }
 
@@ -238,8 +381,9 @@ export async function convertToTaskNote(
 	}
 	// The note keeps its tags; one without the property gets the template's
 	const own = app.metadataCache.getFileCache(file)?.frontmatter;
-	const tags = noteTagsOf(
-		own && "tags" in own ? own : templateProperties(app, settings),
+	const tags = mergeTagNames(
+		noteTagsOf(own && "tags" in own ? own : templateProperties(app, settings)),
+		input.tags ?? [],
 	);
 
 	if (input.move) {
@@ -264,7 +408,7 @@ export async function convertToTaskNote(
 	await app.vault.process(file, (content) =>
 		withTaskAtTop(content, taskBlock(input, settings, tags)),
 	);
-	await applyTaskNoteProperties(app, settings, file, input.folder);
+	await applyTaskNoteProperties(app, settings, file, input);
 	return file;
 }
 
@@ -344,18 +488,18 @@ async function ensureFolder(app: App, folderPath: string): Promise<void> {
 }
 
 /**
- * Sets the project from the folder and adds the template's missing
- * properties. Empty created/updated times are filled in, as the plugins that
- * keep them only do so on the first edit.
+ * Sets the project from the folder, adds the tags picked in the window and
+ * the template's missing properties. Empty created/updated times are filled
+ * in, as the plugins that keep them only do so on the first edit.
  */
 async function applyTaskNoteProperties(
 	app: App,
 	settings: TaskNoteSettings,
 	file: TFile,
-	folder: string,
+	input: TaskNoteInput,
 ): Promise<void> {
 	const fromTemplate = templateProperties(app, settings);
-	const project = cleanFolderInput(folder);
+	const project = cleanFolderInput(input.folder);
 	const created = moment(file.stat.ctime).format(TIMESTAMP_FORMAT);
 	const now = moment().format(TIMESTAMP_FORMAT);
 	const isEmpty = (value: unknown) =>
@@ -364,6 +508,9 @@ async function applyTaskNoteProperties(
 	await app.fileManager.processFrontMatter(file, (frontmatter) => {
 		for (const [key, value] of Object.entries(fromTemplate)) {
 			if (!(key in frontmatter)) frontmatter[key] = value;
+		}
+		if (input.tags?.length) {
+			frontmatter.tags = mergeTagNames(noteTagsOf(frontmatter), input.tags);
 		}
 		// A note in the root folder belongs to no project
 		frontmatter[settings.projectKey] = project === "" ? null : project;

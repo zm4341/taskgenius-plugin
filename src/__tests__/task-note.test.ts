@@ -5,10 +5,13 @@
 
 import { TFile, TFolder } from "obsidian";
 import {
+	addNoteMetadataToTasks,
 	convertToTaskNote,
 	createTaskNote,
 	listTaskNoteFolders,
 	taskNoteFolderOf,
+	withNoteMetadata,
+	withNoteMetadataOnTasks,
 	type TaskNoteSettings,
 } from "@/utils/file/task-note";
 
@@ -232,6 +235,24 @@ describe("New task notes", () => {
 		);
 	});
 
+	it("add the tags picked in the window to the note and the task line", async () => {
+		const { app, add, read } = createApp();
+		const tagged = TEMPLATE.replace("tags:\n", "tags:\n  - 写作脚手架\n");
+		await add({ "Templates/Task.md": tagged, "Tasks/Projects/Dev/": "" });
+
+		await createTaskNote(app, settings, {
+			title: "中英作文写作辅助",
+			folder: "Dev",
+			tags: ["AI教师", "写作脚手架"],
+		});
+
+		const note = read("Tasks/Projects/Dev/中英作文写作辅助.md")!;
+		expect(parseFrontmatter(note).data.tags).toEqual(["写作脚手架", "AI教师"]);
+		expect(note).toContain(
+			"\n- [ ] 中英作文写作辅助 #写作脚手架 #AI教师 #project/Dev\n",
+		);
+	});
+
 	it("write the tags and project as Dataview fields in that format", async () => {
 		const { app, add, read } = createApp();
 		const tagged = TEMPLATE.replace("tags:\n", "tags:\n  - idea\n");
@@ -394,6 +415,24 @@ describe("Existing notes turned into task notes", () => {
 		);
 	});
 
+	it("add the tags picked in the window to their own", async () => {
+		const { app, add, read } = createApp();
+		const ownTags = inboxNote.replace("---\nNotes", "tags:\n  - 英语口语\n---\nNotes");
+		await add({ "Templates/Task.md": TEMPLATE, "_Inbox/Call Bob.md": ownTags });
+
+		await convertToTaskNote(app, settings, {
+			file: app.vault.getAbstractFileByPath("_Inbox/Call Bob.md"),
+			title: "Call Bob",
+			folder: "Dev",
+			move: false,
+			tags: ["口语"],
+		});
+
+		const note = read("_Inbox/Call Bob.md")!;
+		expect(parseFrontmatter(note).data.tags).toEqual(["英语口语", "口语"]);
+		expect(note).toContain("---\n- [ ] Call Bob #英语口语 #口语 #project/Dev\n");
+	});
+
 	it("can stay where they are", async () => {
 		const { app, add, read } = createApp();
 		await add({ "Templates/Task.md": TEMPLATE, "_Inbox/Call Bob.md": inboxNote });
@@ -456,5 +495,141 @@ describe("Task note folders", () => {
 		expect(folderOf("Tasks/Projects/Dev/a.md")).toBe("Dev");
 		expect(folderOf("Tasks/Projects/b.md")).toBe("");
 		expect(folderOf("_Inbox/c.md")).toBeNull();
+	});
+});
+
+describe("Task lines given the note's tags and project", () => {
+	const format = { projectTagPrefix: "project" };
+	const sync = (line: string, tags: string[], project: string) =>
+		withNoteMetadata(line, tags, project, format);
+
+	it("get the project after the text", () => {
+		expect(sync("- [ ] Agents 之间共享信息", [], "AI/Agent")).toBe(
+			"- [ ] Agents 之间共享信息 #project/AI/Agent",
+		);
+		expect(sync("- [ ] 上架计算器到 AppStore ", [], "Development/Other")).toBe(
+			"- [ ] 上架计算器到 AppStore #project/Development/Other",
+		);
+	});
+
+	it("get tags and project before the context, priority and dates", () => {
+		expect(sync("- [ ] 如何让AI教师进化成 Agent？  🔼", ["AI教师"], "Dev/Enhance")).toBe(
+			"- [ ] 如何让AI教师进化成 Agent？ #AI教师 #project/Dev/Enhance 🔼",
+		);
+		expect(sync("- [a] 增加任务归档状态 ✅ 2026-10-01", [], "Dev/TG")).toBe(
+			"- [a] 增加任务归档状态 #project/Dev/TG ✅ 2026-10-01",
+		);
+		expect(sync("- [ ] 游戏录播解说 @[[Bob Smith]]", [], "Business")).toBe(
+			"- [ ] 游戏录播解说 #project/Business @[[Bob Smith]]",
+		);
+	});
+
+	it("get missing tags before the project they have", () => {
+		expect(
+			sync("- [ ] 强化解题拆解步骤 #project/Dev/Enhance 🔼", ["AI批改"], "Dev/Enhance"),
+		).toBe("- [ ] 强化解题拆解步骤 #AI批改 #project/Dev/Enhance 🔼");
+	});
+
+	it("stay as they are when they have both, whatever the spacing", () => {
+		const line = "- [ ]  Web3 技术 #ai教师 #project/Development/AKG  @Dev";
+		expect(sync(line, ["AI教师"], "Development/AKG")).toBe(line);
+	});
+
+	it("get a different project replaced", () => {
+		expect(sync("- [ ] Plan #project/Old/Place @Dev", [], "New Place")).toBe(
+			"- [ ] Plan #project/New-Place @Dev",
+		);
+	});
+
+	it("keep their project when the note has none", () => {
+		expect(sync("- [ ] Plan #project/Dev", ["a"], "")).toBe(
+			"- [ ] Plan #a #project/Dev",
+		);
+	});
+
+	it("don't count a # in links or code as a tag", () => {
+		expect(sync("- [ ] See [[Note#x]] and `#x`", ["x"], "")).toBe(
+			"- [ ] See [[Note#x]] and `#x` #x",
+		);
+	});
+
+	it("are the only lines changed in the note", () => {
+		const content = [
+			"---",
+			"tags:",
+			"  - a",
+			"---",
+			"- [ ] Top",
+			"\t- [ ] Nested",
+			"```",
+			"- [ ] In code",
+			"```",
+			"- [x] Done\r",
+			"",
+		].join("\n");
+
+		expect(withNoteMetadataOnTasks(content, ["a"], "Dev", format)).toBe(
+			[
+				"---",
+				"tags:",
+				"  - a",
+				"---",
+				"- [ ] Top #a #project/Dev",
+				"\t- [ ] Nested",
+				"```",
+				"- [ ] In code",
+				"```",
+				"- [x] Done #a #project/Dev\r",
+				"",
+			].join("\n"),
+		);
+	});
+});
+
+describe("Adding a note's tags and project to its tasks", () => {
+	it("updates the task lines and says how many changed", async () => {
+		const { app, add, read } = createApp();
+		await add({
+			"Tasks/Projects/Dev/a.md": "---\ntags:\n  - idea\nProject: Dev\n---\n- [ ] A\n",
+		});
+
+		const result = await addNoteMetadataToTasks(
+			app,
+			settings,
+			app.vault.getAbstractFileByPath("Tasks/Projects/Dev/a.md"),
+		);
+
+		expect(result).toEqual({ tasks: 1, changed: 1 });
+		expect(read("Tasks/Projects/Dev/a.md")).toBe(
+			"---\ntags:\n  - idea\nProject: Dev\n---\n- [ ] A #idea #project/Dev\n",
+		);
+	});
+
+	it("leaves a note that is up to date unwritten", async () => {
+		const { app, add } = createApp();
+		await add({ "a.md": "---\nProject: Dev\n---\n- [ ] A #project/Dev\n" });
+		const process = jest.spyOn(app.vault, "process");
+
+		const result = await addNoteMetadataToTasks(
+			app,
+			settings,
+			app.vault.getAbstractFileByPath("a.md"),
+		);
+
+		expect(result).toEqual({ tasks: 1, changed: 0 });
+		expect(process).not.toHaveBeenCalled();
+	});
+
+	it("tells a note without tasks or without properties apart", async () => {
+		const { app, add } = createApp();
+		await add({
+			"empty.md": "---\nProject: Dev\n---\nJust notes\n",
+			"bare.md": "- [ ] A\n",
+		});
+		const run = (path: string) =>
+			addNoteMetadataToTasks(app, settings, app.vault.getAbstractFileByPath(path));
+
+		expect(await run("empty.md")).toEqual({ tasks: 0, changed: 0 });
+		expect(await run("bare.md")).toBeNull();
 	});
 });

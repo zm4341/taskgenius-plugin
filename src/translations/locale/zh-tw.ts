@@ -2313,6 +2313,13 @@ const translations = {
 	"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.":
 		"{{tags}} 來自筆記屬性，這篇筆記裡的其他任務也有，所以沒刪；要刪請到筆記屬性裡刪",
 	"Open {{note}}": "打開 {{note}}",
+	"Added to the note's tags property and the task": "寫進筆記的 tags 屬性，任務也會帶上",
+	"Optional, separated by commas or spaces": "可選，用逗號或空格分隔",
+	"Add the note's tags and project to its tasks": "把筆記的標籤和項目補到任務行",
+	"This note has no tags or project to add": "這篇筆記的屬性裡沒有標籤和項目",
+	"This note has no tasks": "這篇筆記裡沒有任務",
+	"Its tasks already have the note's tags and project": "任務行已經帶著筆記的標籤和項目了",
+	"Added the note's tags and project to {{count}} task(s)": "已給 {{count}} 個任務補上筆記的標籤和項目",
 	"New Task button": "新增任務按鈕",
 	"Task notes folder": "任務筆記資料夾",
 	"Each task gets its own note in this folder or a subfolder. A subfolder is a project: its path is written to the note's project property. Leave empty for the vault root.":
