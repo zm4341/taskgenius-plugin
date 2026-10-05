@@ -471,6 +471,19 @@ declare module "obsidian" {
 			event: "task-genius:selection-mode-changed",
 			payload: SelectionModeChangeEventData,
 		): void;
+
+		/** Asks Obsidian's page preview to show the linked note */
+		trigger(
+			event: "hover-link",
+			payload: {
+				event: MouseEvent;
+				source: string;
+				hoverParent: HoverParent;
+				targetEl: HTMLElement | null;
+				linktext: string;
+				sourcePath?: string;
+			},
+		): void;
 	}
 
 	interface WorkspaceLeaf {

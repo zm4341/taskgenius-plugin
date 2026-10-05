@@ -73,6 +73,7 @@ import {
 	addNoteMetadataToTasks,
 	getTaskNoteSettings,
 } from "./utils/file/task-note";
+import { HOVER_LINK_SOURCE } from "./utils/task/context-link";
 import { TASK_VIEW_TYPE, TaskView } from "./pages/TaskView";
 import { SettingsModal } from "./components/features/settings/SettingsModal";
 import "./styles/global.scss";
@@ -259,6 +260,13 @@ export default class TaskProgressBarPlugin extends Plugin {
 		// Initialize URI handler
 		this.uriHandler = new ObsidianUriHandler(this);
 		this.uriHandler.register();
+
+		// Notes linked in Task Genius views, like a context @[[Note]], preview
+		// on Mod+hover; Obsidian lists this under Page preview settings
+		this.registerHoverLinkSource(HOVER_LINK_SOURCE, {
+			display: "Task Genius",
+			defaultMod: true,
+		});
 
 		// Initialize rebuild progress manager
 		this.rebuildProgressManager = new RebuildProgressManager();

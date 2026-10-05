@@ -2312,7 +2312,6 @@ const translations = {
 	"Not a folder: {{path}}": "不是資料夾：{{path}}",
 	"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.":
 		"{{tags}} 來自筆記屬性，這篇筆記裡的其他任務也有，所以沒刪；要刪請到筆記屬性裡刪",
-	"Open {{note}}": "打開 {{note}}",
 	"Added to the note's tags property and the task": "寫進筆記的 tags 屬性，任務也會帶上",
 	"Optional, separated by commas or spaces": "可選，用逗號或空格分隔",
 	"Add the note's tags and project to its tasks": "把筆記的標籤和項目補到任務行",

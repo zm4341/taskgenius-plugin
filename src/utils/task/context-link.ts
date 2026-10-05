@@ -18,6 +18,15 @@ export function contextLinkTarget(context: string): string | null {
 	return context.slice(2, -2).split("|")[0].trim() || null;
 }
 
+/** What Obsidian shows for the link: its alias, else the note and heading, "[[Note#Part]]" → "Note > Part" */
+export function contextLinkText(context: string): string {
+	const [target, alias] = context.slice(2, -2).split("|");
+	return alias?.trim() || target.split("#").map((part) => part.trim()).filter(Boolean).join(" > ");
+}
+
+/** Page preview source of the links in Task Genius views; previews show on Mod+hover by default */
+export const HOVER_LINK_SOURCE = "task-genius";
+
 /** The context as the task line writes it after "@": spaces become "-", except in a link */
 export function contextForLine(context: string): string {
 	const value = context.trim().replace(/^@+/, "");

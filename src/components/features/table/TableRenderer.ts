@@ -1,4 +1,13 @@
-import { Component, setIcon, Menu, App, Keymap } from "obsidian";
+import {
+	Component,
+	setIcon,
+	Menu,
+	App,
+	Keymap,
+	getLinkpath,
+	type HoverParent,
+	type HoverPopover,
+} from "obsidian";
 import { TableColumn, TableRow, TableCell } from "./TableTypes";
 import { TableSpecificConfig } from "../../../common/setting-definition";
 import { t } from "@/translations/helper";
@@ -16,7 +25,12 @@ import {
 } from "@/utils/task/task-operations";
 import { getAllStatusMarks, getAllStatusNames } from "@/utils/status-cycle-resolver";
 import { getArchivedMarks } from "@/utils/task/archived-status";
-import { contextLinkTarget } from "@/utils/task/context-link";
+import {
+	contextLinkTarget,
+	contextLinkText,
+	HOVER_LINK_SOURCE,
+	isContextLink,
+} from "@/utils/task/context-link";
 
 // Cache for autocomplete data to avoid repeated expensive operations
 interface AutoCompleteCache {
@@ -29,7 +43,9 @@ interface AutoCompleteCache {
 /**
  * Table renderer component responsible for rendering the table HTML structure
  */
-export class TableRenderer extends Component {
+export class TableRenderer extends Component implements HoverParent {
+	/** Page preview of a linked note, set by Obsidian */
+	hoverPopover: HoverPopover | null = null;
 	private resizeObserver: ResizeObserver | null = null;
 	private isResizing: boolean = false;
 	private resizeStartX: number = 0;
@@ -464,9 +480,11 @@ export class TableRenderer extends Component {
 					cell.columnId === "context")
 			) {
 				const input = currentCell.querySelector("input");
+				const shown =
+					currentCell.querySelector<HTMLElement>("[data-value]");
 				const currentValue = input
 					? input.value
-					: currentCell.textContent || "";
+					: (shown?.dataset.value ?? currentCell.textContent) || "";
 				const newValue = cell.displayValue || "";
 				if (currentValue.trim() !== newValue.trim()) {
 					return true;
@@ -1328,6 +1346,128 @@ export class TableRenderer extends Component {
 	}
 
 	/**
+	 * The inline editor of a text cell, with suggestions for projects and
+	 * contexts. A changed value is saved on blur or Enter.
+	 */
+	private createTextInput(
+		cellEl: HTMLElement,
+		cell: TableCell,
+		value: string,
+		originalValue: string,
+		onUnchanged?: () => void,
+	): HTMLInputElement {
+		// Create editable input
+		const input = cellEl.createEl("input", "task-table-text-input");
+		input.type = "text";
+		input.value = value;
+		input.style.cssText =
+			"border:none;background:transparent;width:100%;padding:0;font:inherit;";
+
+		// Setup autocomplete only when user starts typing or focuses
+		let autoCompleteSetup = false;
+		const setupAutoCompleteOnce = () => {
+			if (!autoCompleteSetup && this.app) {
+				autoCompleteSetup = true;
+				if (cell.columnId === "project") {
+					this.setupAutoComplete(input, "project");
+				} else if (cell.columnId === "context") {
+					this.setupAutoComplete(input, "context");
+				}
+			}
+		};
+
+		// Handle blur event to save changes
+		this.registerDomEvent(input, "blur", () => {
+			const newValue = input.value.trim();
+
+			// Only save if value actually changed
+			if (originalValue !== newValue) {
+				this.saveCellValue(cellEl, cell, newValue);
+			} else {
+				onUnchanged?.();
+			}
+		});
+
+		// Handle Enter key to save and exit
+		this.registerDomEvent(input, "keydown", (e) => {
+			if (e.key === "Enter") {
+				input.blur();
+				e.preventDefault();
+			}
+			// Stop propagation to prevent triggering table events
+			e.stopPropagation();
+		});
+
+		// Setup autocomplete on focus or first input for project/context columns
+		if (cell.columnId === "project" || cell.columnId === "context") {
+			this.registerDomEvent(input, "focus", setupAutoCompleteOnce);
+			this.registerDomEvent(input, "input", setupAutoCompleteOnce);
+		}
+
+		// Stop click propagation to prevent row selection
+		this.registerDomEvent(input, "click", (e) => {
+			e.stopPropagation();
+			requestAnimationFrame(() => input.focus());
+		});
+
+		return input;
+	}
+
+	/**
+	 * A note as the context, @[[Note]], shown the way Obsidian shows a link:
+	 * clicking it opens the note, Mod+hover previews it, and clicking beside
+	 * it edits the link as written
+	 */
+	private renderContextLink(
+		cellEl: HTMLElement,
+		cell: TableCell,
+		value: string,
+		sourcePath: string,
+	) {
+		const { metadataCache, workspace } = this.plugin.app;
+		const target = contextLinkTarget(value)!;
+		const wrapper = cellEl.createDiv({ cls: "task-table-context-link" });
+		// The value itself, for comparing rows, as the link shows less of it
+		wrapper.dataset.value = value;
+
+		const link = wrapper.createEl("a", {
+			cls: "internal-link",
+			text: contextLinkText(value),
+			attr: { href: target, "data-href": target },
+		});
+		if (!metadataCache.getFirstLinkpathDest(getLinkpath(target), sourcePath)) {
+			link.addClass("is-unresolved");
+		}
+		this.registerDomEvent(link, "click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			void workspace.openLinkText(target, sourcePath, Keymap.isModEvent(e));
+		});
+		this.registerDomEvent(link, "mouseover", (e) => {
+			workspace.trigger("hover-link", {
+				event: e,
+				source: HOVER_LINK_SOURCE,
+				hoverParent: this,
+				targetEl: link,
+				linktext: target,
+				sourcePath,
+			});
+		});
+
+		if (!cell.editable) return;
+		wrapper.addClass("is-editable");
+		this.registerDomEvent(wrapper, "click", (e) => {
+			e.stopPropagation();
+			cellEl.empty();
+			const input = this.createTextInput(cellEl, cell, value, value, () => {
+				cellEl.empty();
+				this.renderContextLink(cellEl, cell, value, sourcePath);
+			});
+			input.focus();
+		});
+	}
+
+	/**
 	 * Render text cell with inline editing and auto-suggest
 	 */
 	private renderTextCell(
@@ -1360,73 +1500,24 @@ export class TableRenderer extends Component {
 			effectiveValue = (cell.value as string) || "";
 		}
 
-		// A note as the context, @[[Note]], comes with a button that opens it
-		const linkedNote =
-			cell.columnId === "context" ? contextLinkTarget(effectiveValue) : null;
-		const host = linkedNote
-			? cellEl.createDiv({ cls: "task-table-context-link" })
-			: cellEl;
+		// A note as the context, @[[Note]], shows as a link to it
+		if (cell.columnId === "context" && isContextLink(effectiveValue)) {
+			this.renderContextLink(
+				cellEl,
+				cell,
+				effectiveValue,
+				row?.task?.filePath ?? "",
+			);
+			return;
+		}
 
 		if (cell.editable && !isReadonly) {
-			// Create editable input
-			const input = host.createEl("input", "task-table-text-input");
-			input.type = "text";
-			input.value = displayText;
-			input.style.cssText =
-				"border:none;background:transparent;width:100%;padding:0;font:inherit;";
-
 			// Store initial value for comparison - should match what's shown in the input
 			// For content column, use the cleaned text; for others, use the raw value
 			const originalValue = isContentColumn
 				? displayText // This is the cleaned text that user sees and edits
 				: effectiveValue;
-
-			// Setup autocomplete only when user starts typing or focuses
-			let autoCompleteSetup = false;
-			const setupAutoCompleteOnce = () => {
-				if (!autoCompleteSetup && this.app) {
-					autoCompleteSetup = true;
-					if (cell.columnId === "project") {
-						this.setupAutoComplete(input, "project");
-					} else if (cell.columnId === "context") {
-						this.setupAutoComplete(input, "context");
-					}
-				}
-			};
-
-			// Handle blur event to save changes
-			this.registerDomEvent(input, "blur", () => {
-				const newValue = input.value.trim();
-
-				// Only save if value actually changed
-				if (originalValue !== newValue) {
-					this.saveCellValue(cellEl, cell, newValue);
-				}
-			});
-
-			// Handle Enter key to save and exit
-			this.registerDomEvent(input, "keydown", (e) => {
-				if (e.key === "Enter") {
-					input.blur();
-					e.preventDefault();
-				}
-				// Stop propagation to prevent triggering table events
-				e.stopPropagation();
-			});
-
-			// Setup autocomplete on focus or first input for project/context columns
-			if (cell.columnId === "project" || cell.columnId === "context") {
-				this.registerDomEvent(input, "focus", setupAutoCompleteOnce);
-				this.registerDomEvent(input, "input", setupAutoCompleteOnce);
-			}
-
-			// Stop click propagation to prevent row selection
-			this.registerDomEvent(input, "click", (e) => {
-				e.stopPropagation();
-				requestAnimationFrame(() => input.focus());
-			});
-		} else if (linkedNote) {
-			host.createSpan({ text: displayText });
+			this.createTextInput(cellEl, cell, displayText, originalValue);
 		} else {
 			cellEl.textContent = displayText;
 
@@ -1442,26 +1533,6 @@ export class TableRenderer extends Component {
 				});
 				cellEl.title = t("Click to open file");
 			}
-		}
-
-		if (linkedNote) {
-			const openButton = host.createSpan({
-				cls: "task-table-context-open clickable-icon",
-				attr: {
-					"aria-label": t("Open {{note}}", {
-						interpolation: { note: linkedNote },
-					}),
-				},
-			});
-			setIcon(openButton, "arrow-up-right");
-			this.registerDomEvent(openButton, "click", (e) => {
-				e.stopPropagation();
-				void this.plugin.app.workspace.openLinkText(
-					linkedNote,
-					row?.task?.filePath ?? "",
-					Keymap.isModEvent(e),
-				);
-			});
 		}
 
 		// Add tgProject indicator for project column - only show if no user-set project exists

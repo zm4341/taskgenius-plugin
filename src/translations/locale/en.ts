@@ -2534,7 +2534,6 @@ const translations = {
 	"Not a folder: {{path}}": "Not a folder: {{path}}",
 	"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.":
 		"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.",
-	"Open {{note}}": "Open {{note}}",
 	"Added to the note's tags property and the task": "Added to the note's tags property and the task",
 	"Optional, separated by commas or spaces": "Optional, separated by commas or spaces",
 	"Add the note's tags and project to its tasks": "Add the note's tags and project to its tasks",

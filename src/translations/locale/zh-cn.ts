@@ -2358,7 +2358,6 @@ const translations = {
 	"Not a folder: {{path}}": "不是文件夹：{{path}}",
 	"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.":
 		"{{tags}} 来自笔记属性，这篇笔记里的其他任务也有，所以没删；要删请到笔记属性里删",
-	"Open {{note}}": "打开 {{note}}",
 	"Added to the note's tags property and the task": "写进笔记的 tags 属性，任务也会带上",
 	"Optional, separated by commas or spaces": "可选，用逗号或空格分隔",
 	"Add the note's tags and project to its tasks": "把笔记的标签和项目补到任务行",

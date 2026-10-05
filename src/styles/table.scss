@@ -485,34 +485,38 @@
 	padding: 2px 4px !important;
 }
 
-/* A note as the context: the link, then a button that opens the note */
+/* A note as the context: a link like Obsidian's; clicking beside it edits it */
 .task-table-context-link {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	min-height: 1.5em;
 }
 
-.task-table-context-link > input,
-.task-table-context-link > span:first-child {
-	flex: 1 1 auto;
-	min-width: 0;
+.task-table-context-link.is-editable {
+	cursor: text;
+}
+
+.task-table-context-link > .internal-link {
+	/* Leaves room beside a long link to click for editing */
+	max-width: calc(100% - 12px);
 	overflow: hidden;
 	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--link-color);
+	text-decoration-line: var(--link-decoration);
+	cursor: var(--cursor-link);
 }
 
-.task-table-context-open {
-	flex: none;
-	padding: 2px;
-	color: var(--text-faint);
+.task-table-context-link > .internal-link:hover {
+	color: var(--link-color-hover);
+	text-decoration-line: var(--link-decoration-hover);
 }
 
-.task-table-context-open:hover {
-	color: var(--text-accent);
-}
-
-.task-table-context-open svg {
-	width: 14px;
-	height: 14px;
+.task-table-context-link > .internal-link.is-unresolved {
+	color: var(--link-unresolved-color);
+	opacity: var(--link-unresolved-opacity);
+	text-decoration-style: var(--link-unresolved-decoration-style);
+	text-decoration-color: var(--link-unresolved-decoration-color);
 }
 
 /* Obsidian sizes inputs and dropdowns on its own; editors match the table */

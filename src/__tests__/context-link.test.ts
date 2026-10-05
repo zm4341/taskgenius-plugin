@@ -9,9 +9,11 @@ import { MarkdownTaskParser } from "@/dataflow/core/ConfigurableTaskParser";
 import { getConfig } from "@/common/task-parser-config";
 import { WriteAPI } from "@/dataflow/api/WriteAPI";
 import { ContextSuggest } from "@/components/ui/inputs/AutoComplete";
+import { TableRenderer } from "@/components/features/table/TableRenderer";
 import {
 	contextForLine,
 	contextLinkTarget,
+	contextLinkText,
 } from "@/utils/task/context-link";
 import { createMockPlugin } from "./mockUtils";
 import type { Task } from "@/types/task";
@@ -32,8 +34,42 @@ jest.mock("obsidian", () => {
 		}
 		return at === query.length ? { score: -text.length, matches: [] } : null;
 	};
-	return { ...actual, AbstractInputSuggest, prepareFuzzySearch };
+	const Keymap = {
+		isModEvent: (event: MouseEvent) =>
+			event.metaKey || event.ctrlKey ? "tab" : false,
+	};
+	const getLinkpath = (linktext: string) => linktext.replace(/#.*$/, "");
+	return {
+		...actual,
+		AbstractInputSuggest,
+		prepareFuzzySearch,
+		Keymap,
+		getLinkpath,
+	};
 });
+
+// Minimal stand-ins for the DOM helpers Obsidian adds to HTMLElement
+const proto = HTMLElement.prototype as any;
+proto.createEl = function (tag: string, o?: any) {
+	const el = document.createElement(tag);
+	if (typeof o === "string") o = { cls: o };
+	if (o?.cls) el.className = o.cls;
+	if (o?.text !== undefined) el.textContent = String(o.text);
+	for (const [key, value] of Object.entries(o?.attr ?? {})) {
+		el.setAttribute(key, String(value));
+	}
+	this.appendChild(el);
+	return el;
+};
+proto.createDiv = function (o?: any) {
+	return this.createEl("div", o);
+};
+proto.empty = function () {
+	this.replaceChildren();
+};
+proto.addClass = function (...cls: string[]) {
+	this.classList.add(...cls);
+};
 
 const plugin = createMockPlugin({
 	preferMetadataFormat: "tasks",
@@ -109,6 +145,12 @@ describe("context-link helpers", () => {
 		expect(contextForLine("[[Bob Smith]]")).toBe("[[Bob Smith]]");
 		expect(contextForLine("@[[Bob Smith]]")).toBe("[[Bob Smith]]");
 		expect(contextForLine("@home office")).toBe("home-office");
+	});
+
+	it("shows a link as Obsidian does", () => {
+		expect(contextLinkText("[[Bob Smith]]")).toBe("Bob Smith");
+		expect(contextLinkText("[[Bob Smith|Bob]]")).toBe("Bob");
+		expect(contextLinkText("[[Bob Smith#Phone]]")).toBe("Bob Smith > Phone");
 	});
 
 	it("finds the note a link context points to", () => {
@@ -209,5 +251,124 @@ describe("Context suggestions", () => {
 			"[[Bobby Tables]]",
 			"[[Bob Smith]]",
 		]);
+	});
+});
+
+describe("Context column in the table", () => {
+	function render(value: string, editable = true) {
+		const app: any = {
+			workspace: { openLinkText: jest.fn(), trigger: jest.fn() },
+			metadataCache: {
+				getFirstLinkpathDest: (path: string) =>
+					path === "Missing" ? null : { path: `${path}.md` },
+				getTags: () => ({}),
+			},
+		};
+		const div = () => document.createElement("div");
+		const renderer = new TableRenderer(div(), div(), div(), [], {} as any, app, {
+			app,
+		} as any);
+		const onCellChange = jest.fn();
+		(renderer as any).onCellChange = onCellChange;
+
+		const cellEl = document.createElement("td");
+		cellEl.dataset.rowId = "Tasks/a.md-L0";
+		document.body.appendChild(cellEl);
+		const cell = { columnId: "context", value, displayValue: value, editable };
+		(renderer as any).renderTextCell(cellEl, cell, {
+			task: { filePath: "Tasks/a.md", metadata: {} },
+		});
+		return { app, renderer, cellEl, onCellChange };
+	}
+	const click = (el: Element, init: MouseEventInit = {}) =>
+		el.dispatchEvent(new MouseEvent("click", { bubbles: true, ...init }));
+
+	it("shows a note as a link with its name, which opens the note", () => {
+		const { app, cellEl } = render("[[Bob Smith|Bob]]");
+		const link = cellEl.querySelector("a.internal-link")!;
+
+		expect(link.textContent).toBe("Bob");
+		expect(cellEl.querySelector("input")).toBeNull();
+
+		click(link);
+		expect(app.workspace.openLinkText).toHaveBeenCalledWith(
+			"Bob Smith",
+			"Tasks/a.md",
+			false,
+		);
+		click(link, { metaKey: true });
+		expect(app.workspace.openLinkText).toHaveBeenLastCalledWith(
+			"Bob Smith",
+			"Tasks/a.md",
+			"tab",
+		);
+	});
+
+	it("marks a link to a missing note", () => {
+		const { cellEl } = render("[[Missing]]");
+
+		expect(cellEl.querySelector("a")!.classList).toContain("is-unresolved");
+	});
+
+	it("asks Obsidian for a preview of the note on hover", () => {
+		const { app, renderer, cellEl } = render("[[Bob Smith]]");
+		const link = cellEl.querySelector("a")!;
+
+		link.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+
+		expect(app.workspace.trigger).toHaveBeenCalledWith(
+			"hover-link",
+			expect.objectContaining({
+				source: "task-genius",
+				hoverParent: renderer,
+				targetEl: link,
+				linktext: "Bob Smith",
+				sourcePath: "Tasks/a.md",
+			}),
+		);
+	});
+
+	it("edits the link as written when clicked beside it, and shows it again if unchanged", () => {
+		const { cellEl, onCellChange } = render("[[Bob Smith]]");
+
+		click(cellEl.querySelector(".task-table-context-link")!);
+		const input = cellEl.querySelector("input")!;
+		expect(input.value).toBe("[[Bob Smith]]");
+		expect(document.activeElement).toBe(input);
+
+		input.dispatchEvent(new FocusEvent("blur"));
+		expect(onCellChange).not.toHaveBeenCalled();
+		expect(cellEl.querySelector("input")).toBeNull();
+		expect(cellEl.querySelector("a")!.textContent).toBe("Bob Smith");
+	});
+
+	it("saves an edited link", () => {
+		const { cellEl, onCellChange } = render("[[Bob Smith]]");
+
+		click(cellEl.querySelector(".task-table-context-link")!);
+		const input = cellEl.querySelector("input")!;
+		input.value = "[[Alice]]";
+		input.dispatchEvent(new FocusEvent("blur"));
+
+		expect(onCellChange).toHaveBeenCalledWith(
+			"Tasks/a.md-L0",
+			"context",
+			"[[Alice]]",
+		);
+	});
+
+	it("only opens the link in a cell that can't be edited", () => {
+		const { cellEl } = render("[[Bob Smith]]", false);
+
+		click(cellEl.querySelector(".task-table-context-link")!);
+
+		expect(cellEl.querySelector("input")).toBeNull();
+	});
+
+	it("keeps other contexts in an input", () => {
+		const { cellEl } = render("home");
+
+		expect(cellEl.querySelector("input")!.value).toBe("home");
+		expect(cellEl.querySelector("a")).toBeNull();
 	});
 });
