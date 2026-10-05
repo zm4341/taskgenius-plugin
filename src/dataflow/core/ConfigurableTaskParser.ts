@@ -12,6 +12,7 @@ import {
 import { parseLocalDate } from "@/utils/date/date-formatter";
 import { TASK_REGEX } from "@/common/regex-define";
 import { ContextDetector } from "@/parsers/context-detector";
+import { CONTEXT_LINK_START } from "@/utils/task/context-link";
 import { TimeParsingService } from "@/services/time-parsing-service";
 import { TimeComponent } from "@/types/time-parsing";
 
@@ -443,8 +444,20 @@ export class MarkdownTaskParser {
 				if (contextMatch) {
 					const [context, beforeContent, afterRemaining] =
 						contextMatch;
+
+					// Tags before the context, as in "#tag #project/x @ctx"
+					const [beforeCleaned, beforeMetadata, beforeTags] =
+						this.extractTagsOnly(beforeContent);
+					tags.push(...beforeTags);
+					Object.assign(metadata, beforeMetadata);
+
 					metadata.context = context;
-					cleanedContent += beforeContent;
+					// Keep the spaces around it so words don't run together
+					const [lead] = beforeContent.match(/^\s*/)!;
+					const [trail] = beforeContent.match(/\s*$/)!;
+					cleanedContent += beforeCleaned
+						? lead + beforeCleaned + trail
+						: lead || trail;
 					remaining = afterRemaining;
 					foundMatch = true;
 					continue;
@@ -1084,18 +1097,41 @@ export class MarkdownTaskParser {
 	}
 
 	private extractContext(content: string): [string, string, string] | null {
-		const atPos = content.indexOf("@");
-		if (atPos === -1) return null;
+		// An "@" in a link, URL or inline code is not a context
+		const detector = new ContextDetector(content);
+		detector.detectAllProtectedRanges();
 
-		// Check if it's a word start
-		const isWordStart =
-			atPos === 0 ||
-			content[atPos - 1].match(/\s/) ||
-			!content[atPos - 1].match(/[a-zA-Z0-9#@$%^&*]/);
+		for (
+			let atPos = content.indexOf("@");
+			atPos !== -1;
+			atPos = content.indexOf("@", atPos + 1)
+		) {
+			// Check if it's a word start, so "me@example.com" has none
+			const isWordStart =
+				atPos === 0 ||
+				content[atPos - 1].match(/\s/) ||
+				!content[atPos - 1].match(/[a-zA-Z0-9#@$%^&*]/);
+			if (!isWordStart || detector.isPositionProtected(atPos)) continue;
 
-		if (!isWordStart) return null;
+			const afterAt = content.substring(atPos + 1);
+			// A note as the context, kept as its link: @[[Note]], @[[Note|Alias]]
+			const link = afterAt.match(CONTEXT_LINK_START);
+			const contextEnd = link
+				? link[0].length
+				: this.contextNameLength(afterAt);
+			if (contextEnd > 0) {
+				const context = afterAt.substring(0, contextEnd);
+				const before = content.substring(0, atPos);
+				const after = afterAt.substring(contextEnd);
+				return [context, before, after];
+			}
+		}
 
-		const afterAt = content.substring(atPos + 1);
+		return null;
+	}
+
+	/** Length of the context name at the start of the text, 0 if none */
+	private contextNameLength(afterAt: string): number {
 		let contextEnd = 0;
 
 		// Find context end, similar to tag parsing but for context
@@ -1141,14 +1177,7 @@ export class MarkdownTaskParser {
 			}
 		}
 
-		if (contextEnd > 0) {
-			const context = afterAt.substring(0, contextEnd);
-			const before = content.substring(0, atPos);
-			const after = content.substring(atPos + 1 + contextEnd);
-			return [context, before, after];
-		}
-
-		return null;
+		return contextEnd;
 	}
 
 	private extractTagsOnly(

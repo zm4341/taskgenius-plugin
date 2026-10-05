@@ -189,7 +189,8 @@ export class ProjectSuggest extends CustomSuggest {
 }
 
 /**
- * ContextSuggest - Provides autocomplete for context names
+ * ContextSuggest - Provides autocomplete for context names, and for notes
+ * after "[[", since a note can be the context: @[[Note]]
  */
 export class ContextSuggest extends CustomSuggest {
 	constructor(
@@ -205,6 +206,29 @@ export class ContextSuggest extends CustomSuggest {
 			this.availableChoices = cachedData.contexts;
 		});
 	}
+
+	getSuggestions(query: string): string[] {
+		const link = query.trim().replace(/^@/, "").match(/^\[\[([^[\]|#]*)/);
+		return link
+			? noteLinkSuggestions(this.app, link[1].trim())
+			: super.getSuggestions(query);
+	}
+}
+
+/** Links to the notes whose names match, best match first, e.g. "[[Note]]" */
+function noteLinkSuggestions(app: App, query: string): string[] {
+	const search = prepareFuzzySearch(query);
+	return app.vault
+		.getMarkdownFiles()
+		.map((file) => ({ file, match: query ? search(file.basename) : null }))
+		.filter(({ match }) => !query || match)
+		.sort(
+			(a, b) =>
+				(b.match?.score ?? 0) - (a.match?.score ?? 0) ||
+				b.file.stat.mtime - a.file.stat.mtime,
+		)
+		.slice(0, 50)
+		.map(({ file }) => `[[${app.metadataCache.fileToLinktext(file, "")}]]`);
 }
 
 /**

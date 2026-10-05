@@ -28,6 +28,7 @@ import { BulkOperationResult } from "@/types/selection";
 import { formatDate as formatDateSmart } from "@/utils/date/date-utils";
 import { noteTagsOf, removeNoteTags, tagName } from "@/utils/file/note-tags";
 import { countTasks } from "@/utils/file/task-note";
+import { contextForLine } from "@/utils/task/context-link";
 import { t } from "@/translations/helper";
 
 /**
@@ -2239,10 +2240,8 @@ export class WriteAPI {
 			} else {
 				const contextPrefix =
 					this.plugin.settings.contextTagPrefix?.tasks || "@";
-				// Tasks 格式：空格使用 "-" 连接
-				const sanitizedContext = String(args.context)
-					.trim()
-					.replace(/\s+/g, "-");
+				// Tasks 格式：空格使用 "-" 连接，@[[笔记]] 保持原样
+				const sanitizedContext = contextForLine(String(args.context));
 				metadata.push(`${contextPrefix}${sanitizedContext}`);
 			}
 		}

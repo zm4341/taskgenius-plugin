@@ -1,4 +1,4 @@
-import { Component, setIcon, Menu, App } from "obsidian";
+import { Component, setIcon, Menu, App, Keymap } from "obsidian";
 import { TableColumn, TableRow, TableCell } from "./TableTypes";
 import { TableSpecificConfig } from "../../../common/setting-definition";
 import { t } from "@/translations/helper";
@@ -16,6 +16,7 @@ import {
 } from "@/utils/task/task-operations";
 import { getAllStatusMarks, getAllStatusNames } from "@/utils/status-cycle-resolver";
 import { getArchivedMarks } from "@/utils/task/archived-status";
+import { contextLinkTarget } from "@/utils/task/context-link";
 
 // Cache for autocomplete data to avoid repeated expensive operations
 interface AutoCompleteCache {
@@ -1359,9 +1360,16 @@ export class TableRenderer extends Component {
 			effectiveValue = (cell.value as string) || "";
 		}
 
+		// A note as the context, @[[Note]], comes with a button that opens it
+		const linkedNote =
+			cell.columnId === "context" ? contextLinkTarget(effectiveValue) : null;
+		const host = linkedNote
+			? cellEl.createDiv({ cls: "task-table-context-link" })
+			: cellEl;
+
 		if (cell.editable && !isReadonly) {
 			// Create editable input
-			const input = cellEl.createEl("input", "task-table-text-input");
+			const input = host.createEl("input", "task-table-text-input");
 			input.type = "text";
 			input.value = displayText;
 			input.style.cssText =
@@ -1417,6 +1425,8 @@ export class TableRenderer extends Component {
 				e.stopPropagation();
 				requestAnimationFrame(() => input.focus());
 			});
+		} else if (linkedNote) {
+			host.createSpan({ text: displayText });
 		} else {
 			cellEl.textContent = displayText;
 
@@ -1432,6 +1442,26 @@ export class TableRenderer extends Component {
 				});
 				cellEl.title = t("Click to open file");
 			}
+		}
+
+		if (linkedNote) {
+			const openButton = host.createSpan({
+				cls: "task-table-context-open clickable-icon",
+				attr: {
+					"aria-label": t("Open {{note}}", {
+						interpolation: { note: linkedNote },
+					}),
+				},
+			});
+			setIcon(openButton, "arrow-up-right");
+			this.registerDomEvent(openButton, "click", (e) => {
+				e.stopPropagation();
+				void this.plugin.app.workspace.openLinkText(
+					linkedNote,
+					row?.task?.filePath ?? "",
+					Keymap.isModEvent(e),
+				);
+			});
 		}
 
 		// Add tgProject indicator for project column - only show if no user-set project exists

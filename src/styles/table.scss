@@ -485,6 +485,36 @@
 	padding: 2px 4px !important;
 }
 
+/* A note as the context: the link, then a button that opens the note */
+.task-table-context-link {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.task-table-context-link > input,
+.task-table-context-link > span:first-child {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.task-table-context-open {
+	flex: none;
+	padding: 2px;
+	color: var(--text-faint);
+}
+
+.task-table-context-open:hover {
+	color: var(--text-accent);
+}
+
+.task-table-context-open svg {
+	width: 14px;
+	height: 14px;
+}
+
 /* Obsidian sizes inputs and dropdowns on its own; editors match the table */
 .task-table-cell.editing input,
 .task-table-cell.editing select {

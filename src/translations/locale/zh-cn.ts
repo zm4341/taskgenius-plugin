@@ -2358,6 +2358,7 @@ const translations = {
 	"Not a folder: {{path}}": "不是文件夹：{{path}}",
 	"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.":
 		"{{tags}} 来自笔记属性，这篇笔记里的其他任务也有，所以没删；要删请到笔记属性里删",
+	"Open {{note}}": "打开 {{note}}",
 	"New Task button": "新建任务按钮",
 	"Task notes folder": "任务笔记文件夹",
 	"Each task gets its own note in this folder or a subfolder. A subfolder is a project: its path is written to the note's project property. Leave empty for the vault root.":
