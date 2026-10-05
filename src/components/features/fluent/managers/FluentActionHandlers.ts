@@ -24,6 +24,7 @@ import {
 } from "@/utils/status-cycle-resolver";
 import { TaskTimerManager } from "@/managers/timer-manager";
 import { getArchivedMarks } from "@/utils/task/archived-status";
+import { tagName } from "@/utils/file/note-tags";
 
 /**
  * FluentActionHandlers - Handles all user actions and task operations
@@ -187,9 +188,16 @@ export class FluentActionHandlers extends Component {
 				originalTask,
 				updatedTask
 			);
+			// Tags the user took off, e.g. in the details panel; WriteAPI also
+			// takes them off the note's tags property the task inherits them from
+			const kept = new Set((updatedTask.metadata?.tags ?? []).map(tagName));
+			const removedTags = (originalTask.metadata?.tags ?? []).filter(
+				(tag) => !kept.has(tagName(tag))
+			);
 			const writeResult = await this.plugin.writeAPI.updateTask({
 				taskId: originalTask.id,
 				updates: updates,
+				removedTags,
 			});
 
 			if (!writeResult.success) {

@@ -2532,6 +2532,8 @@ const translations = {
 	"Task note template not found: {{path}}":
 		"Task note template not found: {{path}}",
 	"Not a folder: {{path}}": "Not a folder: {{path}}",
+	"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.":
+		"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.",
 	"New Task button": "New Task button",
 	"Task notes folder": "Task notes folder",
 	"Each task gets its own note in this folder or a subfolder. A subfolder is a project: its path is written to the note's project property. Leave empty for the vault root.":

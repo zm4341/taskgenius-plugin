@@ -6,7 +6,7 @@
  * which automatically update the index through the Orchestrator.
  */
 
-import { App, TFile, Vault, MetadataCache, moment } from "obsidian";
+import { App, TFile, Vault, MetadataCache, moment, Notice } from "obsidian";
 import { Task, CanvasTaskMetadata } from "@/types/task";
 import TaskProgressBarPlugin from "@/index";
 import {
@@ -26,6 +26,9 @@ import { rrulestr } from "rrule";
 import { EMOJI_TAG_REGEX, TOKEN_CONTEXT_REGEX } from "@/common/regex-define";
 import { BulkOperationResult } from "@/types/selection";
 import { formatDate as formatDateSmart } from "@/utils/date/date-utils";
+import { noteTagsOf, removeNoteTags, tagName } from "@/utils/file/note-tags";
+import { countTasks } from "@/utils/file/task-note";
+import { t } from "@/translations/helper";
 
 /**
  * Arguments for creating a task
@@ -50,6 +53,12 @@ export interface CreateTaskArgs {
 export interface UpdateTaskArgs {
 	taskId: string;
 	updates: Partial<Task>;
+	/**
+	 * Tags the user took off the task. They leave the task line, and the
+	 * note's tags property too when the task inherits them from there, or
+	 * they would come right back. Pass only when the user removed tags.
+	 */
+	removedTags?: string[];
 }
 
 /**
@@ -730,6 +739,17 @@ export class WriteAPI {
 									projectInlineRe,
 									"$1",
 								);
+								// Removed tags may sit inside the text rather than at the end
+								for (const tag of args.removedTags ?? []) {
+									const removedTagRe = new RegExp(
+										`(^|\\s)#${esc(tagName(tag))}(?=\\s|$)`,
+										"g",
+									);
+									taskContent = taskContent.replace(
+										removedTagRe,
+										"$1",
+									);
+								}
 								// Collapse extra spaces left by removals
 								taskContent = taskContent
 									.replace(/\s{2,}/g, " ")
@@ -818,6 +838,10 @@ export class WriteAPI {
 			});
 			await this.vault.modify(file, lines.join("\n"));
 
+			if (args.removedTags?.length) {
+				await this.removeInheritedTags(file, content, args.removedTags);
+			}
+
 			// Create the updated task object with the new content
 			const updatedTaskObj: Task = {
 				...originalTask,
@@ -848,6 +872,40 @@ export class WriteAPI {
 			console.error("WriteAPI: Error updating task:", error);
 			return { success: false, error: String(error) };
 		}
+	}
+
+	/**
+	 * Takes removed tags off the note's tags property, which the task inherits
+	 * them from. Only in a note holding just this task: otherwise its other
+	 * tasks would lose them too, so the note is left alone and the user told.
+	 */
+	private async removeInheritedTags(
+		file: TFile,
+		content: string,
+		removedTags: string[],
+	): Promise<void> {
+		const removed = new Set(removedTags.map(tagName));
+		const inherited = noteTagsOf(
+			this.metadataCache.getFileCache(file)?.frontmatter,
+		).filter((tag) => removed.has(tag));
+		if (inherited.length === 0) return;
+
+		if (countTasks(content) > 1) {
+			new Notice(
+				t(
+					"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.",
+					{
+						interpolation: {
+							tags: inherited.map((tag) => `#${tag}`).join(" "),
+						},
+					},
+				),
+			);
+			return;
+		}
+		await this.app.fileManager.processFrontMatter(file, (frontmatter) =>
+			removeNoteTags(frontmatter, inherited),
+		);
 	}
 
 	async updateTasksSequentially(

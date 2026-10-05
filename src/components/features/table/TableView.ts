@@ -15,6 +15,7 @@ import { TableHeader, TableHeaderCallbacks } from "./TableHeader";
 import { sortTasks } from "@/commands/sortTaskCommands";
 import { isProjectReadonly } from "@/utils/task/task-operations";
 import { getArchivedMarks } from "@/utils/task/archived-status";
+import { tagName } from "@/utils/file/note-tags";
 import "@/styles/table.scss";
 
 export interface TableViewCallbacks {
@@ -1654,6 +1655,38 @@ export class TableView extends Component {
 			}
 
 			// Re-apply filters and sorting
+			this.applyFiltersAndSort();
+			this.refreshDisplay();
+			return;
+		}
+
+		// Tags go to WriteAPI along with the ones the user removed: a tag the
+		// task inherits from the note's tags property would come right back
+		// unless it is removed there too
+		if (columnId === "tags" && this.plugin.writeAPI) {
+			const newTags = (
+				Array.isArray(newValue) ? newValue : String(newValue ?? "").split(",")
+			)
+				.map((tag: string) => tagName(String(tag)))
+				.filter((tag: string) => tag.length > 0)
+				.map((tag: string) => `#${tag}`);
+			const kept = new Set(newTags.map(tagName));
+			const removedTags = (task.metadata.tags ?? []).filter(
+				(tag) => !kept.has(tagName(tag)),
+			);
+			const metadata = { ...task.metadata, tags: newTags };
+			// Show the new tags at once, on a copy: the task object belongs to the index
+			this.allTasks[taskIndex] = { ...task, metadata };
+
+			const result = await this.plugin.writeAPI.updateTask({
+				taskId: task.id,
+				updates: { metadata },
+				removedTags,
+			});
+			if (!result.success) {
+				console.error("Failed to update task tags:", result.error);
+			}
+
 			this.applyFiltersAndSort();
 			this.refreshDisplay();
 			return;

@@ -148,11 +148,18 @@ export function taskNoteFolderOf(
 		: null;
 }
 
+/** How many tasks the note holds; a task note holds one */
+export function countTasks(content: string): number {
+	const frontmatter = content.match(FRONTMATTER)?.[0] ?? "";
+	return content
+		.slice(frontmatter.length)
+		.split("\n")
+		.filter((line) => TASK_LINE.test(line)).length;
+}
+
 /** Whether the note already has a task, which would make a second one */
 export async function noteHasTask(app: App, file: TFile): Promise<boolean> {
-	const content = await app.vault.read(file);
-	const frontmatter = content.match(FRONTMATTER)?.[0] ?? "";
-	return TASK_LINE.test(content.slice(frontmatter.length));
+	return countTasks(await app.vault.read(file)) > 0;
 }
 
 /** Creates a note holding just this task, from the template, in its folder */

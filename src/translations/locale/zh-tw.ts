@@ -2310,6 +2310,8 @@ const translations = {
 	"This note already has a task: {{path}}": "這篇筆記裡已經有任務了：{{path}}",
 	"Task note template not found: {{path}}": "找不到任務筆記範本：{{path}}",
 	"Not a folder: {{path}}": "不是資料夾：{{path}}",
+	"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.":
+		"{{tags}} 來自筆記屬性，這篇筆記裡的其他任務也有，所以沒刪；要刪請到筆記屬性裡刪",
 	"New Task button": "新增任務按鈕",
 	"Task notes folder": "任務筆記資料夾",
 	"Each task gets its own note in this folder or a subfolder. A subfolder is a project: its path is written to the note's project property. Leave empty for the vault root.":
