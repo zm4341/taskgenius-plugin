@@ -1,6 +1,7 @@
 import { App, TFile, TFolder, moment, normalizePath } from "obsidian";
 import type { TaskProgressBarSettings } from "@/common/setting-definition";
 import { t } from "@/translations/helper";
+import { noteTagsOf } from "@/utils/file/note-tags";
 
 /** Where the New Task button puts task notes, one note per task */
 export interface TaskNoteSettings {
@@ -12,6 +13,8 @@ export interface TaskNoteSettings {
 	projectKey: string;
 	/** How dates are written on the task line; Tasks emoji by default */
 	metadataFormat?: "tasks" | "dataview";
+	/** Prefix of the project on the task line: #project/Dev or [project:: Dev] */
+	projectTagPrefix?: string;
 }
 
 export interface TaskNoteDates {
@@ -39,13 +42,17 @@ export function getTaskNoteSettings(
 	settings: TaskProgressBarSettings,
 ): TaskNoteSettings {
 	const saved = settings.quickCapture?.taskNote;
+	const dataview = settings.preferMetadataFormat === "dataview";
 	return {
 		folder: saved?.folder ?? "",
 		templateFile: saved?.templateFile ?? "",
 		projectKey:
 			settings.projectConfig?.metadataConfig?.metadataKey || "project",
-		metadataFormat:
-			settings.preferMetadataFormat === "dataview" ? "dataview" : "tasks",
+		metadataFormat: dataview ? "dataview" : "tasks",
+		projectTagPrefix:
+			(dataview
+				? settings.projectTagPrefix?.dataview
+				: settings.projectTagPrefix?.tasks) || "project",
 	};
 }
 
@@ -72,6 +79,29 @@ export function formatTaskDates(
 				: `${emoji} ${day(date!)}`,
 		)
 		.join(" ");
+}
+
+/**
+ * The note's tags and project as the task line carries them, written the way
+ * WriteAPI writes them, e.g. "#写作脚手架 #project/Development/Vernify"
+ */
+export function formatNoteMetadata(
+	tags: string[],
+	project: string,
+	settings: Pick<TaskNoteSettings, "metadataFormat" | "projectTagPrefix">,
+): string {
+	const prefix = settings.projectTagPrefix || "project";
+	const parts: string[] = [];
+	if (settings.metadataFormat === "dataview") {
+		if (tags.length > 0) {
+			parts.push(`[tags:: ${tags.map((tag) => `#${tag}`).join(", ")}]`);
+		}
+		if (project) parts.push(`[${prefix}:: ${project}]`);
+	} else {
+		parts.push(...tags.map((tag) => `#${tag.replace(/\s+/g, "-")}`));
+		if (project) parts.push(`#${prefix}/${project.replace(/\s+/g, "-")}`);
+	}
+	return parts.join(" ");
 }
 
 /** Replaces characters that break file names or links */
@@ -180,9 +210,10 @@ export async function createTaskNote(
 
 	const template = await readTemplate(app, settings);
 	await ensureFolder(app, folderPath);
+	const tags = noteTagsOf(templateProperties(app, settings));
 	const file = await app.vault.create(
 		path,
-		withTaskAtTop(template, taskBlock(input, settings)),
+		withTaskAtTop(template, taskBlock(input, settings, tags)),
 	);
 	await applyTaskNoteProperties(app, settings, file, input.folder);
 	return file;
@@ -205,6 +236,11 @@ export async function convertToTaskNote(
 			}),
 		);
 	}
+	// The note keeps its tags; one without the property gets the template's
+	const own = app.metadataCache.getFileCache(file)?.frontmatter;
+	const tags = noteTagsOf(
+		own && "tags" in own ? own : templateProperties(app, settings),
+	);
 
 	if (input.move) {
 		const folderPath = resolveTaskNoteFolder(settings, input.folder);
@@ -226,16 +262,30 @@ export async function convertToTaskNote(
 	}
 
 	await app.vault.process(file, (content) =>
-		withTaskAtTop(content, taskBlock(input, settings)),
+		withTaskAtTop(content, taskBlock(input, settings, tags)),
 	);
 	await applyTaskNoteProperties(app, settings, file, input.folder);
 	return file;
 }
 
-function taskBlock(input: TaskNoteInput, settings: TaskNoteSettings): string {
+/**
+ * The task line ends with the note's tags and project, which the task
+ * inherits anyway, so the line shows them too; dates follow
+ */
+function taskBlock(
+	input: TaskNoteInput,
+	settings: TaskNoteSettings,
+	tags: string[],
+): string {
 	const description = input.description?.trim();
-	const dates = formatTaskDates(input.dates, settings.metadataFormat);
-	const taskLine = `- [ ] ${input.title.trim()}${dates ? " " + dates : ""}`;
+	const taskLine = [
+		"- [ ]",
+		input.title.trim(),
+		formatNoteMetadata(tags, cleanFolderInput(input.folder), settings),
+		formatTaskDates(input.dates, settings.metadataFormat),
+	]
+		.filter(Boolean)
+		.join(" ");
 	return `${taskLine}\n${description ? description + "\n" : ""}`;
 }
 
@@ -265,6 +315,19 @@ async function readTemplate(
 	return app.vault.read(file);
 }
 
+/** The template's properties, empty without a template */
+function templateProperties(
+	app: App,
+	settings: TaskNoteSettings,
+): Record<string, unknown> {
+	const file = settings.templateFile
+		? app.vault.getAbstractFileByPath(normalizePath(settings.templateFile))
+		: null;
+	return file instanceof TFile
+		? (app.metadataCache.getFileCache(file)?.frontmatter ?? {})
+		: {};
+}
+
 async function ensureFolder(app: App, folderPath: string): Promise<void> {
 	let current = "";
 	for (const part of folderPath.split("/").filter(Boolean)) {
@@ -291,13 +354,7 @@ async function applyTaskNoteProperties(
 	file: TFile,
 	folder: string,
 ): Promise<void> {
-	const templateFile = settings.templateFile
-		? app.vault.getAbstractFileByPath(normalizePath(settings.templateFile))
-		: null;
-	const templateProperties =
-		templateFile instanceof TFile
-			? (app.metadataCache.getFileCache(templateFile)?.frontmatter ?? {})
-			: {};
+	const fromTemplate = templateProperties(app, settings);
 	const project = cleanFolderInput(folder);
 	const created = moment(file.stat.ctime).format(TIMESTAMP_FORMAT);
 	const now = moment().format(TIMESTAMP_FORMAT);
@@ -305,7 +362,7 @@ async function applyTaskNoteProperties(
 		value === null || value === undefined || value === "";
 
 	await app.fileManager.processFrontMatter(file, (frontmatter) => {
-		for (const [key, value] of Object.entries(templateProperties)) {
+		for (const [key, value] of Object.entries(fromTemplate)) {
 			if (!(key in frontmatter)) frontmatter[key] = value;
 		}
 		// A note in the root folder belongs to no project

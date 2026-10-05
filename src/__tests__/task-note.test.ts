@@ -65,21 +65,32 @@ const settings: TaskNoteSettings = {
 	projectKey: "Project",
 };
 
-/** Frontmatter as Obsidian keeps it: key order, and empty values as `key:` */
+/** Frontmatter as Obsidian keeps it: key order, empty values as `key:`, lists as `  - item` */
 function parseFrontmatter(content: string) {
 	const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
 	const data: Record<string, unknown> = {};
+	let lastKey = "";
 	for (const line of (match?.[1] ?? "").split("\n").filter(Boolean)) {
+		const item = line.match(/^\s*-\s+(.*)$/);
+		if (item) {
+			data[lastKey] = [...((data[lastKey] as string[]) ?? []), item[1]];
+			continue;
+		}
 		const [key, ...rest] = line.split(":");
 		const value = rest.join(":").trim();
 		data[key] = value === "" ? null : value;
+		lastKey = key;
 	}
 	return { data, body: content.slice(match?.[0].length ?? 0) };
 }
 
 function stringifyFrontmatter(data: Record<string, unknown>, body: string) {
-	const lines = Object.entries(data).map(([key, value]) =>
-		value === null || value === undefined ? `${key}:` : `${key}: ${value}`,
+	const lines = Object.entries(data).flatMap(([key, value]) =>
+		Array.isArray(value)
+			? [`${key}:`, ...value.map((item) => `  - ${item}`)]
+			: value === null || value === undefined
+				? [`${key}:`]
+				: [`${key}: ${value}`],
 	);
 	return `---\n${lines.join("\n")}\n---\n${body}`;
 }
@@ -198,10 +209,42 @@ describe("New task notes", () => {
 				"updatedAt: 2026-10-01 09:30:00",
 				"Project: Dev/AKG",
 				"---",
-				"- [ ] Write the GDD",
+				"- [ ] Write the GDD #project/Dev/AKG",
 				"Chapters one to three",
 				"",
 			].join("\n"),
+		);
+	});
+
+	it("carry the template's tags and the project on the task line", async () => {
+		const { app, add, read } = createApp();
+		const tagged = TEMPLATE.replace("tags:\n", "tags:\n  - 写作脚手架\n  - AI教师\n");
+		await add({ "Templates/Task.md": tagged, "Tasks/Projects/Dev/": "" });
+
+		await createTaskNote(app, settings, {
+			title: "中英作文写作辅助",
+			folder: "Dev/Vernify Add",
+			dates: { due: new Date(2026, 9, 5) },
+		});
+
+		expect(read("Tasks/Projects/Dev/Vernify Add/中英作文写作辅助.md")).toContain(
+			"\n- [ ] 中英作文写作辅助 #写作脚手架 #AI教师 #project/Dev/Vernify-Add 📅 2026-10-05\n",
+		);
+	});
+
+	it("write the tags and project as Dataview fields in that format", async () => {
+		const { app, add, read } = createApp();
+		const tagged = TEMPLATE.replace("tags:\n", "tags:\n  - idea\n");
+		await add({ "Templates/Task.md": tagged, "Tasks/Projects/Dev/": "" });
+
+		await createTaskNote(
+			app,
+			{ ...settings, metadataFormat: "dataview" },
+			{ title: "Call Bob", folder: "Dev" },
+		);
+
+		expect(read("Tasks/Projects/Dev/Call Bob.md")).toContain(
+			"\n- [ ] Call Bob [tags:: #idea] [project:: Dev]\n",
 		);
 	});
 
@@ -219,7 +262,7 @@ describe("New task notes", () => {
 		);
 		const content = read("Tasks/Projects/Dev/NewGame/Sketch levels.md");
 		expect(content).toContain("Project: Dev/NewGame\n");
-		expect(content).toContain("---\n- [ ] Sketch levels\n");
+		expect(content).toContain("---\n- [ ] Sketch levels #project/Dev/NewGame\n");
 	});
 
 	it("belong to no project in the root folder", async () => {
@@ -229,6 +272,7 @@ describe("New task notes", () => {
 		await createTaskNote(app, settings, { title: "Loose end", folder: "" });
 
 		expect(read("Tasks/Projects/Loose end.md")).toContain("\nProject:\n");
+		expect(read("Tasks/Projects/Loose end.md")).toContain("\n- [ ] Loose end\n");
 	});
 
 	it("keep the task text but drop characters file names cannot have", async () => {
@@ -324,11 +368,29 @@ describe("Existing notes turned into task notes", () => {
 				"categories: Task",
 				"Project: Dev/AKG",
 				"---",
-				"- [ ] Call Bob",
+				"- [ ] Call Bob #project/Dev/AKG",
 				"",
 				"Notes from the call",
 				"",
 			].join("\n"),
+		);
+	});
+
+	it("carry their own tags on the task line, not the template's", async () => {
+		const { app, add, read } = createApp();
+		const tagged = TEMPLATE.replace("tags:\n", "tags:\n  - from-template\n");
+		const ownTags = inboxNote.replace("---\nNotes", "tags:\n  - 英语口语\n---\nNotes");
+		await add({ "Templates/Task.md": tagged, "_Inbox/Call Bob.md": ownTags });
+
+		await convertToTaskNote(app, settings, {
+			file: app.vault.getAbstractFileByPath("_Inbox/Call Bob.md"),
+			title: "Call Bob",
+			folder: "Dev",
+			move: false,
+		});
+
+		expect(read("_Inbox/Call Bob.md")).toContain(
+			"---\n- [ ] Call Bob #英语口语 #project/Dev\n",
 		);
 	});
 
