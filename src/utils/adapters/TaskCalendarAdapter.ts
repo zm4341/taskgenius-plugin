@@ -259,19 +259,19 @@ function getTaskColor(task: Task): string {
 		return "var(--text-faint)";
 	}
 
-	// Color by priority
+	// Color by priority, 5 being the highest
 	const priority = task.metadata.priority ?? 3; // Default to medium priority
 
 	switch (priority) {
-		case 1: // Highest
+		case 5: // Highest
 			return "var(--color-red)";
-		case 2: // High
+		case 4: // High
 			return "var(--color-orange)";
 		case 3: // Medium
 			return "var(--color-yellow)";
-		case 4: // Low
+		case 2: // Low
 			return "var(--color-green)";
-		case 5: // Lowest
+		case 1: // Lowest
 			return "var(--color-blue)";
 		default:
 			return "var(--interactive-accent)";
