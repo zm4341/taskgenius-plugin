@@ -165,7 +165,8 @@
 	font-weight: bold;
 }
 
-.task-item.tree-task-item .task-project {
+.task-item.tree-task-item .task-project,
+.task-item.tree-task-item .task-context {
 	display: inline-block;
 	padding: 1px 6px;
 	border-radius: 4px;

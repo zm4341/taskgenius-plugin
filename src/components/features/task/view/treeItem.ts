@@ -6,10 +6,14 @@ import {
 	Keymap,
 	Platform,
 	Workspace,
+	type HoverParent,
+	type HoverPopover,
 } from "obsidian";
 import { Task } from "@/types/task";
 
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
+import { createContextLink } from "@/components/ui/renderers/ContextLink";
+import { isContextLink } from "@/utils/task/context-link";
 import { createTaskCheckbox } from "./details";
 import { getViewSettingOrDefault, ViewMode } from "@/common/setting-definition";
 import { getRelativeTimeString } from "@/utils/date/date-formatter";
@@ -24,8 +28,10 @@ import { showBulkOperationsMenu } from "./BulkOperationsMenu";
 import { TaskStatusIndicator } from "./TaskStatusIndicator";
 import { TaskTimerManager } from "@/managers/timer-manager";
 
-export class TaskTreeItemComponent extends Component {
+export class TaskTreeItemComponent extends Component implements HoverParent {
 	public element: HTMLElement;
+	// The page preview of a context's link
+	hoverPopover: HoverPopover | null = null;
 	private task: Task;
 	private isSelected: boolean = false;
 	private isExpanded: boolean = true;
@@ -591,6 +597,11 @@ export class TaskTreeItemComponent extends Component {
 			this.renderProjectMetadata(metadataEl);
 		}
 
+		// Context if available
+		if (this.task.metadata.context) {
+			this.renderContextMetadata(metadataEl);
+		}
+
 		// Tags if available
 		if (this.task.metadata.tags && this.task.metadata.tags.length > 0) {
 			this.renderTagsMetadata(metadataEl);
@@ -759,6 +770,30 @@ export class TaskTreeItemComponent extends Component {
 						"project",
 						this.task.metadata.project || ""
 					);
+				}
+			});
+		}
+	}
+
+	/** The context after "@": a name, or a link to a note that opens on click */
+	private renderContextMetadata(metadataEl: HTMLElement) {
+		const context = this.task.metadata.context!;
+		const contextEl = metadataEl.createEl("div", {
+			cls: "task-context",
+		});
+		if (isContextLink(context)) {
+			createContextLink(this.app, contextEl, context, this.task.filePath, this);
+		} else {
+			contextEl.textContent = context;
+		}
+
+		// Make context clickable for editing only if inline editor is enabled
+		if (this.plugin.settings.enableInlineEditor) {
+			this.registerDomEvent(contextEl, "click", (e) => {
+				e.stopPropagation();
+				if (!this.isCurrentlyEditing()) {
+					const editor = this.getInlineEditor();
+					editor.showMetadataEditor(contextEl, "context", context);
 				}
 			});
 		}

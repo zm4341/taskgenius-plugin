@@ -12,7 +12,11 @@ import {
 import { parseLocalDate } from "@/utils/date/date-formatter";
 import { TASK_REGEX } from "@/common/regex-define";
 import { ContextDetector } from "@/parsers/context-detector";
-import { CONTEXT_LINK_START } from "@/utils/task/context-link";
+import {
+	CONTEXT_LINK_START,
+	contextNameLength,
+	isContextStart,
+} from "@/utils/task/context-link";
 import { TimeParsingService } from "@/services/time-parsing-service";
 import { TimeComponent } from "@/types/time-parsing";
 
@@ -1107,18 +1111,18 @@ export class MarkdownTaskParser {
 			atPos = content.indexOf("@", atPos + 1)
 		) {
 			// Check if it's a word start, so "me@example.com" has none
-			const isWordStart =
-				atPos === 0 ||
-				content[atPos - 1].match(/\s/) ||
-				!content[atPos - 1].match(/[a-zA-Z0-9#@$%^&*]/);
-			if (!isWordStart || detector.isPositionProtected(atPos)) continue;
+			if (
+				!isContextStart(content, atPos) ||
+				detector.isPositionProtected(atPos)
+			)
+				continue;
 
 			const afterAt = content.substring(atPos + 1);
 			// A note as the context, kept as its link: @[[Note]], @[[Note|Alias]]
 			const link = afterAt.match(CONTEXT_LINK_START);
 			const contextEnd = link
 				? link[0].length
-				: this.contextNameLength(afterAt);
+				: contextNameLength(afterAt);
 			if (contextEnd > 0) {
 				const context = afterAt.substring(0, contextEnd);
 				const before = content.substring(0, atPos);
@@ -1128,56 +1132,6 @@ export class MarkdownTaskParser {
 		}
 
 		return null;
-	}
-
-	/** Length of the context name at the start of the text, 0 if none */
-	private contextNameLength(afterAt: string): number {
-		let contextEnd = 0;
-
-		// Find context end, similar to tag parsing but for context
-		for (let i = 0; i < afterAt.length; i++) {
-			const char = afterAt[i];
-			const charCode = char.charCodeAt(0);
-
-			// Check if character is valid for context:
-			// - ASCII letters and numbers: a-z, A-Z, 0-9
-			// - Special characters: -, _
-			// - Unicode characters (including Chinese): > 127
-			// - Exclude common separators and punctuation
-			if (
-				(charCode >= 48 && charCode <= 57) || // 0-9
-				(charCode >= 65 && charCode <= 90) || // A-Z
-				(charCode >= 97 && charCode <= 122) || // a-z
-				char === "-" ||
-				char === "_" ||
-				(charCode > 127 &&
-					char !== "，" &&
-					char !== "。" &&
-					char !== "；" &&
-					char !== "：" &&
-					char !== "！" &&
-					char !== "？" &&
-					char !== "「" &&
-					char !== "」" &&
-					char !== "『" &&
-					char !== "』" &&
-					char !== "（" &&
-					char !== "）" &&
-					char !== "【" &&
-					char !== "】" &&
-					char !== '"' &&
-					char !== '"' &&
-					char !== "'" &&
-					char !== "'" &&
-					char !== " ")
-			) {
-				contextEnd = i + 1;
-			} else {
-				break;
-			}
-		}
-
-		return contextEnd;
 	}
 
 	private extractTagsOnly(

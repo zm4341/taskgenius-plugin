@@ -6,6 +6,20 @@
 /** A link at the start of the text, as in "[[Note#Heading|Alias]] rest" */
 export const CONTEXT_LINK_START = /^\[\[[^[\]\n]+\]\]/;
 
+/** Whether the "@" at this index starts a word, so "me@example.com" has no context */
+export function isContextStart(text: string, atIndex: number): boolean {
+	return atIndex === 0 || !/[a-zA-Z0-9#@$%^&*]/.test(text[atIndex - 1]);
+}
+
+/**
+ * Length of the context name at the start of the text after "@", 0 if
+ * none: letters, digits, "-", "_" and other non-ASCII characters, up to
+ * a space or punctuation
+ */
+export function contextNameLength(afterAt: string): number {
+	return afterAt.match(/^(?:[\w-]|[^\x00-\x7F，。；：！？「」『』（）【】])*/)![0].length;
+}
+
 /** Whether the context is a link to a note, e.g. "[[Note]]" */
 export function isContextLink(context: string): boolean {
 	const link = context.match(CONTEXT_LINK_START);

@@ -6,9 +6,13 @@ import {
 	Keymap,
 	Platform,
 	Workspace,
+	type HoverParent,
+	type HoverPopover,
 } from "obsidian";
 import { Task } from "@/types/task";
 import { MarkdownRendererComponent } from "@/components/ui/renderers/MarkdownRenderer";
+import { createContextLink } from "@/components/ui/renderers/ContextLink";
+import { isContextLink } from "@/utils/task/context-link";
 
 import "@/styles/task-status-indicator.scss";
 import { createTaskCheckbox } from "./details";
@@ -24,8 +28,10 @@ import { TaskSelectionManager } from "@/components/features/task/selection/TaskS
 import { showBulkOperationsMenu } from "./BulkOperationsMenu";
 import { TaskStatusIndicator } from "./TaskStatusIndicator";
 
-export class TaskListItemComponent extends Component {
+export class TaskListItemComponent extends Component implements HoverParent {
 	public element: HTMLElement;
+	// The page preview of a context's link
+	hoverPopover: HoverPopover | null = null;
 
 	// Events
 	public onTaskSelected: (task: Task) => void;
@@ -523,6 +529,11 @@ export class TaskListItemComponent extends Component {
 			this.renderProjectMetadata();
 		}
 
+		// Context if available
+		if (this.task.metadata.context) {
+			this.renderContextMetadata();
+		}
+
 		// Tags if available
 		if (this.task.metadata.tags && this.task.metadata.tags.length > 0) {
 			this.renderTagsMetadata();
@@ -806,6 +817,33 @@ export class TaskListItemComponent extends Component {
 						projectEl,
 						"project",
 						this.task.metadata.project || ""
+					);
+				}
+			});
+		}
+	}
+
+	/** The context after "@": a name, or a link to a note that opens on click */
+	private renderContextMetadata() {
+		const context = this.task.metadata.context!;
+		const contextEl = this.metadataEl.createEl("div", {
+			cls: "task-context",
+		});
+		if (isContextLink(context)) {
+			createContextLink(this.app, contextEl, context, this.task.filePath, this);
+		} else {
+			contextEl.textContent = context;
+		}
+
+		// Make context clickable for editing only if inline editor is enabled
+		if (this.plugin.settings.enableInlineEditor) {
+			this.registerDomEvent(contextEl, "click", (e) => {
+				e.stopPropagation();
+				if (!this.isCurrentlyEditing()) {
+					this.getInlineEditor().showMetadataEditor(
+						contextEl,
+						"context",
+						context
 					);
 				}
 			});

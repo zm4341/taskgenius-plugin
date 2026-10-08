@@ -231,6 +231,44 @@
 	color: var(--text-accent-hover);
 }
 
+/* Context: "@" and a name, or a link to the note */
+.task-context {
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+	border-radius: var(--radius-s);
+	padding: var(--size-2-1) var(--size-2-3);
+	white-space: nowrap;
+	opacity: 0.75;
+}
+
+.task-context::before {
+	content: "@";
+	color: var(--text-muted);
+}
+
+.task-item:hover .task-context {
+	opacity: 1;
+}
+
+.task-context > .internal-link {
+	color: var(--link-color);
+	text-decoration-line: var(--link-decoration);
+	cursor: var(--cursor-link);
+}
+
+.task-context > .internal-link:hover {
+	color: var(--link-color-hover);
+	text-decoration-line: var(--link-decoration-hover);
+}
+
+.task-context > .internal-link.is-unresolved {
+	color: var(--link-unresolved-color);
+	opacity: var(--link-unresolved-opacity);
+	text-decoration-style: var(--link-unresolved-decoration-style);
+	text-decoration-color: var(--link-unresolved-decoration-color);
+}
+
 .task-priority {
 	margin-left: 8px;
 	font-size: 0.9em;

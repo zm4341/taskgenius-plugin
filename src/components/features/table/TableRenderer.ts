@@ -3,8 +3,6 @@ import {
 	setIcon,
 	Menu,
 	App,
-	Keymap,
-	getLinkpath,
 	type HoverParent,
 	type HoverPopover,
 } from "obsidian";
@@ -19,18 +17,14 @@ import {
 	TagSuggest,
 } from "@/components/ui/inputs/AutoComplete";
 import { clearAllMarks } from "@/components/ui/renderers/MarkdownRenderer";
+import { createContextLink } from "@/components/ui/renderers/ContextLink";
 import {
 	getEffectiveProject,
 	isProjectReadonly,
 } from "@/utils/task/task-operations";
 import { getAllStatusMarks, getAllStatusNames } from "@/utils/status-cycle-resolver";
 import { getArchivedMarks } from "@/utils/task/archived-status";
-import {
-	contextLinkTarget,
-	contextLinkText,
-	HOVER_LINK_SOURCE,
-	isContextLink,
-} from "@/utils/task/context-link";
+import { isContextLink } from "@/utils/task/context-link";
 import { parseTagNames } from "@/utils/file/note-tags";
 
 // Cache for autocomplete data to avoid repeated expensive operations
@@ -1420,35 +1414,10 @@ export class TableRenderer extends Component implements HoverParent {
 		value: string,
 		sourcePath: string,
 	) {
-		const { metadataCache, workspace } = this.plugin.app;
-		const target = contextLinkTarget(value)!;
 		const wrapper = cellEl.createDiv({ cls: "task-table-context-link" });
 		// The value itself, for comparing rows, as the link shows less of it
 		wrapper.dataset.value = value;
-
-		const link = wrapper.createEl("a", {
-			cls: "internal-link",
-			text: contextLinkText(value),
-			attr: { href: target, "data-href": target },
-		});
-		if (!metadataCache.getFirstLinkpathDest(getLinkpath(target), sourcePath)) {
-			link.addClass("is-unresolved");
-		}
-		this.registerDomEvent(link, "click", (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			void workspace.openLinkText(target, sourcePath, Keymap.isModEvent(e));
-		});
-		this.registerDomEvent(link, "mouseover", (e) => {
-			workspace.trigger("hover-link", {
-				event: e,
-				source: HOVER_LINK_SOURCE,
-				hoverParent: this,
-				targetEl: link,
-				linktext: target,
-				sourcePath,
-			});
-		});
+		createContextLink(this.plugin.app, wrapper, value, sourcePath, this);
 
 		if (!cell.editable) return;
 		wrapper.addClass("is-editable");

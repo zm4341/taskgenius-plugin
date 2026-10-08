@@ -220,6 +220,7 @@
 /* Editable Metadata Items - More subtle hover effects */
 .task-item-metadata .task-date,
 .task-item-metadata .task-project,
+.task-item-metadata .task-context,
 .task-item-metadata .task-tag {
 	cursor: pointer;
 	transition: background-color 0.15s ease, transform 0.15s ease;
@@ -228,6 +229,7 @@
 
 .task-item-metadata .task-date:hover,
 .task-item-metadata .task-project:hover,
+.task-item-metadata .task-context:hover,
 .task-item-metadata .task-tag:hover {
 	background-color: var(--background-modifier-hover);
 	transform: none;
@@ -300,6 +302,7 @@
 	.inline-editor *,
 	.task-item-metadata .task-date,
 	.task-item-metadata .task-project,
+	.task-item-metadata .task-context,
 	.task-item-metadata .task-tag,
 	.task-item-content,
 	.add-metadata-btn {

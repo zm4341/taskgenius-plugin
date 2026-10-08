@@ -5,6 +5,7 @@ import {
 	TFile,
 } from "obsidian";
 import { DEFAULT_SYMBOLS, TAG_REGEX } from "@/common/default-symbol";
+import { contextNameLength, isContextStart } from "@/utils/task/context-link";
 
 // Use a non-global, start-anchored tag matcher to allow index checks
 const TAG_HEAD = new RegExp("^" + TAG_REGEX.source);
@@ -82,6 +83,30 @@ function removeTagsWithLinkProtection(text: string): string {
 	}
 
 	return result;
+}
+
+/**
+ * Remove contexts the way the task parser reads them: "@" at a word start,
+ * then a name or a note link. Links and code are placeholders here, and of
+ * them only a note link can be a context: @[[Note]]
+ */
+function removeContexts(text: string): string {
+	let result = "";
+	let from = 0;
+	for (let at = text.indexOf("@"); at !== -1; at = text.indexOf("@", at + 1)) {
+		if (at < from || !isContextStart(text, at)) continue;
+		const afterAt = text.substring(at + 1);
+		const placeholder = afterAt.match(/^__PRESERVED_(\w+?)_\d+__/);
+		const length = placeholder
+			? placeholder[1] === "wiki"
+				? placeholder[0].length
+				: 0
+			: contextNameLength(afterAt);
+		if (length === 0) continue;
+		result += text.substring(from, at);
+		from = at + 1 + length;
+	}
+	return result + text.substring(from);
 }
 
 export function clearAllMarks(markdown: string): string {
@@ -262,7 +287,7 @@ export function clearAllMarks(markdown: string): string {
 	tempMarkdown = removeTagsWithLinkProtection(tempMarkdown);
 
 	// Remove context tags from temporary markdown
-	tempMarkdown = tempMarkdown.replace(/@[\w-]+/g, "");
+	tempMarkdown = removeContexts(tempMarkdown);
 
 	// Remove target location patterns (like "target: office 📁")
 	tempMarkdown = tempMarkdown.replace(/\btarget:\s*/gi, "");
