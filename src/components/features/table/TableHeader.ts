@@ -13,6 +13,7 @@ export interface TableHeaderCallbacks {
 export class TableHeader extends Component {
 	private headerEl: HTMLElement;
 	private taskCount: number = 0;
+	private archivedCount: number = 0;
 	private isTreeMode: boolean = false;
 	private availableColumns: Array<{
 		id: string;
@@ -45,8 +46,9 @@ export class TableHeader extends Component {
 	/**
 	 * Update task count display
 	 */
-	public updateTaskCount(count: number) {
+	public updateTaskCount(count: number, archivedCount = 0) {
 		this.taskCount = count;
+		this.archivedCount = archivedCount;
 		this.updateTaskCountDisplay();
 	}
 
@@ -95,6 +97,28 @@ export class TableHeader extends Component {
 		const countText = countContainer.createSpan("task-count-text");
 		countText.textContent = this.getTaskCountText();
 		countText.dataset.countElement = "true";
+
+		// Archived tasks, which the count leaves out unless they are shown
+		const archived = container.createDiv("task-archived-count");
+		setIcon(archived.createSpan("task-count-icon"), "archive");
+		archived.createSpan({ cls: "task-archived-count-text" });
+		this.updateArchivedDisplay();
+	}
+
+	private updateArchivedDisplay() {
+		const archived = this.headerEl?.querySelector<HTMLElement>(
+			".task-archived-count"
+		);
+		if (!archived) return;
+		archived.toggle(this.archivedCount > 0);
+		archived.querySelector(".task-archived-count-text")!.textContent =
+			String(this.archivedCount);
+		archived.setAttribute(
+			"aria-label",
+			t("Archived tasks: {{count}}", {
+				interpolation: { count: String(this.archivedCount) },
+			})
+		);
 	}
 
 	/**
@@ -120,6 +144,7 @@ export class TableHeader extends Component {
 		if (countElement) {
 			countElement.textContent = this.getTaskCountText();
 		}
+		this.updateArchivedDisplay();
 	}
 
 	/**

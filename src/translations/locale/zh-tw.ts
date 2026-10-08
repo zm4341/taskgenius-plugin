@@ -2314,6 +2314,7 @@ const translations = {
 		"{{tags}} 來自筆記屬性，這篇筆記裡的其他任務也有，所以沒刪；要刪請到筆記屬性裡刪",
 	"Added to the note's tags property and the task": "寫進筆記的 tags 屬性，任務也會帶上",
 	"Optional, separated by commas or spaces": "可選，用逗號或空格分隔",
+	"Archived tasks: {{count}}": "已歸檔任務：{{count}}",
 	"Add the note's tags and project to its tasks": "把筆記的標籤和項目補到任務行",
 	"This note has no tags or project to add": "這篇筆記的屬性裡沒有標籤和項目",
 	"This note has no tasks": "這篇筆記裡沒有任務",

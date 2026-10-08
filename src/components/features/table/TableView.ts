@@ -1474,7 +1474,14 @@ export class TableView extends Component {
 	private updateTableHeaderInfo() {
 		if (this.tableHeader) {
 			// Update task count
-			this.tableHeader.updateTaskCount(this.filteredTasks.length);
+			const archivedMarks = getArchivedMarks(
+				this.plugin?.settings?.taskStatuses
+			);
+			this.tableHeader.updateTaskCount(
+				this.filteredTasks.length,
+				this.allTasks.filter((task) => archivedMarks.includes(task.status))
+					.length
+			);
 
 			// Update tree mode state
 			this.tableHeader.updateTreeMode(this.isTreeView);

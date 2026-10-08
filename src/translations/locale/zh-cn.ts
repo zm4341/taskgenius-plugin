@@ -2360,6 +2360,7 @@ const translations = {
 		"{{tags}} 来自笔记属性，这篇笔记里的其他任务也有，所以没删；要删请到笔记属性里删",
 	"Added to the note's tags property and the task": "写进笔记的 tags 属性，任务也会带上",
 	"Optional, separated by commas or spaces": "可选，用逗号或空格分隔",
+	"Archived tasks: {{count}}": "已归档任务：{{count}}",
 	"Add the note's tags and project to its tasks": "把笔记的标签和项目补到任务行",
 	"This note has no tags or project to add": "这篇笔记的属性里没有标签和项目",
 	"This note has no tasks": "这篇笔记里没有任务",

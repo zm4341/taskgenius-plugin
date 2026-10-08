@@ -2536,6 +2536,7 @@ const translations = {
 		"Kept {{tags}}: they come from the note's properties, which its other tasks share. Remove them there.",
 	"Added to the note's tags property and the task": "Added to the note's tags property and the task",
 	"Optional, separated by commas or spaces": "Optional, separated by commas or spaces",
+	"Archived tasks: {{count}}": "Archived tasks: {{count}}",
 	"Add the note's tags and project to its tasks": "Add the note's tags and project to its tasks",
 	"This note has no tags or project to add": "This note has no tags or project to add",
 	"This note has no tasks": "This note has no tasks",

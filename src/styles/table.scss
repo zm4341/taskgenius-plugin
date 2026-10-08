@@ -802,6 +802,18 @@
 	color: var(--text-normal);
 }
 
+/* Archived tasks beside the count, as the table hides them by default */
+.task-archived-count {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 10px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+}
+
 /* Control Buttons */
 .table-controls-container {
 	display: flex;
