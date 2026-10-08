@@ -352,6 +352,22 @@ div[data-type^="tg-timeline-sidebar-view"] .timeline-date-only-title {
 	font-style: italic;
 }
 
+/* A task kept at today shows its own date on a line under its text, e.g. "10/8 开始" */
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event-text:has(> .timeline-event-date-label) {
+	flex-wrap: wrap;
+	row-gap: 2px;
+}
+
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event-date-label {
+	flex-basis: 100%;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event-date-label.is-overdue {
+	color: var(--text-error);
+}
+
 /* Priority beside the task, as the table shows it */
 div[data-type^="tg-timeline-sidebar-view"] .timeline-event-priority {
 	display: flex;

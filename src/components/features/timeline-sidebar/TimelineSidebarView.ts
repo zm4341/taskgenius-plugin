@@ -39,8 +39,20 @@ const PRIORITY_LEVELS: Record<number, { name: string; icon: string; cls: string 
 	1: { name: "Lowest", icon: "chevrons-down", cls: "lowest" },
 };
 
-/** Tasks without a date that still belong on the timeline, under today */
-type UndatedKind = "inProgress" | "planned";
+/**
+ * Unfinished work kept at today, whatever its date: tasks in progress, and
+ * planned tasks without a day or whose day has passed
+ */
+type CurrentKind = "inProgress" | "planned";
+
+/** A date as short as it can be: "10/8", with the year when it isn't this year */
+function shortDate(time: number | Date): string {
+	const date = new Date(time);
+	const monthDay = `${date.getMonth() + 1}/${date.getDate()}`;
+	return date.getFullYear() === new Date().getFullYear()
+		? monthDay
+		: `${date.getFullYear()}/${monthDay}`;
+}
 
 interface TimelineEvent {
 	id: string;
@@ -50,6 +62,8 @@ interface TimelineEvent {
 	status?: string;
 	task?: Task;
 	isToday?: boolean;
+	/** The task's own date, when it shows on another day, e.g. "Started 10/8" */
+	dateLabel?: { text: string; overdue: boolean };
 }
 
 /**
@@ -77,8 +91,8 @@ export class TimelineSidebarView extends ItemView {
 	private timelineContainerEl: HTMLElement;
 	private currentDate: moment.Moment = moment();
 	private events: EnhancedTimelineEvent[] = [];
-	/** Tasks in progress or planned without a date, which have no day of their own */
-	private undatedTasks: Record<UndatedKind, Task[]> = {
+	/** Unfinished work kept at today, see CurrentKind */
+	private currentTasks: Record<CurrentKind, EnhancedTimelineEvent[]> = {
 		inProgress: [],
 		planned: [],
 	};
@@ -265,18 +279,44 @@ export class TimelineSidebarView extends ItemView {
 			(statuses || "").split("|").filter((mark) => mark !== "");
 		const inProgressMarks = marksOf(this.plugin.settings.taskStatuses.inProgress);
 		const plannedMarks = marksOf(this.plugin.settings.taskStatuses.planned);
-		this.undatedTasks = { inProgress: [], planned: [] };
+		const todayKey = moment().format("YYYY-MM-DD");
+		const isPast = (date: Date | number) =>
+			moment(date).format("YYYY-MM-DD") < todayKey;
+		this.currentTasks = { inProgress: [], planned: [] };
 
 		// Convert tasks to timeline events
 		timelineFilteredTasks.forEach((task) => {
 			const dates = this.extractDatesFromTask(task);
-			if (dates.length === 0) {
-				if (inProgressMarks.includes(task.status)) {
-					this.undatedTasks.inProgress.push(task);
-				} else if (plannedMarks.includes(task.status)) {
-					this.undatedTasks.planned.push(task);
-				}
+
+			// Work in progress stays at today, whatever its dates
+			if (inProgressMarks.includes(task.status)) {
+				this.currentTasks.inProgress.push(
+					this.currentEvent(task, "inProgress", this.inProgressDateLabel(task, isPast))
+				);
+				return;
 			}
+			// So does a plan without a day, or whose day has passed
+			if (
+				plannedMarks.includes(task.status) &&
+				dates.every(({ date }) => isPast(date))
+			) {
+				this.currentTasks.planned.push(
+					this.currentEvent(
+						task,
+						"planned",
+						dates.length > 0
+							? {
+									text: t("Planned for {{date}}", {
+										interpolation: { date: shortDate(dates[0].date) },
+									}),
+									overdue: true,
+								}
+							: undefined
+					)
+				);
+				return;
+			}
+
 			dates.forEach(({date, type}) => {
 				const event: EnhancedTimelineEvent = {
 					id: `${task.id}-${type}`,
@@ -616,16 +656,16 @@ export class TimelineSidebarView extends ItemView {
 		// Events list
 		const eventsListEl = dateGroupEl.createDiv("timeline-events-list");
 
-		// Tasks in progress or planned without a date are listed under today
-		const undated: Record<UndatedKind, Task[]> = isToday
-			? this.undatedTasks
+		// Unfinished work is listed under today
+		const current: Record<CurrentKind, EnhancedTimelineEvent[]> = isToday
+			? this.currentTasks
 			: { inProgress: [], planned: [] };
 
 		// Only today shows up without events
 		if (
 			events.length === 0 &&
-			undated.inProgress.length === 0 &&
-			undated.planned.length === 0
+			current.inProgress.length === 0 &&
+			current.planned.length === 0
 		) {
 			eventsListEl.createDiv({
 				cls: "timeline-empty-day",
@@ -642,39 +682,83 @@ export class TimelineSidebarView extends ItemView {
 			this.renderGroupedEvents(eventsListEl, sortedEvents);
 		}
 
-		this.renderUndatedTasks(eventsListEl, "inProgress", undated.inProgress);
-		this.renderUndatedTasks(eventsListEl, "planned", undated.planned);
+		this.renderCurrentTasks(eventsListEl, "inProgress", current.inProgress);
+		this.renderCurrentTasks(eventsListEl, "planned", current.planned);
+	}
+
+	/** A task kept at today, as an event for today's list */
+	private currentEvent(
+		task: Task,
+		kind: CurrentKind,
+		dateLabel?: EnhancedTimelineEvent["dateLabel"],
+	): EnhancedTimelineEvent {
+		const now = new Date();
+		return {
+			id: `${task.id}-${kind}`,
+			content: task.content,
+			time: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+			type: "task",
+			status: task.status,
+			task,
+			isToday: true,
+			dateLabel,
+		};
+	}
+
+	/** The date on an in-progress task: its due date, else its start, else its scheduled date */
+	private inProgressDateLabel(
+		task: Task,
+		isPast: (date: number) => boolean,
+	): EnhancedTimelineEvent["dateLabel"] {
+		const { dueDate, startDate, scheduledDate } = task.metadata;
+		if (dueDate) {
+			return {
+				text: t("Due {{date}}", { interpolation: { date: shortDate(dueDate) } }),
+				overdue: isPast(dueDate),
+			};
+		}
+		if (startDate) {
+			return {
+				text: t("Started {{date}}", { interpolation: { date: shortDate(startDate) } }),
+				overdue: false,
+			};
+		}
+		if (scheduledDate) {
+			return {
+				text: t("Scheduled {{date}}", {
+					interpolation: { date: shortDate(scheduledDate) },
+				}),
+				overdue: false,
+			};
+		}
+		return undefined;
 	}
 
 	/**
-	 * Tasks in progress or planned without a date, after today's events in
-	 * sections like the all-day one; the most important first
+	 * Unfinished work after today's events, in sections like the all-day one;
+	 * the most important first
 	 */
-	private renderUndatedTasks(
+	private renderCurrentTasks(
 		containerEl: HTMLElement,
-		kind: UndatedKind,
-		tasks: Task[],
+		kind: CurrentKind,
+		events: EnhancedTimelineEvent[],
 	): void {
-		if (tasks.length === 0) return;
+		if (events.length === 0) return;
 
-		const count = tasks.length;
+		const count = events.length;
 		const [label, title] =
 			kind === "inProgress"
 				? [
 						t("In Progress"),
 						count === 1
-							? t("1 in-progress task without a date")
-							: t("{{count}} in-progress tasks without a date", {
-									interpolation: { count },
-								}),
+							? t("1 task in progress")
+							: t("{{count}} tasks in progress", { interpolation: { count } }),
 					]
 				: [
 						t("Planned"),
 						count === 1
-							? t("1 planned task without a date")
-							: t("{{count}} planned tasks without a date", {
-									interpolation: { count },
-								}),
+							? t("1 planned task")
+							: t("{{count}} planned tasks", { interpolation: { count } }),
 					];
 		const section = containerEl.createDiv(
 			`timeline-date-only-section timeline-${
@@ -688,28 +772,15 @@ export class TimelineSidebarView extends ItemView {
 		});
 		headerEl.createDiv({ cls: "timeline-date-only-title", text: title });
 
-		const now = new Date();
-		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-		const priorityOf = (task: Task) =>
-			parsePriorityFilterValue(task.metadata.priority as any) ?? 0;
-		[...tasks]
+		const priorityOf = (event: EnhancedTimelineEvent) =>
+			parsePriorityFilterValue(event.task?.metadata.priority as any) ?? 0;
+		[...events]
 			.sort(
 				(a, b) =>
 					priorityOf(b) - priorityOf(a) ||
 					a.content.localeCompare(b.content)
 			)
-			.forEach((task) => {
-				const event: EnhancedTimelineEvent = {
-					id: `${task.id}-${kind}`,
-					content: task.content,
-					time: today,
-					type: "task",
-					status: task.status,
-					task,
-					isToday: true,
-				};
-				this.renderEvent(section, event, false);
-			});
+			.forEach((event) => this.renderEvent(section, event, false));
 	}
 
 	/** The task's priority beside its text, as the table shows it */
@@ -1150,6 +1221,14 @@ export class TimelineSidebarView extends ItemView {
 		} else {
 			// Fallback for non-task events
 			contentContainer.setText(event.content);
+		}
+
+		if (event.dateLabel) {
+			const dateEl = textEl.createDiv({
+				cls: "timeline-event-date-label",
+				text: event.dateLabel.text,
+			});
+			dateEl.toggleClass("is-overdue", event.dateLabel.overdue);
 		}
 
 		this.renderPriority(contentEl, event.task);

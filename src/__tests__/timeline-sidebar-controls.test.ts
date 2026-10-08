@@ -282,7 +282,6 @@ describe("Timeline day groups", () => {
 		};
 		const { el } = await openTimeline([
 			task("Someday"),
-			task("Started", day(0), "/"),
 			planned("Sketch it", 3),
 			planned("Pick a framework", 5),
 			planned("Ship it", 5, day(1)),
@@ -291,23 +290,19 @@ describe("Timeline day groups", () => {
 		const section = today.querySelector(".timeline-planned-section")!;
 
 		expect(section.querySelector(".timeline-date-only-header")?.textContent).toBe(
-			"Planned2 planned tasks without a date",
+			"Planned2 planned tasks",
 		);
 		expect(eventTexts(section as HTMLElement)).toEqual([
 			"Pick a framework",
 			"Sketch it",
 		]);
-		// Dated tasks stay on their day; tasks that aren't planned stay out
-		expect(eventTexts(today as HTMLElement)).toEqual([
-			"Started",
-			"Pick a framework",
-			"Sketch it",
-		]);
+		// A plan for a later day stays there; tasks that aren't planned stay out
+		expect(eventTexts(today as HTMLElement)).not.toContain("Ship it");
 		expect(eventTexts(el)).toContain("Ship it");
 		expect(eventTexts(el)).not.toContain("Someday");
 	});
 
-	it("list in-progress tasks without a date under today, before planned ones", async () => {
+	it("keep work in progress under today, before planned tasks", async () => {
 		const { el } = await openTimeline([
 			task("Started", day(0), "/"),
 			task("Next up", undefined, "?"),
@@ -322,13 +317,52 @@ describe("Timeline day groups", () => {
 		}));
 
 		expect(sections).toEqual([
-			{ header: "All day1 all-day event", tasks: ["Started"] },
-			{
-				header: "In Progress1 in-progress task without a date",
-				tasks: ["Half done"],
-			},
-			{ header: "Planned1 planned task without a date", tasks: ["Next up"] },
+			{ header: "In Progress2 tasks in progress", tasks: ["Half done", "Started"] },
+			{ header: "Planned1 planned task", tasks: ["Next up"] },
 		]);
+	});
+
+	it("keep unfinished work at today once its day has passed, with its date", async () => {
+		const shortDate = (time: number) => {
+			const date = new Date(time);
+			const monthDay = `${date.getMonth() + 1}/${date.getDate()}`;
+			return date.getFullYear() === new Date().getFullYear()
+				? monthDay
+				: `${date.getFullYear()}/${monthDay}`;
+		};
+		const writing = task("Writing", undefined, "/");
+		writing.metadata.startDate = day(-3);
+		const { el } = await openTimeline([
+			writing,
+			task("Overdue work", day(-1), "/"),
+			task("Old plan", day(-2), "?"),
+			task("Future plan", day(2), "?"),
+			task("Finished", day(-1), "x"),
+		]);
+		const today = el.querySelector(".timeline-date-group.is-today")!;
+		const cards = Array.from(today.querySelectorAll(".timeline-event")).map(
+			(event) => {
+				const label = event.querySelector(".timeline-event-date-label");
+				return [
+					event.querySelector(".timeline-event-content-text")?.textContent,
+					label?.textContent,
+					label?.classList.contains("is-overdue"),
+				];
+			},
+		);
+
+		expect(cards).toEqual([
+			["Overdue work", `Due ${shortDate(day(-1))}`, true],
+			["Writing", `Started ${shortDate(day(-3))}`, false],
+			["Old plan", `Planned for ${shortDate(day(-2))}`, true],
+		]);
+		// Finished tasks stay on their day, plans for later days on theirs
+		const yesterday = Array.from(el.querySelectorAll(".timeline-date-group")).find(
+			(group) => group.querySelector(".timeline-date-header")?.textContent === "Yesterday",
+		)!;
+		expect(eventTexts(yesterday as HTMLElement)).toEqual(["Finished"]);
+		expect(eventTexts(el)).toContain("Future plan");
+		expect(eventTexts(today as HTMLElement)).not.toContain("Future plan");
 	});
 
 	it("show planned tasks rather than an empty today", async () => {
