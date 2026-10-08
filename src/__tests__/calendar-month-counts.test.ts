@@ -1,12 +1,14 @@
 /**
  * The month calendars of the Events view, and of Today and the other views
  * in calendar mode, show how many tasks each day has, large in the middle
- * of the day; a day's count lists them. Picking days makes a task with New
- * Task, the window the rest of the plugin makes tasks with.
+ * of the day; a day's count lists them, each with its status. Picking days
+ * makes a task with New Task, the window the rest of the plugin makes tasks
+ * with.
  *
  * Regressions: the month view drew every task of a day, so a day with
  * dozens of tasks stretched its week into a column taller than the screen;
- * and picking days opened the old quick capture window.
+ * picking days opened the old quick capture window; and the list of a day
+ * showed no status, so tasks in progress or planned looked like the rest.
  */
 
 import { CalendarComponent } from "@/components/features/calendar";
@@ -86,8 +88,15 @@ jest.mock(
 	() => ({ QuickCaptureModal: class {} }),
 );
 
+// The checkbox the views show a task's status with
 jest.mock("@/components/features/task/view/details", () => ({
-	createTaskCheckbox: () => document.createElement("input"),
+	createTaskCheckbox: (status: string, _task: unknown, container: HTMLElement) => {
+		const checkbox = container.appendChild(document.createElement("input"));
+		checkbox.type = "checkbox";
+		checkbox.className = "task-list-item-checkbox";
+		checkbox.dataset.task = status;
+		return checkbox;
+	},
 }));
 
 // The other views the managers of the Events and Fluent views can make,
@@ -223,9 +232,17 @@ const tasks = [
 	}),
 ];
 
+/** The same tasks, with those of 30 September in progress and planned */
+const tasksWithStatuses = [
+	{ ...tasks[0], status: "/" },
+	{ ...tasks[1], status: "?" },
+	tasks[2],
+	tasks[3],
+];
+
 /** The app and plugin, with the tasks' notes and when they were made */
-function setUp() {
-	const notes = new Map(tasks.map((t) => [t.filePath, t.createdAt]));
+function setUp(list = tasks) {
+	const notes = new Map(list.map((t) => [t.filePath, t.createdAt]));
 	const app: any = {
 		workspace: { on: () => ({}), trigger: () => {} },
 		loadLocalStorage: () => null,
@@ -250,8 +267,8 @@ function setUp() {
 	return { app, plugin };
 }
 
-function openCalendar(countsInMonth: boolean) {
-	const { app, plugin } = setUp();
+function openCalendar(countsInMonth: boolean, list = tasks) {
+	const { app, plugin } = setUp(list);
 	const onTaskSelected = jest.fn();
 	const parentEl = document.createElement("div");
 	document.body.appendChild(parentEl);
@@ -261,7 +278,7 @@ function openCalendar(countsInMonth: boolean) {
 		monthShowsCounts: countsInMonth,
 	});
 	calendar.load();
-	calendar.setTasks(tasks);
+	calendar.setTasks(list);
 
 	/** The count in the cell of the given day of October's month view */
 	const countOn = (day: string) => {
@@ -273,7 +290,7 @@ function openCalendar(countsInMonth: boolean) {
 		return cell?.querySelector<HTMLElement>(".tg-event-count-badge");
 	};
 
-	return { calendar, parentEl, countOn, onTaskSelected };
+	return { calendar, plugin, parentEl, countOn, onTaskSelected };
 }
 
 /** The dates of the New Task windows opened so far */
@@ -331,6 +348,52 @@ describe("Events view month calendar", () => {
 		items[1].click();
 
 		expect(onTaskSelected).toHaveBeenCalledWith(tasks[1]);
+		expect(document.body.querySelector(".tg-day-tasks")).toBeNull();
+	});
+
+	it("shows each task's status in the list, as the other views do", () => {
+		const { countOn } = openCalendar(true, tasksWithStatuses);
+
+		countOn("30")!.click();
+
+		const checkboxes = Array.from(
+			document.body.querySelectorAll<HTMLInputElement>(
+				".tg-day-tasks-item > .task-list-item-checkbox",
+			),
+		);
+		expect(checkboxes.map((checkbox) => checkbox.dataset.task)).toEqual([
+			"/",
+			"?",
+			" ",
+		]);
+	});
+
+	it("completes a task from its checkbox in the list, without opening it", async () => {
+		const { plugin, countOn, onTaskSelected } = openCalendar(
+			true,
+			tasksWithStatuses,
+		);
+		plugin.writeAPI = {
+			updateTaskStatus: jest.fn().mockResolvedValue({ success: true }),
+		};
+
+		countOn("30")!.click();
+		const checkbox = document.body.querySelector<HTMLInputElement>(
+			".tg-day-tasks-item > .task-list-item-checkbox",
+		)!;
+		checkbox.click();
+		await jest.advanceTimersByTimeAsync(0);
+
+		expect(plugin.writeAPI.updateTaskStatus).toHaveBeenCalledWith({
+			taskId: "draw icons",
+			status: "x",
+			completed: true,
+		});
+		expect(checkbox.dataset.task).toBe("x");
+		expect(onTaskSelected).not.toHaveBeenCalled();
+
+		// The calendar is drawn again with the change, which closes the list
+		await jest.advanceTimersByTimeAsync(100);
 		expect(document.body.querySelector(".tg-day-tasks")).toBeNull();
 	});
 

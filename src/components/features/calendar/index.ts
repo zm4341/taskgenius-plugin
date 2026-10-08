@@ -1083,38 +1083,42 @@ export class CalendarComponent extends Component {
 		// Handle checkbox click - same pattern as CalendarEventComponent
 		this.registerDomEvent(checkbox, "click", async (ev) => {
 			ev.stopPropagation();
-
-			// Toggle task status
-			const newStatus = task.completed ? " " : "x";
-
-			if (this.plugin.writeAPI) {
-				const result = await this.plugin.writeAPI.updateTaskStatus({
-					taskId: task.id,
-					status: newStatus,
-					completed: !task.completed,
-				});
-
-				if (result.success) {
-					// Update UI immediately
-					checkbox.checked = !task.completed;
-					checkbox.dataset.task = newStatus;
-
-					// Trigger task-completed event if needed
-					if (!task.completed) {
-						this.app.workspace.trigger(
-							"task-genius:task-completed",
-							task,
-						);
-					}
-
-					// Refresh calendar
-					setTimeout(() => {
-						this.processTasks();
-						this.renderCurrentView();
-					}, 100);
-				}
-			}
+			await this.toggleTaskCompletion(task, checkbox);
 		});
+	}
+
+	/**
+	 * Completes the task from its checkbox, or makes a completed one not
+	 * done again; the calendar is drawn again after
+	 */
+	private async toggleTaskCompletion(task: Task, checkbox: HTMLInputElement) {
+		// Toggle task status
+		const newStatus = task.completed ? " " : "x";
+
+		if (this.plugin.writeAPI) {
+			const result = await this.plugin.writeAPI.updateTaskStatus({
+				taskId: task.id,
+				status: newStatus,
+				completed: !task.completed,
+			});
+
+			if (result.success) {
+				// Update UI immediately
+				checkbox.checked = !task.completed;
+				checkbox.dataset.task = newStatus;
+
+				// Trigger task-completed event if needed
+				if (!task.completed) {
+					this.app.workspace.trigger("task-genius:task-completed", task);
+				}
+
+				// Refresh calendar
+				setTimeout(() => {
+					this.processTasks();
+					this.renderCurrentView();
+				}, 100);
+			}
+		}
 	}
 
 	/**
@@ -1695,12 +1699,19 @@ export class CalendarComponent extends Component {
 		const list = popover.createDiv("tg-day-tasks-list");
 		events.forEach((event) => {
 			const task = getTaskFromEvent(event as AdapterCalendarEvent);
-			const item = list.createDiv({
-				cls: "tg-day-tasks-item",
-				text: event.title,
-			});
+			const item = list.createDiv({ cls: "tg-day-tasks-item" });
 			item.toggleClass("is-undated", !!event.metadata?.undated);
 			item.toggleClass("is-completed", !!task?.completed);
+			if (task) {
+				// The status shows as in the checkboxes of the other views,
+				// such as in progress or planned; a click completes the task
+				const checkbox = createTaskCheckbox(task.status || " ", task, item);
+				checkbox.addEventListener("click", (e) => {
+					e.stopPropagation();
+					void this.toggleTaskCompletion(task, checkbox);
+				});
+			}
+			item.createSpan({ cls: "tg-day-tasks-item-title", text: event.title });
 			item.addEventListener("click", () => {
 				this.closeDayTasks();
 				this.handleTGEventClick(event as AdapterCalendarEvent);
