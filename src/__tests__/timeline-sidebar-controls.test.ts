@@ -183,6 +183,7 @@ async function openTimeline(
 				abandoned: "-",
 				archived: "a",
 				notStarted: " ",
+				planned: ">|?",
 			},
 		},
 		dataflowOrchestrator: {
@@ -270,6 +271,47 @@ describe("Timeline day groups", () => {
 			true,
 		);
 		expect(eventFor("Done")?.classList.contains("is-completed")).toBe(true);
+	});
+
+	it("list planned tasks without a date under today, the most important first", async () => {
+		const planned = (content: string, priority: number, dueDate?: number) => {
+			const t = task(content, dueDate, "?");
+			t.metadata.priority = priority;
+			return t;
+		};
+		const { el } = await openTimeline([
+			task("Someday"),
+			task("Started", day(0), "/"),
+			planned("Sketch it", 3),
+			planned("Pick a framework", 5),
+			planned("Ship it", 5, day(1)),
+		]);
+		const today = el.querySelector(".timeline-date-group.is-today")!;
+		const section = today.querySelector(".timeline-planned-section")!;
+
+		expect(section.querySelector(".timeline-date-only-header")?.textContent).toBe(
+			"Planned2 planned tasks without a date",
+		);
+		expect(eventTexts(section as HTMLElement)).toEqual([
+			"Pick a framework",
+			"Sketch it",
+		]);
+		// Dated tasks stay on their day; tasks that aren't planned stay out
+		expect(eventTexts(today as HTMLElement)).toEqual([
+			"Started",
+			"Pick a framework",
+			"Sketch it",
+		]);
+		expect(eventTexts(el)).toContain("Ship it");
+		expect(eventTexts(el)).not.toContain("Someday");
+	});
+
+	it("show planned tasks rather than an empty today", async () => {
+		const { el } = await openTimeline([task("Pick a framework", undefined, "?")]);
+		const today = el.querySelector(".timeline-date-group.is-today")!;
+
+		expect(today.textContent).not.toContain("Nothing planned for today");
+		expect(eventTexts(today as HTMLElement)).toEqual(["Pick a framework"]);
 	});
 
 	it("label all-day and same-time groups in the user's language", async () => {

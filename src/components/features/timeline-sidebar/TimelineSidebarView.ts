@@ -64,6 +64,8 @@ export class TimelineSidebarView extends ItemView {
 	private timelineContainerEl: HTMLElement;
 	private currentDate: moment.Moment = moment();
 	private events: EnhancedTimelineEvent[] = [];
+	/** Planned tasks without a date, which have no day of their own */
+	private undatedPlannedTasks: Task[] = [];
 	private isAutoScrolling: boolean = false;
 
 	// Header buttons with a state to show
@@ -243,9 +245,17 @@ export class TimelineSidebarView extends ItemView {
 			return !(isIcsTask && showAsBadge);
 		});
 
+		const plannedMarks = (this.plugin.settings.taskStatuses.planned || "")
+			.split("|")
+			.filter((mark) => mark !== "");
+		this.undatedPlannedTasks = [];
+
 		// Convert tasks to timeline events
 		timelineFilteredTasks.forEach((task) => {
 			const dates = this.extractDatesFromTask(task);
+			if (dates.length === 0 && plannedMarks.includes(task.status)) {
+				this.undatedPlannedTasks.push(task);
+			}
 			dates.forEach(({date, type}) => {
 				const event: EnhancedTimelineEvent = {
 					id: `${task.id}-${type}`,
@@ -585,8 +595,11 @@ export class TimelineSidebarView extends ItemView {
 		// Events list
 		const eventsListEl = dateGroupEl.createDiv("timeline-events-list");
 
+		// Planned tasks without a date are listed under today
+		const plannedTasks = isToday ? this.undatedPlannedTasks : [];
+
 		// Only today shows up without events
-		if (events.length === 0) {
+		if (events.length === 0 && plannedTasks.length === 0) {
 			eventsListEl.createDiv({
 				cls: "timeline-empty-day",
 				text: t("Nothing planned for today"),
@@ -594,11 +607,62 @@ export class TimelineSidebarView extends ItemView {
 			return;
 		}
 
-		// Sort events by time within the day for chronological ordering
-		const sortedEvents = this.sortEventsByTime(events);
+		if (events.length > 0) {
+			// Sort events by time within the day for chronological ordering
+			const sortedEvents = this.sortEventsByTime(events);
 
-		// Group events by time and render them
-		this.renderGroupedEvents(eventsListEl, sortedEvents);
+			// Group events by time and render them
+			this.renderGroupedEvents(eventsListEl, sortedEvents);
+		}
+
+		this.renderUndatedPlannedTasks(eventsListEl, plannedTasks);
+	}
+
+	/**
+	 * Planned tasks without a date, after today's events in a section like
+	 * the all-day one; the most important first
+	 */
+	private renderUndatedPlannedTasks(containerEl: HTMLElement, tasks: Task[]): void {
+		if (tasks.length === 0) return;
+
+		const section = containerEl.createDiv(
+			"timeline-date-only-section timeline-planned-section"
+		);
+		const headerEl = section.createDiv("timeline-date-only-header");
+		headerEl.createDiv({
+			cls: "timeline-event-time timeline-event-time-date-only",
+			text: t("Planned"),
+		});
+		headerEl.createDiv({
+			cls: "timeline-date-only-title",
+			text:
+				tasks.length === 1
+					? t("1 planned task without a date")
+					: t("{{count}} planned tasks without a date", {
+							interpolation: { count: tasks.length },
+						}),
+		});
+
+		const now = new Date();
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		[...tasks]
+			.sort(
+				(a, b) =>
+					(b.metadata.priority ?? 0) - (a.metadata.priority ?? 0) ||
+					a.content.localeCompare(b.content)
+			)
+			.forEach((task) => {
+				const event: EnhancedTimelineEvent = {
+					id: `${task.id}-planned`,
+					content: task.content,
+					time: today,
+					type: "task",
+					status: task.status,
+					task,
+					isToday: true,
+				};
+				this.renderEvent(section, event, false);
+			});
 	}
 
 	/**

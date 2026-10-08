@@ -2377,6 +2377,8 @@ const translations = {
 	"All day": "全天",
 	"1 all-day event": "1 项全天任务",
 	"{{count}} all-day events": "{{count}} 项全天任务",
+	"1 planned task without a date": "1 项未定日期的计划任务",
+	"{{count}} planned tasks without a date": "{{count}} 项未定日期的计划任务",
 	"{{count}} events": "{{count}} 项",
 	"Open the timeline showing only today. The focus button in its header switches this any time.":
 		"时间轴打开时只显示今天，随时可以用顶部的聚焦按钮切换。",

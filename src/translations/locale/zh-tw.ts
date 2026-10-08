@@ -2331,6 +2331,8 @@ const translations = {
 	"All day": "全天",
 	"1 all-day event": "1 項全天任務",
 	"{{count}} all-day events": "{{count}} 項全天任務",
+	"1 planned task without a date": "1 項未定日期的計劃任務",
+	"{{count}} planned tasks without a date": "{{count}} 項未定日期的計劃任務",
 	"{{count}} events": "{{count}} 項",
 	"Open the timeline showing only today. The focus button in its header switches this any time.":
 		"時間軸開啟時只顯示今天，隨時可以用頂部的聚焦按鈕切換。",
