@@ -352,6 +352,40 @@ div[data-type^="tg-timeline-sidebar-view"] .timeline-date-only-title {
 	font-style: italic;
 }
 
+/* Priority beside the task, as the table shows it */
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event-priority {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	flex: none;
+	align-self: center;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event-priority-icon {
+	display: flex;
+}
+
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event-priority-icon svg {
+	width: 12px;
+	height: 12px;
+}
+
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event-priority.priority-highest .timeline-event-priority-icon,
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event-priority.priority-high .timeline-event-priority-icon {
+	color: var(--text-error);
+}
+
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event-priority.priority-medium .timeline-event-priority-icon {
+	color: var(--text-warning);
+}
+
+div[data-type^="tg-timeline-sidebar-view"] .timeline-event-priority.priority-lowest .timeline-event-priority-icon {
+	color: var(--text-faint);
+}
+
 /* Event Content */
 div[data-type^="tg-timeline-sidebar-view"] .timeline-event-content {
 	flex: 1;

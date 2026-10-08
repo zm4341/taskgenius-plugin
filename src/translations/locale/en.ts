@@ -2553,6 +2553,8 @@ const translations = {
 	"All day": "All day",
 	"1 all-day event": "1 all-day event",
 	"{{count}} all-day events": "{{count}} all-day events",
+	"1 in-progress task without a date": "1 in-progress task without a date",
+	"{{count}} in-progress tasks without a date": "{{count}} in-progress tasks without a date",
 	"1 planned task without a date": "1 planned task without a date",
 	"{{count}} planned tasks without a date": "{{count}} planned tasks without a date",
 	"{{count}} events": "{{count}} events",

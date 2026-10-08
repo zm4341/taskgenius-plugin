@@ -183,6 +183,7 @@ async function openTimeline(
 				abandoned: "-",
 				archived: "a",
 				notStarted: " ",
+				inProgress: "/|d",
 				planned: ">|?",
 			},
 		},
@@ -306,12 +307,72 @@ describe("Timeline day groups", () => {
 		expect(eventTexts(el)).not.toContain("Someday");
 	});
 
+	it("list in-progress tasks without a date under today, before planned ones", async () => {
+		const { el } = await openTimeline([
+			task("Started", day(0), "/"),
+			task("Next up", undefined, "?"),
+			task("Half done", undefined, "/"),
+		]);
+		const today = el.querySelector(".timeline-date-group.is-today")!;
+		const sections = Array.from(
+			today.querySelectorAll(".timeline-date-only-section"),
+		).map((section) => ({
+			header: section.querySelector(".timeline-date-only-header")?.textContent,
+			tasks: eventTexts(section as HTMLElement),
+		}));
+
+		expect(sections).toEqual([
+			{ header: "All day1 all-day event", tasks: ["Started"] },
+			{
+				header: "In Progress1 in-progress task without a date",
+				tasks: ["Half done"],
+			},
+			{ header: "Planned1 planned task without a date", tasks: ["Next up"] },
+		]);
+	});
+
 	it("show planned tasks rather than an empty today", async () => {
 		const { el } = await openTimeline([task("Pick a framework", undefined, "?")]);
 		const today = el.querySelector(".timeline-date-group.is-today")!;
 
 		expect(today.textContent).not.toContain("Nothing planned for today");
 		expect(eventTexts(today as HTMLElement)).toEqual(["Pick a framework"]);
+	});
+
+	it("show each task's priority beside it, as the table does", async () => {
+		const withPriority = (content: string, priority?: number) => {
+			const t = task(content, day(0));
+			t.metadata.priority = priority;
+			return t;
+		};
+		const { el } = await openTimeline([
+			withPriority("Laundry", 5),
+			withPriority("Groceries"),
+			withPriority("10:00 standup", 3),
+			withPriority("10:00 call", 1),
+		]);
+		const priorityOf = (text: string) => {
+			const event = Array.from(el.querySelectorAll(".timeline-event")).find(
+				(event) => event.textContent?.includes(text),
+			);
+			const priority = event?.querySelector(".timeline-event-priority");
+			return priority && [priority.className, priority.textContent];
+		};
+
+		expect(priorityOf("Laundry")).toEqual([
+			"timeline-event-priority priority-highest",
+			"Highest",
+		]);
+		expect(priorityOf("Groceries")).toBeFalsy();
+		// Tasks at the same time are shown as a group, with their priorities too
+		expect(priorityOf("standup")).toEqual([
+			"timeline-event-priority priority-medium",
+			"Medium",
+		]);
+		expect(priorityOf("call")).toEqual([
+			"timeline-event-priority priority-lowest",
+			"Lowest",
+		]);
 	});
 
 	it("label all-day and same-time groups in the user's language", async () => {
