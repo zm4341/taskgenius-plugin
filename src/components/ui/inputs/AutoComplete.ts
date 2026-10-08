@@ -1,6 +1,8 @@
 import {
 	AbstractInputSuggest,
 	App,
+	KeymapEventHandler,
+	KeymapEventListener,
 	prepareFuzzySearch,
 	Scope,
 	TFile,
@@ -8,6 +10,7 @@ import {
 import TaskProgressBarPlugin from "@/index";
 import { QuickCaptureOptions } from "@/editor-extensions/core/quick-capture-panel";
 import { currentTagOf, isTaskTag, parseTagNames } from "@/utils/file/note-tags";
+import { isContextLink } from "@/utils/task/context-link";
 
 // Global cache for autocomplete data to avoid repeated expensive operations
 interface GlobalAutoCompleteCache {
@@ -92,12 +95,65 @@ export async function getCachedData(
 	return globalCache;
 }
 
+/** Obsidian's list of suggestions in the popover; undocumented, so any of it may be missing */
+interface SuggestionList {
+	selectedItem?: number;
+	forceSetSelectedItem?(index: number, evt: Event | null): void;
+}
+
+/** A key registered on a scope, with its handler, which is undocumented */
+type KeyHandler = KeymapEventHandler & { func?: KeymapEventListener };
+
 abstract class BaseSuggest<T> extends AbstractInputSuggest<T> {
 	constructor(
 		app: App,
 		public inputEl: HTMLInputElement,
 	) {
 		super(app, inputEl);
+		this.passEnterWhenNothingIsHighlighted();
+	}
+
+	/**
+	 * The text being typed, for suggests whose first suggestion is what was
+	 * typed, so Enter keeps it. With nothing typed, no suggestion is
+	 * highlighted and Enter goes to the input, so Enter can clear a field or
+	 * end a list instead of filling in the first suggestion. Null keeps
+	 * Obsidian's behavior, where Enter takes the first suggestion
+	 */
+	protected typedText(query: string): string | null {
+		return null;
+	}
+
+	open(): void {
+		super.open();
+		if (this.typedText(this.inputEl.value) === "") {
+			// The first suggestion is highlighted whenever the list changes
+			this.suggestionList()?.forceSetSelectedItem?.(-1, null);
+		}
+	}
+
+	private suggestionList(): SuggestionList | undefined {
+		return (this as unknown as { suggestions?: SuggestionList }).suggestions;
+	}
+
+	/**
+	 * The list's Enter handler takes the highlighted suggestion and keeps the
+	 * key from the input, even when none is highlighted. Undocumented, like
+	 * the scope's keys, so without them Enter keeps Obsidian's behavior
+	 */
+	private passEnterWhenNothingIsHighlighted(): void {
+		const keys = (this.scope as unknown as { keys?: KeyHandler[] } | undefined)
+			?.keys;
+		const enter = keys?.find((key) => key.key === "Enter" && !key.modifiers);
+		const takeHighlighted = enter?.func;
+		if (!enter || !takeHighlighted) return;
+		enter.func = (evt, ctx) => {
+			if ((this.suggestionList()?.selectedItem ?? 0) >= 0) {
+				return takeHighlighted(evt, ctx);
+			}
+			// Not handled, so the input gets Enter
+			this.close();
+		};
 	}
 
 	// Common method to render suggestions
@@ -187,6 +243,17 @@ export class ProjectSuggest extends CustomSuggest {
 			}
 		});
 	}
+
+	protected typedText(query: string): string {
+		return query.trim();
+	}
+
+	getSuggestions(query: string): string[] {
+		const typed = this.typedText(query);
+		return typed
+			? rankChoices(this.availableChoices, typed)
+			: this.availableChoices.slice(0, 100);
+	}
 }
 
 /**
@@ -208,11 +275,24 @@ export class ContextSuggest extends CustomSuggest {
 		});
 	}
 
+	// What was typed, without "@"
+	protected typedText(query: string): string {
+		return query.trim().replace(/^@+/, "");
+	}
+
 	getSuggestions(query: string): string[] {
-		const link = query.trim().replace(/^@/, "").match(/^\[\[([^[\]|#]*)/);
-		return link
-			? noteLinkSuggestions(this.app, link[1].trim())
-			: super.getSuggestions(query);
+		const typed = this.typedText(query);
+		const link = typed.match(/^\[\[([^[\]|#]*)/);
+		if (link) {
+			const notes = noteLinkSuggestions(this.app, link[1].trim());
+			// A whole link is kept, also one to a note not written yet
+			return isContextLink(typed)
+				? [typed, ...notes.filter((note) => note !== typed)]
+				: notes;
+		}
+		return typed
+			? rankChoices(this.availableChoices, typed)
+			: this.availableChoices.slice(0, 100);
 	}
 }
 
@@ -233,26 +313,32 @@ function noteLinkSuggestions(app: App, query: string): string[] {
 }
 
 /**
- * Tags matching what was typed, best first: the same tag, else what was
- * typed as a new tag, so Enter keeps it; then tags starting with it, then
- * the other fuzzy matches
+ * Tags, projects or contexts matching what was typed, best first: the same
+ * one, else what was typed as a new one, so Enter keeps it; then the ones
+ * starting with it, then the ones with a part after "/" starting with it,
+ * shortest first; then the other fuzzy matches
  */
-function rankTags(tags: string[], typed: string): string[] {
+function rankChoices(choices: string[], typed: string): string[] {
 	const query = typed.toLowerCase();
 	const search = prepareFuzzySearch(query);
-	const matches = tags
-		.map((tag) => ({ tag, lower: tag.toLowerCase() }))
-		.map((m) => ({ ...m, score: search(m.lower)?.score }))
+	const startRank = (lower: string) =>
+		lower.startsWith(query) ? 2 : lower.includes(`/${query}`) ? 1 : 0;
+	const matches = choices
+		.map((choice) => ({ choice, lower: choice.toLowerCase() }))
+		.map((m) => ({
+			...m,
+			score: search(m.lower)?.score,
+			start: startRank(m.lower),
+		}))
 		.filter((m) => m.score !== undefined && m.lower !== query)
 		.sort(
 			(a, b) =>
-				Number(b.lower.startsWith(query)) -
-					Number(a.lower.startsWith(query)) ||
-				(a.lower.startsWith(query) ? a.tag.length - b.tag.length : 0) ||
+				b.start - a.start ||
+				(a.start > 0 ? a.choice.length - b.choice.length : 0) ||
 				b.score! - a.score!,
 		)
-		.map((m) => m.tag);
-	const same = tags.find((tag) => tag.toLowerCase() === query);
+		.map((m) => m.choice);
+	const same = choices.find((choice) => choice.toLowerCase() === query);
 	return [same ?? typed, ...matches].slice(0, 100);
 }
 
@@ -289,11 +375,15 @@ export class TagSuggest extends CustomSuggest {
 		}
 	}
 
-	// Suggests for the tag being typed, the last one of the list
-	getSuggestions(query: string): string[] {
-		const typed = this.isDetailed
+	// The tag being typed, the last one of the list
+	protected typedText(query: string): string {
+		return this.isDetailed
 			? query.trim().replace(/^#+/, "")
 			: currentTagOf(query);
+	}
+
+	getSuggestions(query: string): string[] {
+		const typed = this.typedText(query);
 		// Leaves out the tags already in the list
 		const entered = new Set(
 			this.isDetailed
@@ -306,7 +396,7 @@ export class TagSuggest extends CustomSuggest {
 		const tags = this.availableChoices.filter(
 			(tag) => isTaskTag(tag) && !entered.has(tag.toLowerCase()),
 		);
-		return typed ? rankTags(tags, typed) : tags.slice(0, 100);
+		return typed ? rankChoices(tags, typed) : tags.slice(0, 100);
 	}
 
 	// Override to add # prefix and keep previous tags

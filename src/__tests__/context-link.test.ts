@@ -235,8 +235,9 @@ describe("Context suggestions", () => {
 		return s;
 	}
 
-	it("suggests contexts as before", () => {
+	it("suggests contexts after what was typed, so Enter keeps it", () => {
 		expect(suggest(["home", "office"]).getSuggestions("off")).toEqual([
+			"off",
 			"office",
 		]);
 	});
