@@ -31,6 +31,7 @@ import {
 	HOVER_LINK_SOURCE,
 	isContextLink,
 } from "@/utils/task/context-link";
+import { parseTagNames } from "@/utils/file/note-tags";
 
 // Cache for autocomplete data to avoid repeated expensive operations
 interface AutoCompleteCache {
@@ -1291,13 +1292,8 @@ export class TableRenderer extends Component implements HoverParent {
 
 			// Handle blur event to save changes
 			this.registerDomEvent(input, "blur", () => {
-				const newValue = input.value.trim();
-				const newTags = newValue
-					? newValue
-							.split(",")
-							.map((tag) => tag.trim())
-							.filter((tag) => tag.length > 0)
-					: [];
+				// Tags may be separated by commas (also "，"), "、" or spaces
+				const newTags = parseTagNames(input.value).map((tag) => `#${tag}`);
 
 				// Only save if tags actually changed
 				if (!this.arraysEqual(originalTags, newTags)) {

@@ -15,7 +15,7 @@ import { TableHeader, TableHeaderCallbacks } from "./TableHeader";
 import { sortTasks } from "@/commands/sortTaskCommands";
 import { isProjectReadonly } from "@/utils/task/task-operations";
 import { getArchivedMarks } from "@/utils/task/archived-status";
-import { tagName } from "@/utils/file/note-tags";
+import { parseTagNames, tagName } from "@/utils/file/note-tags";
 import "@/styles/table.scss";
 
 export interface TableViewCallbacks {
@@ -1671,12 +1671,9 @@ export class TableView extends Component {
 		// task inherits from the note's tags property would come right back
 		// unless it is removed there too
 		if (columnId === "tags" && this.plugin.writeAPI) {
-			const newTags = (
-				Array.isArray(newValue) ? newValue : String(newValue ?? "").split(",")
-			)
-				.map((tag: string) => tagName(String(tag)))
-				.filter((tag: string) => tag.length > 0)
-				.map((tag: string) => `#${tag}`);
+			const newTags = parseTagNames(
+				(Array.isArray(newValue) ? newValue : [newValue ?? ""]).join(","),
+			).map((tag) => `#${tag}`);
 			const kept = new Set(newTags.map(tagName));
 			const removedTags = (task.metadata.tags ?? []).filter(
 				(tag) => !kept.has(tagName(tag)),

@@ -26,7 +26,12 @@ import { rrulestr } from "rrule";
 import { EMOJI_TAG_REGEX, TOKEN_CONTEXT_REGEX } from "@/common/regex-define";
 import { BulkOperationResult } from "@/types/selection";
 import { formatDate as formatDateSmart } from "@/utils/date/date-utils";
-import { noteTagsOf, removeNoteTags, tagName } from "@/utils/file/note-tags";
+import {
+	noteTagsOf,
+	parseTagNames,
+	removeNoteTags,
+	tagName,
+} from "@/utils/file/note-tags";
 import { countTasks } from "@/utils/file/task-note";
 import { contextForLine } from "@/utils/task/context-link";
 import { t } from "@/translations/helper";
@@ -2196,17 +2201,15 @@ export class WriteAPI {
 		const useDataviewFormat =
 			this.plugin.settings.preferMetadataFormat === "dataview";
 
-		// Tags
-		if (args.tags?.length) {
+		// Tags; one typed with separators, like "a，b c", becomes several
+		const tags = parseTagNames((args.tags ?? []).join(",")).map(
+			(tag) => `#${tag}`,
+		);
+		if (tags.length) {
 			if (useDataviewFormat) {
-				metadata.push(`[tags:: ${args.tags.join(", ")}]`);
+				metadata.push(`[tags:: ${tags.join(", ")}]`);
 			} else {
-				// Ensure tags don't already have # prefix before adding one
-				metadata.push(
-					...args.tags.map((tag) =>
-						tag.startsWith("#") ? tag : `#${tag}`,
-					),
-				);
+				metadata.push(...tags);
 			}
 		}
 

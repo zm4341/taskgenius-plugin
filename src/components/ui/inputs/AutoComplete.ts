@@ -7,6 +7,7 @@ import {
 } from "obsidian";
 import TaskProgressBarPlugin from "@/index";
 import { QuickCaptureOptions } from "@/editor-extensions/core/quick-capture-panel";
+import { currentTagOf, isTaskTag, parseTagNames } from "@/utils/file/note-tags";
 
 // Global cache for autocomplete data to avoid repeated expensive operations
 interface GlobalAutoCompleteCache {
@@ -232,6 +233,30 @@ function noteLinkSuggestions(app: App, query: string): string[] {
 }
 
 /**
+ * Tags matching what was typed, best first: the same tag, else what was
+ * typed as a new tag, so Enter keeps it; then tags starting with it, then
+ * the other fuzzy matches
+ */
+function rankTags(tags: string[], typed: string): string[] {
+	const query = typed.toLowerCase();
+	const search = prepareFuzzySearch(query);
+	const matches = tags
+		.map((tag) => ({ tag, lower: tag.toLowerCase() }))
+		.map((m) => ({ ...m, score: search(m.lower)?.score }))
+		.filter((m) => m.score !== undefined && m.lower !== query)
+		.sort(
+			(a, b) =>
+				Number(b.lower.startsWith(query)) -
+					Number(a.lower.startsWith(query)) ||
+				(a.lower.startsWith(query) ? a.tag.length - b.tag.length : 0) ||
+				b.score! - a.score!,
+		)
+		.map((m) => m.tag);
+	const same = tags.find((tag) => tag.toLowerCase() === query);
+	return [same ?? typed, ...matches].slice(0, 100);
+}
+
+/**
  * TagSuggest - Provides autocomplete for tag names
  */
 export const TAG_COMMIT_EVENT = "task-progress-bar:tag-commit";
@@ -264,35 +289,24 @@ export class TagSuggest extends CustomSuggest {
 		}
 	}
 
-	// Override getSuggestions to handle comma-separated tags
+	// Suggests for the tag being typed, the last one of the list
 	getSuggestions(query: string): string[] {
-		if (this.isDetailed) {
-			const currentTagInput = query
-				.trim()
-				.replace(/^#+/, "")
-				.toLowerCase();
-
-			if (!currentTagInput) {
-				return this.availableChoices.slice(0, 100);
-			}
-
-			const fuzzySearch = prepareFuzzySearch(currentTagInput);
-			return this.availableChoices
-				.filter((tag) => fuzzySearch(tag.toLowerCase()))
-				.slice(0, 100);
-		}
-
-		const parts = query.split(",");
-		const currentTagInput = parts[parts.length - 1].trim();
-
-		if (!currentTagInput) {
-			return this.availableChoices.slice(0, 100);
-		}
-
-		const fuzzySearch = prepareFuzzySearch(currentTagInput.toLowerCase());
-		return this.availableChoices
-			.filter((tag) => fuzzySearch(tag.toLowerCase()))
-			.slice(0, 100);
+		const typed = this.isDetailed
+			? query.trim().replace(/^#+/, "")
+			: currentTagOf(query);
+		// Leaves out the tags already in the list
+		const entered = new Set(
+			this.isDetailed
+				? []
+				: parseTagNames(query.slice(0, query.length - typed.length)).map(
+						(tag) => tag.toLowerCase(),
+					),
+		);
+		// Tags the task line can't hold, such as "#a；b", would break it
+		const tags = this.availableChoices.filter(
+			(tag) => isTaskTag(tag) && !entered.has(tag.toLowerCase()),
+		);
+		return typed ? rankTags(tags, typed) : tags.slice(0, 100);
 	}
 
 	// Override to add # prefix and keep previous tags
@@ -301,14 +315,11 @@ export class TagSuggest extends CustomSuggest {
 			return `#${item}`;
 		}
 
-		const currentValue = this.inputEl.value;
-		const parts = currentValue.split(",");
-
-		// Replace the last part with the selected tag
-		parts[parts.length - 1] = `#${item}`;
-
-		// Join back with commas and add a new comma for the next tag
-		return `${parts.join(",")},`;
+		// Replace the tag being typed, then leave room for the next one
+		const before = this.inputEl.value
+			.replace(/#*[^,，、;；\s#]*$/, "")
+			.replace(/[,，、;；\s]+$/, "");
+		return `${before ? `${before}, ` : ""}#${item}, `;
 	}
 
 	// Override to display full tag

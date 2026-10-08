@@ -24,9 +24,25 @@ export function noteTagsOf(
 		.filter((tag) => tag.length > 0);
 }
 
-/** Tag names in what the user typed: separated by commas or spaces, "#" optional */
+/** What separates tags typed as a list: commas and semicolons (also full-width), "、", spaces, "#" */
+const TAG_SEPARATORS = /[,，、;；\s#]+/;
+
+/** Tag names in what the user typed, each once: "a，b #c" → ["a", "b", "c"] */
 export function parseTagNames(text: string): string[] {
-	return noteTagsOf({ tags: text });
+	return mergeTagNames(text.split(TAG_SEPARATORS));
+}
+
+/** The tag being typed at the end of the list, without "#": "a, #te" → "te" */
+export function currentTagOf(text: string): string {
+	return text.split(TAG_SEPARATORS).pop() ?? "";
+}
+
+/**
+ * Whether a task line can hold the tag: the task parser ends a tag at
+ * spaces and at ASCII or full-width punctuation other than "/", "-" and "_"
+ */
+export function isTaskTag(name: string): boolean {
+	return /^(?:[\w/-]|[^\x00-\x7F，。；：！？、「」『』（）【】“”‘’])+$/u.test(name);
 }
 
 /** Tag names of all the lists, each once; tags ignore case, so the first spelling stays */
