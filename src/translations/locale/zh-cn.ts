@@ -2386,8 +2386,8 @@ const translations = {
 	"Scheduled {{date}}": "计划 {{date}}",
 	"Planned for {{date}}": "原定 {{date}}",
 	"{{count}} events": "{{count}} 项",
-	"Open the timeline showing only today. The focus button in its header switches this any time.":
-		"时间轴打开时只显示今天，随时可以用顶部的聚焦按钮切换。",
+	"Show only today in the timeline: its events, and the tasks in progress or planned.":
+		"时间轴只显示今天：今天的事件，以及进行中和计划中的任务。",
 	"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.":
 		"时间轴最多显示多少项，超出时保留离现在最近的。",
 	"{{count}} tasks created": "已创建 {{count}} 个任务",

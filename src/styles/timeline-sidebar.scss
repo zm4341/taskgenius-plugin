@@ -10,60 +10,6 @@ div[data-type^="tg-timeline-sidebar-view"] .timeline-sidebar-container {
 	padding: 0 !important;
 }
 
-/* Header */
-div[data-type^="tg-timeline-sidebar-view"] .timeline-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: var(--size-4-3) var(--size-4-4);
-	border-bottom: 1px solid var(--background-modifier-border);
-	background: linear-gradient(
-		135deg,
-		var(--background-secondary) 0%,
-		var(--background-modifier-hover) 100%
-	);
-	flex-shrink: 0;
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-}
-
-div[data-type^="tg-timeline-sidebar-view"] .timeline-title {
-	font-weight: 600;
-	font-size: var(--font-ui-medium);
-	color: var(--text-normal);
-	display: flex;
-	align-items: center;
-	gap: var(--size-4-2);
-}
-
-div[data-type^="tg-timeline-sidebar-view"] .timeline-controls {
-	display: flex;
-	gap: var(--size-4-2);
-}
-
-div[data-type^="tg-timeline-sidebar-view"] .timeline-btn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: var(--size-4-8);
-	height: var(--size-4-8);
-	border-radius: var(--radius-s);
-	cursor: pointer;
-	color: var(--text-muted);
-	background-color: transparent;
-	transition: all 0.2s ease;
-}
-
-div[data-type^="tg-timeline-sidebar-view"] .timeline-btn:hover {
-	color: var(--text-normal);
-	background-color: var(--background-modifier-hover);
-}
-
-div[data-type^="tg-timeline-sidebar-view"] .timeline-btn.is-active {
-	color: var(--text-on-accent);
-	background-color: var(--interactive-accent);
-}
-
 /* Timeline Content */
 div[data-type^="tg-timeline-sidebar-view"] .timeline-content {
 	flex: 1;
@@ -77,16 +23,6 @@ div[data-type^="tg-timeline-sidebar-view"]
 .timeline-content.focus-mode
 .timeline-date-group:not(.is-today) {
 	display: none;
-}
-
-div[data-type^="tg-timeline-sidebar-view"] .timeline-refresh-btn.is-loading svg {
-	animation: tg-timeline-spin 0.8s linear infinite;
-}
-
-@keyframes tg-timeline-spin {
-	to {
-		transform: rotate(360deg);
-	}
 }
 
 /* Today without events */
@@ -111,21 +47,6 @@ div[data-type^="tg-timeline-sidebar-view"] .timeline-date-group.is-today {
 	padding: var(--size-4-2);
 	box-shadow: var(--shadow-s);
 	border: 1px solid var(--interactive-accent);
-}
-
-/* "Go to today" pulses today, which may already be in view */
-div[data-type^="tg-timeline-sidebar-view"] .timeline-date-group.is-today.is-flashing {
-	animation: tg-timeline-today-flash 1.2s ease-out;
-}
-
-@keyframes tg-timeline-today-flash {
-	0%,
-	40% {
-		box-shadow: 0 0 0 3px var(--interactive-accent);
-	}
-	100% {
-		box-shadow: var(--shadow-s);
-	}
 }
 
 div[data-type^="tg-timeline-sidebar-view"] .timeline-date-header {
@@ -480,19 +401,6 @@ div[data-type^="tg-timeline-sidebar-view"] .timeline-event-action:hover {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-	div[data-type^="tg-timeline-sidebar-view"] .timeline-header {
-		padding: var(--size-4-2) var(--size-4-3);
-	}
-
-	div[data-type^="tg-timeline-sidebar-view"] .timeline-controls {
-		gap: var(--size-4-1);
-	}
-
-	div[data-type^="tg-timeline-sidebar-view"] .timeline-btn {
-		width: var(--size-4-7);
-		height: var(--size-4-7);
-	}
-
 	div[data-type^="tg-timeline-sidebar-view"] .timeline-events-list {
 		padding: 0 var(--size-2-3);
 	}

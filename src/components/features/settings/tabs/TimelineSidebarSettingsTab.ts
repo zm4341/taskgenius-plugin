@@ -76,10 +76,10 @@ export function renderTimelineSidebarSettingsTab(
 		);
 
 	new Setting(containerEl)
-		.setName(t("Focus mode by default"))
+		.setName(t("Focus on today"))
 		.setDesc(
 			t(
-				"Open the timeline showing only today. The focus button in its header switches this any time."
+				"Show only today in the timeline: its events, and the tasks in progress or planned."
 			)
 		)
 		.addToggle((toggle) =>

@@ -98,13 +98,6 @@ export class TimelineSidebarView extends ItemView {
 	};
 	private isAutoScrolling: boolean = false;
 
-	// Header buttons with a state to show
-	private refreshBtn: HTMLElement | null = null;
-	private focusBtn: HTMLElement | null = null;
-	private isFocusMode = false;
-	// "Focus mode by default" as last applied, to follow changes in settings
-	private appliedFocusDefault: boolean | null = null;
-
 	// Debounced methods
 	private debouncedRender = debounce(async () => {
 		await this.loadEvents();
@@ -134,9 +127,8 @@ export class TimelineSidebarView extends ItemView {
 		this.containerEl.empty();
 		this.containerEl.addClass("timeline-sidebar-container");
 
-		this.createHeader();
 		this.createTimelineArea();
-		this.applyFocusDefault();
+		this.applyFocusMode();
 
 		// Load initial data
 		await this.loadEvents();
@@ -174,49 +166,6 @@ export class TimelineSidebarView extends ItemView {
 
 	onClose(): Promise<void> {
 		return Promise.resolve();
-	}
-
-	private createHeader(): void {
-		const headerEl = this.containerEl.createDiv("timeline-header");
-
-		// Title
-		const titleEl = headerEl.createDiv("timeline-title");
-		titleEl.setText(t("Timeline"));
-
-		// Controls
-		const controlsEl = headerEl.createDiv("timeline-controls");
-
-		// Today button
-		const todayBtn = controlsEl.createDiv(
-			"timeline-btn timeline-today-btn"
-		);
-		setIcon(todayBtn, "calendar");
-		todayBtn.setAttribute("aria-label", t("Go to today"));
-		this.registerDomEvent(todayBtn, "click", () => {
-			this.scrollToToday(true);
-		});
-
-		// Refresh button
-		const refreshBtn = controlsEl.createDiv(
-			"timeline-btn timeline-refresh-btn"
-		);
-		this.refreshBtn = refreshBtn;
-		setIcon(refreshBtn, "refresh-cw");
-		refreshBtn.setAttribute("aria-label", t("Refresh"));
-		this.registerDomEvent(refreshBtn, "click", () => {
-			void this.refreshFromButton();
-		});
-
-		// Focus mode toggle
-		const focusBtn = controlsEl.createDiv(
-			"timeline-btn timeline-focus-btn"
-		);
-		this.focusBtn = focusBtn;
-		setIcon(focusBtn, "focus");
-		focusBtn.setAttribute("aria-label", t("Focus on today"));
-		this.registerDomEvent(focusBtn, "click", () => {
-			this.setFocusMode(!this.isFocusMode);
-		});
 	}
 
 	private createTimelineArea(): void {
@@ -1296,8 +1245,7 @@ export class TimelineSidebarView extends ItemView {
 		this.app.workspace.setActiveLeaf(leafToUse, {focus: true});
 	}
 
-	/** Scrolls to today; `flash` pulses it, since it may already be in view */
-	private scrollToToday(flash = false): void {
+	private scrollToToday(): void {
 		const todayEl = this.timelineContainerEl.querySelector<HTMLElement>(
 			".timeline-date-group.is-today"
 		);
@@ -1307,47 +1255,15 @@ export class TimelineSidebarView extends ItemView {
 			setTimeout(() => {
 				this.isAutoScrolling = false;
 			}, 1000);
-
-			if (flash) {
-				todayEl.removeClass("is-flashing");
-				// Reflow so the pulse restarts on repeated clicks
-				void todayEl.offsetWidth;
-				todayEl.addClass("is-flashing");
-			}
 		}
 	}
 
-	/** Focus mode shows only today's events */
-	private setFocusMode(on: boolean): void {
-		this.isFocusMode = on;
-		this.timelineContainerEl.toggleClass("focus-mode", on);
-		this.focusBtn?.toggleClass("is-active", on);
-		this.focusBtn?.setAttribute("aria-pressed", String(on));
-	}
-
-	/** Starts with, and follows changes to, "Focus mode by default" */
-	private applyFocusDefault(): void {
-		const focusDefault =
-			this.plugin.settings.timelineSidebar.focusModeByDefault;
-		if (focusDefault === this.appliedFocusDefault) return;
-		this.appliedFocusDefault = focusDefault;
-		this.setFocusMode(focusDefault);
-	}
-
-	/** Reloads and redraws, spinning the icon meanwhile */
-	private async refreshFromButton(): Promise<void> {
-		const button = this.refreshBtn;
-		if (!button || button.hasClass("is-loading")) return;
-		button.addClass("is-loading");
-		try {
-			// A short minimum keeps the spin visible when loading is instant
-			await Promise.all([
-				this.refreshTimeline(),
-				new Promise((resolve) => window.setTimeout(resolve, 500)),
-			]);
-		} finally {
-			button.removeClass("is-loading");
-		}
+	/** The "Focus on today" setting shows only today */
+	private applyFocusMode(): void {
+		this.timelineContainerEl.toggleClass(
+			"focus-mode",
+			this.plugin.settings.timelineSidebar.focusModeByDefault
+		);
 	}
 
 	/** Completed and abandoned tasks both look finished */
@@ -1454,7 +1370,7 @@ export class TimelineSidebarView extends ItemView {
 
 	// Method to trigger view update (called when settings change)
 	public async triggerViewUpdate(): Promise<void> {
-		this.applyFocusDefault();
+		this.applyFocusMode();
 		await this.loadEvents();
 		this.renderTimeline();
 	}

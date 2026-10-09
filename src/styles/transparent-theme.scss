@@ -191,13 +191,6 @@ body.enable-transparent-theme {
 		background-color: transparent !important;
 	}
 	
-	/* 时间轴头部 - 半透明毛玻璃效果 */
-	div[data-type^="tg-timeline-sidebar-view"] .timeline-header {
-		background: color-mix(in srgb, var(--background-secondary) var(--tg-header-opacity-pct, 40%), transparent) !important;
-		backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
-		-webkit-backdrop-filter: blur(var(--tg-blur-px, 10px)) !important;
-	}
-	
 	/* 时间轴内容区域 */
 	div[data-type^="tg-timeline-sidebar-view"] .timeline-content {
 		background: transparent !important;

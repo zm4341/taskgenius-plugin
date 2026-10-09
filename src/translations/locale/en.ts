@@ -2562,8 +2562,8 @@ const translations = {
 	"Scheduled {{date}}": "Scheduled {{date}}",
 	"Planned for {{date}}": "Planned for {{date}}",
 	"{{count}} events": "{{count}} events",
-	"Open the timeline showing only today. The focus button in its header switches this any time.":
-		"Open the timeline showing only today. The focus button in its header switches this any time.",
+	"Show only today in the timeline: its events, and the tasks in progress or planned.":
+		"Show only today in the timeline: its events, and the tasks in progress or planned.",
 	"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.":
 		"Maximum number of events in the timeline. When there are more, the ones closest to now are kept.",
 	"{{count}} tasks created": "{{count}} tasks created",

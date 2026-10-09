@@ -1,10 +1,10 @@
 /**
- * The timeline sidebar: header buttons and day groups. New tasks are made
- * with New Task, so the timeline has no quick capture of its own.
+ * The timeline sidebar: its day groups, and "Focus on today" from the
+ * settings. It has no header: the timeline refreshes itself and opens at
+ * today, and New Task makes tasks, so it has no quick capture either.
  *
- * Regressions: refresh redrew before the tasks had loaded, so it showed the
- * old list; focus only dimmed other days and never lit its button; with
- * nothing due today there was no today group for "Go to today" to reach.
+ * Regressions: focus only dimmed other days; with nothing due today there
+ * was no today group to open at.
  */
 
 import { TimelineSidebarView } from "@/components/features/timeline-sidebar/TimelineSidebarView";
@@ -194,9 +194,7 @@ async function openTimeline(
 	const view = new TimelineSidebarView({ app } as any, plugin);
 	await view.onOpen();
 	const el = (view as any).contentEl as HTMLElement;
-	const button = (name: string) =>
-		el.querySelector(`.timeline-${name}-btn`) as HTMLElement;
-	return { view, plugin, app, el, button };
+	return { view, plugin, app, el };
 }
 
 function dayTitles(el: HTMLElement): string[] {
@@ -431,69 +429,43 @@ describe("Timeline day groups", () => {
 	});
 });
 
-describe("Timeline header buttons", () => {
-	it("Go to today scrolls to today and pulses it", async () => {
-		const { el, button } = await openTimeline([task("Ship it", day(1))]);
+describe("Timeline sidebar", () => {
+	it("has no header, title or buttons", async () => {
+		const { el } = await openTimeline([task("Ship it", day(1))]);
+
+		expect(el.querySelector(".timeline-header")).toBeNull();
+		expect(el.querySelector(".timeline-btn")).toBeNull();
+		expect(el.firstElementChild?.classList).toContain("timeline-content");
+	});
+
+	it("opens at today", async () => {
 		const scrollIntoView = proto.scrollIntoView;
 		scrollIntoView.mockClear();
+		const { el } = await openTimeline([task("Ship it", day(1))]);
+		await new Promise((resolve) => setTimeout(resolve, 150));
 
-		button("today").click();
-
-		const today = el.querySelector(".timeline-date-group.is-today");
-		expect(scrollIntoView.mock.contexts).toEqual([today]);
-		expect(today?.classList.contains("is-flashing")).toBe(true);
+		expect(scrollIntoView.mock.contexts).toContain(
+			el.querySelector(".timeline-date-group.is-today"),
+		);
 	});
 
-	it("Refresh redraws with the tasks loaded again", async () => {
-		const tasks = [task("Old", day(0))];
-		const { el, button } = await openTimeline(tasks);
-		tasks.push(task("New", day(0)));
-
-		button("refresh").click();
-		expect(button("refresh").classList.contains("is-loading")).toBe(true);
-		await settle();
-
-		expect(eventTexts(el)).toEqual(["New", "Old"]);
-		expect(button("refresh").classList.contains("is-loading")).toBe(false);
-	});
-
-	it("Focus shows only today and lights its button while on", async () => {
-		const { el, button } = await openTimeline([task("Ship it", day(1))]);
+	it("shows only today while Focus on today is on in the settings", async () => {
+		const { view, plugin, el } = await openTimeline(
+			[task("Ship it", day(1))],
+			{ focusModeByDefault: true },
+		);
 		const content = el.querySelector(".timeline-content")!;
-
-		button("focus").click();
 		expect(content.classList.contains("focus-mode")).toBe(true);
-		expect(button("focus").classList.contains("is-active")).toBe(true);
-		expect(button("focus").getAttribute("aria-pressed")).toBe("true");
-
-		button("focus").click();
-		expect(content.classList.contains("focus-mode")).toBe(false);
-		expect(button("focus").classList.contains("is-active")).toBe(false);
-	});
-
-	it("Focus starts from the default setting and follows its changes", async () => {
-		const { view, plugin, button } = await openTimeline([], {
-			focusModeByDefault: true,
-		});
-		const isOn = () => button("focus").classList.contains("is-active");
-		expect(isOn()).toBe(true);
-
-		// Switching by hand holds while the setting stays the same
-		button("focus").click();
-		await view.triggerViewUpdate();
-		expect(isOn()).toBe(false);
 
 		plugin.settings.timelineSidebar.focusModeByDefault = false;
 		await view.triggerViewUpdate();
-		expect(isOn()).toBe(false);
+		expect(content.classList.contains("focus-mode")).toBe(false);
 
 		plugin.settings.timelineSidebar.focusModeByDefault = true;
 		await view.triggerViewUpdate();
-		expect(isOn()).toBe(true);
+		expect(content.classList.contains("focus-mode")).toBe(true);
 	});
-});
 
-describe("Timeline sidebar", () => {
 	it("has no quick capture of its own: New Task makes tasks", async () => {
 		const { el } = await openTimeline([task("due today", day(0))]);
 
